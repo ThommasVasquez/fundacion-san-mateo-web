@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 async function build() {
-    console.log('--- STARTING TOTAL ATOMIC CONSOLIDATION (INLINED) ---');
+    console.log('--- STARTING TOTAL ATOMIC REDIRECTION (v50) ---');
 
     const openNextDir = path.join(process.cwd(), '.open-next');
     const serverDefaultDir = path.join(openNextDir, 'server-functions', 'default');
@@ -11,12 +11,11 @@ async function build() {
     const outfile = path.join(openNextDir, '_worker.js');
 
     if (!fs.existsSync(entryPoint)) {
-        console.error('Error: .open-next/worker.js not found. Run opennextjs-cloudflare build first.');
+        console.error('Error: .open-next/worker.js not found.');
         process.exit(1);
     }
 
-    // Step 1: Read all critical manifests for inlining
-    console.log('Step 1: Reading manifests for inlining...');
+    // Step 1: Read manifests for inlining
     const manifests = {};
     const manifestFiles = [
         '.next/routes-manifest.json',
@@ -30,17 +29,48 @@ async function build() {
     manifestFiles.forEach(relPath => {
         const fullPath = path.join(serverDefaultDir, relPath);
         if (fs.existsSync(fullPath)) {
-            console.log(`  - Inlining: ${relPath}`);
             manifests[relPath] = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
         }
     });
 
-    // Step 2: Atomic Bundling with esbuild
-    console.log('Step 2: Bundling worker...');
-    const externals = [
-        'node:*', 'cloudflare:*', 'async_hooks', 'fs', 'path', 'os', 'url', 'vm', 'util', 'buffer', 'crypto', 'stream'
-    ];
+    // Step 2: Create the Monkey-Patch Banner
+    const banner = `
+/* TOTAL_ATOMIC_v50_REDIRECTION */
+const __NEXT_INLINED = ${JSON.stringify(manifests)};
+import { Buffer } from 'node:buffer';
+import fs from 'node:fs';
+import fsp from 'node:fs/promises';
 
+// Helper to resolve relative manifest paths
+const getInlined = (p) => {
+    for (const key of Object.keys(__NEXT_INLINED)) {
+        if (p.endsWith(key)) return JSON.stringify(__NEXT_INLINED[key]);
+    }
+    return null;
+};
+
+// Monkey-patch Synchronous FS
+const origReadFileSync = fs.readFileSync;
+fs.readFileSync = (p, opt) => {
+    const data = getInlined(p.toString());
+    if (data) return opt === 'utf8' || opt?.encoding === 'utf8' ? data : Buffer.from(data);
+    return origReadFileSync(p, opt);
+};
+
+// Monkey-patch Asynchronous FS
+const origReadFile = fsp.readFile;
+fsp.readFile = async (p, opt) => {
+    const data = getInlined(p.toString());
+    if (data) return opt === 'utf8' || opt?.encoding === 'utf8' ? data : Buffer.from(data);
+    return origReadFile(p, opt);
+};
+
+// Map original promises
+fs.promises.readFile = fsp.readFile;
+`;
+
+    // Step 3: Bundle with esbuild
+    const externals = ['node:*', 'cloudflare:*'];
     await esbuild.build({
         entryPoints: [entryPoint],
         bundle: true,
@@ -50,39 +80,16 @@ async function build() {
         minify: false,
         platform: 'node',
         external: externals,
+        banner: { js: banner },
         loader: { '.wasm': 'binary', '.bin': 'binary' },
-        banner: {
-            js: `/* TOTAL_ATOMIC_BUNDLE_v48 */\nconst __NEXT_INLINED_MANIFESTS = ${JSON.stringify(manifests)};`,
-        },
-        logLevel: 'info',
     });
 
-    // Step 3: Post-processing & Polyfill Bypass
-    console.log('Step 3: Defusing bombs and bypassing filesystem...');
+    // Step 4: Final Syntax Defusing
     let content = fs.readFileSync(outfile, 'utf8');
-    
-    // Defuse syntax bombs
     content = content.replace(/import\.meta\.url\s*\?\?=\s*[^;]+;/g, '// defused');
-    
-    // OPTIONAL: We could monkey-patch fs.readFileSync here, but let's try the bundle first.
-    
     fs.writeFileSync(outfile, content, 'utf8');
 
-    // Step 4: Asset Sync (Remaining Assets)
-    console.log('Step 4: Syncing static assets...');
-    const assetsDir = path.join(openNextDir, 'assets');
-    const copyDir = (src, dest) => {
-        if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
-        fs.readdirSync(src).forEach(file => {
-            const s = path.join(src, file);
-            const d = path.join(dest, file);
-            if (fs.statSync(s).isDirectory()) copyDir(s, d);
-            else fs.copyFileSync(s, d);
-        });
-    };
-    if (fs.existsSync(assetsDir)) copyDir(assetsDir, openNextDir);
-
-    console.log('--- TOTAL ATOMIC CONSOLIDATION COMPLETE ---');
+    console.log('--- REDIRECTION CONSOLIDATION COMPLETE ---');
 }
 
 build().catch(err => {
