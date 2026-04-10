@@ -50,16 +50,16 @@ if (fs.existsSync(workerPath)) {
     if (!content.includes('CATCH_ALL_ERROR')) {
         console.log('Injecting Diagnostic & Middleware Safety into _worker.js...');
         
-        // Wrap middlewareHandler in a try/catch
+        // Wrap middleware/request handler in a try/catch
         content = content.replace(
-            /const\s+reqOrResp\s*=\s*await\s+middlewareHandler\(request,\s*env,\s*ctx\);/,
-            'let reqOrResp; try { reqOrResp = await middlewareHandler(request, env, ctx); } catch (e) { console.error("Middleware Error:", e); reqOrResp = request; }'
+            /(const\s+reqOrResp\s*=\s*await\s+)(\w+)(\(request,\s*env,\s*ctx\);)/,
+            'let reqOrResp; try { reqOrResp = await $2(request, env, ctx); } catch (e) { console.error("Middleware/Mux Error:", e); reqOrResp = request; }'
         );
 
-        // Wrap the dynamic import call specifically
+        // Wrap the final server handler call
         content = content.replace(
-            /return\s+handler\(reqOrResp,\s*env,\s*ctx,\s*request\.signal\);/,
-            'try { return await handler(reqOrResp, env, ctx, request.signal); } catch (e) { return new Response("CATCH_ALL_ERROR: " + e.message + "\\nStack: " + e.stack, { status: 500 }); }'
+            /(return\s+)(\w+)(\(reqOrResp,\s*env,\s*ctx,\s*request\.signal\);)/,
+            'try { return await $2(reqOrResp, env, ctx, request.signal); } catch (e) { return new Response("CATCH_ALL_ERROR: " + e.message + "\\nStack: " + e.stack, { status: 500 }); }'
         );
         
         fs.writeFileSync(workerPath, content, 'utf8');
