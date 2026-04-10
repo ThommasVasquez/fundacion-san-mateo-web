@@ -1,0 +1,28 @@
+import type { Metadata } from "next";
+import { Montserrat } from "next/font/google";
+import "./globals.css";
+
+const montserrat = Montserrat({
+  variable: "--font-montserrat",
+  subsets: ["latin"],
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+});
+
+export const metadata: Metadata = {
+  title: "Fundación San Mateo - Institución para el Trabajo y Desarrollo Humano",
+  description: "Formamos integralmente a nuestros estudiantes mediante programas técnicos laborales por competencias con alto nivel de exigencia y calidad en Soacha.",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="es" className={`${montserrat.variable} h-full antialiased`}>
+      <body className="font-sans min-h-full flex flex-col overflow-x-hidden">
+        {children}
+      </body>
+    </html>
+  );
+}

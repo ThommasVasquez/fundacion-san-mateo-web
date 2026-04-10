@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@theme {
+  --color-fsm-blue: #1A3B80;
+  --color-fsm-blue-deep: #0F2A5B;
+  --color-fsm-blue-light: #2A427D;
+  --color-fsm-red: #761C30;
+  --color-fsm-red-deep: #551423;
+  
+  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+  
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+  --color-muted: var(--muted);
+
+  --shadow-premium: 0 25px 50px -12px rgba(15, 42, 91, 0.25);
+  --shadow-inner-glow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+@layer base {
+  :root {
+    --background: #ffffff;
+    --foreground: #0f172a;
+    --primary: #1A3B80;
+    --secondary: #2A427D;
+    --accent: #761C30;
+    --muted: #f8fafc;
+    --border: #e2e8f0;
+    --radius: 2rem;
+  }
+
+  .dark {
+    --background: #020617;
+    --foreground: #f8fafc;
+    --primary: #38bdf8;
+    --border: #1e293b;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tighter font-black;
+  }
+}
+
+/* Custom Utilities */
+.glass {
+  @apply bg-white/70 backdrop-blur-md border border-white/20;
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+/* GSAP hidden elements */
+.gsap-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+}
