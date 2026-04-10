@@ -33,6 +33,12 @@ walk(targetDir, (filePath) => {
          content = content.replace(/"\.open-next\//g, '"./');
     }
 
+    // Patch 4: Syntax Bomb Defusal (import.meta.url)
+    if (content.includes('import.meta.url ??=')) {
+        console.log(`Defusing Syntax Bomb in ${filePath}...`);
+        content = content.replace(/import\.meta\.url\s*\?\?=\s*[^;]+;/g, '// import.meta.url assignment removed for Edge stability');
+    }
+
     fs.writeFileSync(filePath, content, 'utf8');
   }
 });
@@ -42,8 +48,14 @@ const workerPath = path.join(targetDir, '_worker.js');
 if (fs.existsSync(workerPath)) {
     let content = fs.readFileSync(workerPath, 'utf8');
     if (!content.includes('CATCH_ALL_ERROR')) {
-        console.log('Injecting Corrected Catch-All Error Handler into _worker.js...');
+        console.log('Injecting Diagnostic & Middleware Safety into _worker.js...');
         
+        // Wrap middlewareHandler in a try/catch
+        content = content.replace(
+            /const\s+reqOrResp\s*=\s*await\s+middlewareHandler\(request,\s*env,\s*ctx\);/,
+            'let reqOrResp; try { reqOrResp = await middlewareHandler(request, env, ctx); } catch (e) { console.error("Middleware Error:", e); reqOrResp = request; }'
+        );
+
         // Wrap the dynamic import call specifically
         content = content.replace(
             /return\s+handler\(reqOrResp,\s*env,\s*ctx,\s*request\.signal\);/,

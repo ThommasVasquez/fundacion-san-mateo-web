@@ -1,6 +1,6 @@
 name = "fundacion-san-mateo"
 compatibility_date = "2024-11-20"
-compatibility_flags = ["nodejs_compat"]
+compatibility_flags = ["nodejs_compat_v2"]
 pages_build_output_dir = ".open-next"
 
 [vars]
