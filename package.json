@@ -7,7 +7,7 @@
     "build": "next build",
     "build:cloudflare": "NEXT_PRIVATE_SKIP_TURBOPACK=1 NEXT_PRIVATE_WORKER_THREADS=false opennextjs-cloudflare build && node build-atomic.js && node patch-audit.js",
     "preview": "npm run build:cloudflare && wrangler dev",
-    "deploy": "npm run build:cloudflare && wrangler deploy",
+    "deploy": "npm run build:cloudflare && wrangler pages deploy .open-next",
     "lint": "eslint"
   },
   "dependencies": {

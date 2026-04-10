@@ -49,8 +49,9 @@ import fsp from 'node:fs/promises';
 
 // Helper to resolve relative manifest paths
 const getInlined = (p) => {
+    const s = (p && typeof p === 'object' && p.href) ? p.href : String(p || '');
     for (const key of Object.keys(__NEXT_INLINED)) {
-        if (p.endsWith(key)) return JSON.stringify(__NEXT_INLINED[key]);
+        if (s.endsWith(key)) return JSON.stringify(__NEXT_INLINED[key]);
     }
     return null;
 };
@@ -72,6 +73,7 @@ const getInlined = (p) => {
         }
     } catch (e) {}
 
+    /* 
     try {
         const origReadFile = fsp.readFile;
         if (typeof origReadFile === 'function') {
@@ -101,6 +103,7 @@ const getInlined = (p) => {
             });
         }
     } catch (e) {}
+    */
 })();
 `;
 
