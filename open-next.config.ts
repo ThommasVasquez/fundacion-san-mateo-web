@@ -10,5 +10,15 @@ export default {
     },
   },
   edgeExternals: ["node:crypto"],
-  // Middleware disabled for runtime stabilization test
+  middleware: {
+    external: true,
+    override: {
+      wrapper: "cloudflare-edge",
+      converter: "edge",
+      proxyExternalRequest: "fetch",
+      incrementalCache: "dummy",
+      tagCache: "dummy",
+      queue: "dummy",
+    },
+  },
 };

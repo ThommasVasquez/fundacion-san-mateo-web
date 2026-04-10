@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:cloudflare": "NEXT_PRIVATE_SKIP_TURBOPACK=1 opennextjs-cloudflare build && rm -rf out && mkdir out && cp -r .open-next/assets/* out/ && cp .open-next/worker.js out/_worker.js && cp public/_routes.json out/_routes.json && cp -r .open-next/cloudflare out/ && cp -r .open-next/middleware out/ && cp -r .open-next/server-functions out/ && cp -r .open-next/.build out/",
+    "build:cloudflare": "NEXT_PRIVATE_SKIP_TURBOPACK=1 NEXT_PRIVATE_WORKER_THREADS=false opennextjs-cloudflare build && rm -rf out && mkdir out && cp -r .open-next/assets/* out/ && cp public/_routes.json out/_routes.json && npx esbuild .open-next/worker.js --bundle --minify --platform=browser --target=es2022 --external:node:* --external:cloudflare:* --outfile=out/_worker.js",
     "preview": "npm run build:cloudflare && wrangler dev",
     "deploy": "npm run build:cloudflare && wrangler deploy",
     "lint": "eslint"
