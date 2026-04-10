@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:cloudflare": "NEXT_PRIVATE_SKIP_TURBOPACK=1 NEXT_PRIVATE_WORKER_THREADS=false opennextjs-cloudflare build && rm -rf out && mkdir out && cp -r .open-next/assets/* out/ && cp public/_routes.json out/_routes.json && npx esbuild .open-next/worker.js --bundle --minify --platform=browser --format=esm --target=es2022 --external:node:* --external:cloudflare:* --external:fs --external:path --external:async_hooks --external:events --external:util --external:buffer --external:stream --outfile=out/_worker.js",
+    "build:cloudflare": "NEXT_PRIVATE_SKIP_TURBOPACK=1 NEXT_PRIVATE_WORKER_THREADS=false opennextjs-cloudflare build && cp .open-next/worker.js .open-next/_worker.js && cp -r .open-next/assets/* .open-next/ && mkdir -p .open-next/node_modules && cp -r node_modules/next .open-next/node_modules/ && cp -r .open-next/server-functions/default/.next .open-next/ && cp .open-next/server-functions/default/*.json .open-next/ 2>/dev/null || true",
     "preview": "npm run build:cloudflare && wrangler dev",
     "deploy": "npm run build:cloudflare && wrangler deploy",
     "lint": "eslint"
