@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:cloudflare": "NEXT_PRIVATE_SKIP_TURBOPACK=1 NEXT_PRIVATE_WORKER_THREADS=false opennextjs-cloudflare build && cp .open-next/worker.js .open-next/_worker.js && cp -r .open-next/assets/* .open-next/ && mkdir -p .open-next/node_modules && cp -r node_modules/next .open-next/node_modules/ && cp -r node_modules/react .open-next/node_modules/ && cp -r node_modules/react-dom .open-next/node_modules/ && cp -r .open-next/server-functions/default/.next .open-next/ && cp .open-next/server-functions/default/*.json .open-next/ 2>/dev/null || true && node patch-audit.js",
+    "build:cloudflare": "NEXT_PRIVATE_SKIP_TURBOPACK=1 NEXT_PRIVATE_WORKER_THREADS=false opennextjs-cloudflare build && node build-atomic.js",
     "preview": "npm run build:cloudflare && wrangler dev",
     "deploy": "npm run build:cloudflare && wrangler deploy",
     "lint": "eslint"
