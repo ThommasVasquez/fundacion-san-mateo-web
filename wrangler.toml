@@ -3,6 +3,7 @@ name = "fundacion-san-mateo"
 main = ".open-next/cloudflare-output/worker.js"
 compatibility_date = "2024-11-20"
 compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".open-next/cloudflare-output"
 assets = { directory = ".open-next/cloudflare-output/assets", binding = "ASSETS" }
 
 [observability]
