@@ -3,9 +3,5 @@ compatibility_date = "2026-04-10"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "out"
 
-[site]
-bucket = "out"
-entry-point = "."
-
-[env.production.vars]
+[vars]
 NODE_VERSION = "22.16.0"
