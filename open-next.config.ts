@@ -1,4 +1,4 @@
-const config = {
+export default {
   default: {
     override: {
       wrapper: "cloudflare-node",
@@ -13,7 +13,7 @@ const config = {
   middleware: {
     external: true,
     override: {
-      wrapper: "cloudflare-node",
+      wrapper: "cloudflare-edge",
       converter: "edge",
       proxyExternalRequest: "fetch",
       incrementalCache: "dummy",
@@ -22,5 +22,3 @@ const config = {
     },
   },
 };
-
-export default config;
