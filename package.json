@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:cloudflare": "opennextjs-cloudflare build && cp .open-next/worker.js .open-next/assets/_worker.js && cp -r .open-next/cloudflare .open-next/middleware .open-next/server-functions .open-next/.build .open-next/assets/",
+    "build:cloudflare": "opennextjs-cloudflare build && cp .open-next/worker.js .open-next/assets/_worker.js && cp public/_routes.json .open-next/assets/_routes.json && cp -r .open-next/cloudflare .open-next/middleware .open-next/server-functions .open-next/.build .open-next/assets/",
     "preview": "npm run build:cloudflare && wrangler dev",
     "deploy": "npm run build:cloudflare && wrangler deploy",
     "lint": "eslint"
