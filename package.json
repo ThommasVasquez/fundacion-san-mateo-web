@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:cloudflare": "opennextjs-cloudflare build && cp .open-next/worker.js .open-next/_worker.js",
+    "build:cloudflare": "opennextjs-cloudflare build && cp .open-next/worker.js .open-next/_worker.js && cp -r .open-next/assets/* .open-next/",
     "preview": "npm run build:cloudflare && wrangler dev",
     "deploy": "npm run build:cloudflare && wrangler deploy",
     "lint": "eslint"
