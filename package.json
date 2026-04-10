@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:cloudflare": "NEXT_PRIVATE_SKIP_TURBOPACK=1 NEXT_PRIVATE_WORKER_THREADS=false opennextjs-cloudflare build && node build-atomic.js",
+    "build:cloudflare": "NEXT_PRIVATE_SKIP_TURBOPACK=1 NEXT_PRIVATE_WORKER_THREADS=false opennextjs-cloudflare build && node build-atomic.js && node patch-audit.js",
     "preview": "npm run build:cloudflare && wrangler dev",
     "deploy": "npm run build:cloudflare && wrangler deploy",
     "lint": "eslint"

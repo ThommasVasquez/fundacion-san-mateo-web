@@ -22,8 +22,14 @@ async function build() {
         '.next/prerender-manifest.json',
         '.next/build-manifest.json',
         '.next/middleware-manifest.json',
+        '.next/app-path-routes-manifest.json',
+        '.next/images-manifest.json',
+        '.next/required-server-files.json',
         '.next/server/pages-manifest.json',
-        '.next/server/app-paths-manifest.json'
+        '.next/server/app-paths-manifest.json',
+        '.next/server/functions-config-manifest.json',
+        '.next/server/server-reference-manifest.json',
+        '.next/server/next-font-manifest.json'
     ];
 
     manifestFiles.forEach(relPath => {
@@ -50,23 +56,52 @@ const getInlined = (p) => {
 };
 
 // Monkey-patch Synchronous FS
-const origReadFileSync = fs.readFileSync;
-fs.readFileSync = (p, opt) => {
-    const data = getInlined(p.toString());
-    if (data) return opt === 'utf8' || opt?.encoding === 'utf8' ? data : Buffer.from(data);
-    return origReadFileSync(p, opt);
-};
+(function() {
+    try {
+        const origReadFileSync = fs.readFileSync;
+        if (typeof origReadFileSync === 'function') {
+            Object.defineProperty(fs, 'readFileSync', {
+                value: function(p, opt) {
+                    const data = getInlined(p);
+                    if (data) return opt === 'utf8' || opt?.encoding === 'utf8' ? data : Buffer.from(data);
+                    return origReadFileSync.apply(this, arguments);
+                },
+                configurable: true,
+                writable: true
+            });
+        }
+    } catch (e) {}
 
-// Monkey-patch Asynchronous FS
-const origReadFile = fsp.readFile;
-fsp.readFile = async (p, opt) => {
-    const data = getInlined(p.toString());
-    if (data) return opt === 'utf8' || opt?.encoding === 'utf8' ? data : Buffer.from(data);
-    return origReadFile(p, opt);
-};
+    try {
+        const origReadFile = fsp.readFile;
+        if (typeof origReadFile === 'function') {
+            Object.defineProperty(fsp, 'readFile', {
+                value: async function(p, opt) {
+                    const data = getInlined(p);
+                    if (data) return opt === 'utf8' || opt?.encoding === 'utf8' ? data : Buffer.from(data);
+                    return origReadFile.apply(this, arguments);
+                },
+                configurable: true,
+                writable: true
+            });
+        }
+    } catch (e) {}
 
-// Map original promises
-fs.promises.readFile = fsp.readFile;
+    try {
+        if (fs.promises && typeof fs.promises.readFile === 'function') {
+            const origReadFile = fs.promises.readFile;
+            Object.defineProperty(fs.promises, 'readFile', {
+                value: async function(p, opt) {
+                    const data = getInlined(p);
+                    if (data) return opt === 'utf8' || opt?.encoding === 'utf8' ? data : Buffer.from(data);
+                    return origReadFile.apply(this, arguments);
+                },
+                configurable: true,
+                writable: true
+            });
+        }
+    } catch (e) {}
+})();
 `;
 
     // Step 3: Bundle with esbuild
