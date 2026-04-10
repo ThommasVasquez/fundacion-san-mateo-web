@@ -1,7 +1,7 @@
 name = "fundacion-san-mateo"
 compatibility_date = "2024-11-20"
 compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = ".open-next/cloudflare-output"
+pages_build_output_dir = ".open-next"
 
 [vars]
 # Add environment variables here
