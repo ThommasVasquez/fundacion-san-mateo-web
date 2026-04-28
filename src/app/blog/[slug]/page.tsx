@@ -54,7 +54,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           <div className="px-4 md:px-8 lg:px-16 mb-20">
             <div className="max-w-6xl mx-auto aspect-video rounded-[3rem] overflow-hidden shadow-2xl relative">
                <img src={post.image_base64} alt={post.title} className="w-full h-full object-cover" />
-               <div className="absolute inset-0 bg-gradient-to-t from-fsm-blue/20 to-transparent"></div>
+               <div className="absolute inset-0 bg-fsm-blue/30"></div>
             </div>
           </div>
         )}

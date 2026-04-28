@@ -50,7 +50,7 @@ export default function DataTreatmentPage() {
           <Image src="/img/banner19.jpg" alt="Tratamiento de Datos" fill className="object-cover scale-110 brightness-75" priority />
           {/* Gradient removed as per user request */}
           {/* Decorative element */}
-          <div className="absolute bottom-12 right-12 z-20 bg-white/10 backdrop-blur-2xl p-6 rounded-[2.5rem] border border-white/20 shadow-premium">
+          <div className="absolute bottom-12 right-12 z-20 bg-white/10  p-6 rounded-[2.5rem] border border-white/20 shadow-premium">
              <Lock className="text-white opacity-50" size={32} />
           </div>
         </div>
@@ -80,7 +80,7 @@ export default function DataTreatmentPage() {
 
           <div className="prose prose-lg max-w-none text-gray-400 font-medium leading-relaxed space-y-12">
             <div className="reveal-item bg-gray-50/50 p-10 md:p-16 rounded-[4rem] border border-gray-100 shadow-sm relative overflow-hidden group">
-               <div className="absolute -top-12 -right-12 w-48 h-48 bg-fsm-red/5 rounded-full blur-[50px] group-hover:scale-125 transition-transform duration-1000"></div>
+               <div className="absolute -top-12 -right-12 w-48 h-48 bg-fsm-red/5 rounded-full  group-hover:scale-125 transition-transform duration-1000"></div>
                <p className="m-0 italic text-fsm-blue font-bold text-xl relative z-10">
                 La Fundación San Mateo informa que, en cumplimiento de los estándares legales de protección de datos, actúa como Responsable del Tratamiento de su información bajo los siguientes principios:
               </p>
@@ -123,7 +123,7 @@ export default function DataTreatmentPage() {
 
             <div className="reveal-item grid grid-cols-1 md:grid-cols-2 gap-12 pt-12">
                <div className="bg-fsm-blue p-12 rounded-[4rem] text-white shadow-premium relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-fsm-red/40 blur-[50px] rounded-full translate-x-1/2 -translate-y-1/2"></div>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-fsm-red/40  rounded-full translate-x-1/2 -translate-y-1/2"></div>
                   <Mail className="mb-8 text-fsm-red" size={40} />
                   <h4 className="text-2xl font-black mb-6 uppercase tracking-tighter">Canal de Atención</h4>
                   <p className="text-white/60 font-medium leading-relaxed mb-10 text-sm">

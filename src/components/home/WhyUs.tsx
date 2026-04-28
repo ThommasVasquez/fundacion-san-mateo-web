@@ -75,7 +75,7 @@ const WhyUs = () => {
               
               <div className="flex flex-wrap gap-8">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 bg-white/10 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/20">
+                  <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center border border-white/20">
                     <ShieldCheck className="text-fsm-red" size={32} />
                   </div>
                   <div>
@@ -84,7 +84,7 @@ const WhyUs = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 bg-white/10 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/20">
+                  <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center border border-white/20">
                     <Award className="text-fsm-red" size={32} />
                   </div>
                   <div>
@@ -119,8 +119,7 @@ const WhyUs = () => {
       </div>
 
       {/* Decorative Blur Elements */}
-      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-fsm-red/20 blur-[150px] rounded-full"></div>
-      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-fsm-blue/20 blur-[150px] rounded-full"></div>
+      {/* Blurs removed */}
     </section>
   );
 };

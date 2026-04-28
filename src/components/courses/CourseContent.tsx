@@ -135,7 +135,7 @@ export default function CourseContent({ title, bannerImg, mainImg, directedTo, o
 
             {/* Admission Process Section - Premium Redesign */}
             <div className="reveal-item bg-gray-50/50 p-12 md:p-16 rounded-[4rem] border border-gray-100 shadow-sm overflow-hidden relative">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-fsm-blue/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
+              {/* Blur removed */}
               <h2 className="text-3xl font-black text-fsm-blue mb-12 uppercase relative z-10">Proceso de <br /> <span className="text-fsm-red">Vinculación</span></h2>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative z-10">

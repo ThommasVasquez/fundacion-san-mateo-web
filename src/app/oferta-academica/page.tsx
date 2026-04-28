@@ -89,7 +89,7 @@ export default function AcademicOffer() {
           <Image src="/img/banner31.jpg" alt="FSM Class" fill className="object-cover scale-110" priority />
           {/* Gradient removed as per user request */}
           {/* Floating badge */}
-          <div className="absolute bottom-12 right-12 z-20 bg-white/10 backdrop-blur-2xl p-6 rounded-[2.5rem] border border-white/20 hidden md:block">
+          <div className="absolute bottom-12 right-12 z-20 bg-white p-6 rounded-[2.5rem] border border-gray-100 hidden md:block">
             <div className="flex items-center gap-3">
               <Star className="text-fsm-red fill-fsm-red" size={24} />
               <p className="text-white text-xs font-black tracking-widest uppercase">Líderes en Soacha</p>
@@ -139,9 +139,9 @@ export default function AcademicOffer() {
                   className="reveal-item group relative h-[500px] lg:h-[600px] rounded-[4rem] overflow-hidden shadow-premium border border-gray-100"
                 >
                   <Image src={program.image} alt={program.title} fill className="object-cover transition-transform duration-1000 group-hover:scale-110" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-fsm-blue via-fsm-blue/20 to-transparent opacity-80 group-hover:opacity-95 transition-opacity duration-700" />
+                  <div className="absolute inset-0 bg-fsm-blue/40 opacity-80 group-hover:opacity-95 transition-opacity duration-700" />
                   <div className="absolute inset-0 p-12 md:p-16 flex flex-col justify-end text-white z-10">
-                    <div className="mb-6 w-14 h-14 bg-white/10 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/20 group-hover:bg-fsm-red group-hover:border-fsm-red transition-all duration-500">
+                    <div className="mb-6 w-14 h-14 bg-fsm-blue/20 rounded-2xl flex items-center justify-center border border-white/20 group-hover:bg-fsm-red group-hover:border-fsm-red transition-all duration-500">
                       <GraduationCap size={28} />
                     </div>
                     <span className="text-[10px] font-black tracking-[0.3em] uppercase opacity-70 mb-4">{program.subtitle}</span>
@@ -193,7 +193,7 @@ export default function AcademicOffer() {
 
         {/* Dynamic CTA */}
         <div className="mt-32 p-12 md:p-20 bg-fsm-blue rounded-[5rem] relative overflow-hidden text-center group">
-          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-white/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
+          {/* Blur removed */}
           <div className="relative z-10 max-w-3xl mx-auto">
             <h4 className="text-4xl md:text-5xl font-black text-white mb-8 uppercase leading-tight">
               ¿LISTO PARA <br /> <span className="text-fsm-red">DAR EL SALTO</span>?

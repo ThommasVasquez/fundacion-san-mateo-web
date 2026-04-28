@@ -72,7 +72,7 @@ export default function WhyUsPage() {
           <Image src="/img/banner4.jpg" alt="¿Por qué nosotros?" fill className="object-cover scale-110" priority />
           {/* Gradient removed as per user request */}
           {/* Floating badge */}
-          <div className="absolute bottom-12 right-12 z-20 bg-white/10 backdrop-blur-2xl p-6 rounded-[2.5rem] border border-white/20">
+          <div className="absolute bottom-12 right-12 z-20 bg-white/20 p-6 rounded-[2.5rem] border border-white/20">
             <div className="flex items-center gap-3">
               <Star className="text-fsm-red fill-fsm-red" size={24} />
               <p className="text-white text-xs font-black tracking-widest uppercase">Excelencia Técnica</p>
@@ -116,7 +116,7 @@ export default function WhyUsPage() {
                <div className="relative h-[500px] w-full rounded-[4rem] overflow-hidden shadow-premium z-10 border border-gray-100">
                   <Image src="/img/image24.jpg" alt="Calidad FSM" fill className="object-cover transition-transform duration-1000 group-hover:scale-110" />
                </div>
-               <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-fsm-blue/5 rounded-full blur-2xl -z-0"></div>
+               {/* Blur removed */}
             </div>
           </section>
 
@@ -156,7 +156,7 @@ export default function WhyUsPage() {
 
           {/* Normatividad Call-to-Action */}
           <div className="reveal-item bg-fsm-blue rounded-[5rem] p-16 md:p-24 text-white relative overflow-hidden shadow-premium">
-             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
+             {/* Blur removed */}
              <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-12">
                 <div className="max-w-xl text-center md:text-left">
                   <h4 className="text-4xl font-black mb-6 uppercase tracking-tighter">Transparencia y Legalidad</h4>

@@ -101,7 +101,7 @@ export default function NewsPage() {
           <Image src="/img/banner14.jpg" alt="Noticias FSM" fill className="object-cover scale-110 brightness-75" priority />
           {/* Gradient removed as per user request */}
           {/* Floating badge */}
-          <div className="absolute bottom-12 right-12 z-20 bg-white/10 backdrop-blur-2xl p-6 rounded-[2.5rem] border border-white/20">
+          <div className="absolute bottom-12 right-12 z-20 bg-white/10  p-6 rounded-[2.5rem] border border-white/20">
              <Newspaper className="text-white opacity-50" size={32} />
           </div>
         </div>
@@ -124,7 +124,7 @@ export default function NewsPage() {
                     <div className="relative h-72">
                       <Image src={item.image} alt={item.title} fill className="object-cover transition-transform duration-1000 group-hover:scale-110" />
                       <div className="absolute inset-0 bg-fsm-blue/60 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      <div className="absolute top-6 left-6 py-2 px-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full text-[9px] font-black text-white tracking-widest uppercase">
+                      <div className="absolute top-6 left-6 py-2 px-4 bg-white/10  border border-white/20 rounded-full text-[9px] font-black text-white tracking-widest uppercase">
                         {item.category}
                       </div>
                     </div>
@@ -154,9 +154,9 @@ export default function NewsPage() {
           <div className="lg:col-span-4 space-y-12">
              <div className="sticky top-32 space-y-12">
                 <div className="p-12 bg-fsm-blue rounded-[4rem] text-white shadow-premium relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-fsm-red/40 blur-[50px] rounded-full translate-x-1/2 -translate-y-1/2"></div>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-fsm-red/40  rounded-full translate-x-1/2 -translate-y-1/2"></div>
                   <div className="flex items-center gap-4 mb-10">
-                     <div className="p-3 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20"><Share2 size={24} /></div>
+                     <div className="p-3 bg-white/10  rounded-2xl border border-white/20"><Share2 size={24} /></div>
                      <h4 className="text-2xl font-black uppercase tracking-tighter leading-none">Comunidad <br /> Digital</h4>
                   </div>
                   <p className="text-white/60 font-medium mb-10 leading-relaxed italic">

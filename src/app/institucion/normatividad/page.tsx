@@ -84,7 +84,7 @@ export default function NormativityPage() {
           <Image src="/img/banner12.jpg" alt="Normatividad" fill className="object-cover scale-110 brightness-75" priority />
           {/* Gradient removed as per user request */}
           {/* Decorative floating icon */}
-          <div className="absolute bottom-12 right-12 z-20 bg-white/10 backdrop-blur-2xl p-6 rounded-[2.5rem] border border-white/20">
+          <div className="absolute bottom-12 right-12 z-20 bg-white/10  p-6 rounded-[2.5rem] border border-white/20">
              <Shield className="text-white opacity-50" size={40} />
           </div>
         </div>
@@ -141,7 +141,7 @@ export default function NormativityPage() {
 
           <div className="pt-20">
              <div className="p-12 md:p-16 bg-fsm-blue rounded-[4rem] text-center relative overflow-hidden group shadow-premium">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-fsm-red/40 blur-[80px] rounded-full translate-x-1/2 -translate-y-1/2 z-0"></div>
+                <div className="absolute top-0 right-0 w-64 h-64 bg-fsm-red/40  rounded-full translate-x-1/2 -translate-y-1/2 z-0"></div>
                 <div className="relative z-10 max-w-2xl mx-auto space-y-8">
                    <h4 className="text-3xl font-black text-white uppercase tracking-tighter">¿Requiere Consultar <br /> Más Información?</h4>
                    <p className="text-white/60 text-lg font-medium leading-relaxed">

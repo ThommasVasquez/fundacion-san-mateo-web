@@ -111,7 +111,7 @@ export default function FAQPage() {
           <Image src="/img/banner15.jpg" alt="FAQ FSM" fill className="object-cover scale-110 brightness-75" priority />
           {/* Gradient removed as per user request */}
           {/* Decorative element */}
-          <div className="absolute bottom-12 right-12 z-20 bg-white/10 backdrop-blur-2xl p-6 rounded-[2.5rem] border border-white/20 shadow-premium">
+          <div className="absolute bottom-12 right-12 z-20 bg-white/10  p-6 rounded-[2.5rem] border border-white/20 shadow-premium">
              <HelpCircle className="text-white opacity-50" size={32} />
           </div>
         </div>
@@ -180,7 +180,7 @@ export default function FAQPage() {
           {/* Premium Bottom Sidebar Call-out */}
           <div className="reveal-item grid grid-cols-1 md:grid-cols-2 gap-10 pt-20">
              <div className="bg-fsm-blue rounded-[4rem] p-12 text-white shadow-premium relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-fsm-red/40 blur-[50px] rounded-full translate-x-1/2 -translate-y-1/2"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-fsm-red/40  rounded-full translate-x-1/2 -translate-y-1/2"></div>
                 <div className="flex items-center gap-4 mb-8">
                    <ShieldCheck size={28} className="text-fsm-red" />
                    <h4 className="text-2xl font-black uppercase tracking-tighter">Legalidad 100%</h4>

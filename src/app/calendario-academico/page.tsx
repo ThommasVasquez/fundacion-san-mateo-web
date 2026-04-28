@@ -50,7 +50,7 @@ export default function AcademicCalendarPage() {
           <Image src="/img/banner8.jpg" alt="Calendario FSM" fill className="object-cover scale-110 brightness-75" priority />
           {/* Gradient removed as per user request */}
           {/* Decorative element */}
-          <div className="absolute bottom-12 right-12 z-20 bg-white/10 backdrop-blur-2xl p-6 rounded-[2.5rem] border border-white/20 shadow-premium">
+          <div className="absolute bottom-12 right-12 z-20 bg-white/10  p-6 rounded-[2.5rem] border border-white/20 shadow-premium">
              <CalendarDays className="text-white opacity-50" size={32} />
           </div>
         </div>
@@ -85,7 +85,7 @@ export default function AcademicCalendarPage() {
 
           {/* Premium Calendar Container */}
           <div className="reveal-item bg-gray-50/30 rounded-[5rem] shadow-premium p-4 md:p-12 lg:p-16 border border-gray-100 relative overflow-hidden">
-             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-fsm-blue/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-[100px]"></div>
+             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-fsm-blue/5 rounded-full -translate-y-1/2 translate-x-1/2 "></div>
              
              <div className="relative z-10 w-full aspect-[4/3] min-h-[600px] bg-white rounded-[4rem] overflow-hidden shadow-inner border-[12px] border-white ring-1 ring-gray-100">
                 <iframe 
@@ -103,7 +103,7 @@ export default function AcademicCalendarPage() {
           {/* Info Blocks - Asymmetrical */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
             <div className="reveal-item p-12 bg-fsm-blue rounded-[4rem] text-white shadow-premium relative overflow-hidden group">
-               <div className="absolute top-0 right-0 w-32 h-32 bg-fsm-red/40 blur-[50px] rounded-full translate-x-1/2 -translate-y-1/2 opacity-60"></div>
+               <div className="absolute top-0 right-0 w-32 h-32 bg-fsm-red/40  rounded-full translate-x-1/2 -translate-y-1/2 opacity-60"></div>
                <h4 className="text-2xl font-black mb-8 uppercase tracking-tighter">Eventos y Grados</h4>
                <p className="text-white/60 text-lg font-medium leading-relaxed mb-8">
                  Los cierres semestrales, ceremonias de graduación y jornadas de bienestar se publican con antelación para garantizar la participación de toda la comunidad.

@@ -96,7 +96,7 @@ const ProgramsPreview = () => {
               
               {/* Content */}
               <div className="absolute inset-0 p-8 flex flex-col justify-end text-white z-10">
-                <div className="mb-4 bg-white/20 backdrop-blur-md w-fit p-3 rounded-2xl border border-white/30">
+                <div className="mb-4 bg-white/20  w-fit p-3 rounded-2xl border border-white/30">
                   {program.icon}
                 </div>
                 <span className="text-xs font-bold tracking-widest uppercase opacity-80 mb-2">

@@ -66,7 +66,7 @@ const BentoPrograms = () => {
               className="object-cover transition-transform duration-1000 group-hover:scale-110 brightness-75 group-hover:brightness-50"
             />
             <div className="absolute inset-0 p-12 flex flex-col justify-end text-white z-10 bg-fsm-blue/80">
-              <div className="mb-6 w-16 h-16 bg-white/20 backdrop-blur-xl rounded-3xl flex items-center justify-center border border-white/30 transform group-hover:rotate-12 transition-transform duration-500">
+              <div className="mb-6 w-16 h-16 bg-white/30 rounded-3xl flex items-center justify-center border border-white/30 transform group-hover:rotate-12 transition-transform duration-500">
                 <GraduationCap size={32} />
               </div>
               <p className="text-xs font-black tracking-widest mb-4 uppercase opacity-70">Técnico Laboral por Competencias</p>
@@ -90,7 +90,7 @@ const BentoPrograms = () => {
                 className="object-cover transition-transform duration-1000 group-hover:scale-110 brightness-75 group-hover:brightness-50"
               />
               <div className="absolute inset-0 p-12 flex flex-col justify-end text-white z-10 bg-fsm-red/80">
-                <div className="mb-6 w-16 h-16 bg-white/20 backdrop-blur-xl rounded-3xl flex items-center justify-center border border-white/30 transform group-hover:-rotate-12 transition-transform duration-500">
+                <div className="mb-6 w-16 h-16 bg-white/30 rounded-3xl flex items-center justify-center border border-white/30 transform group-hover:-rotate-12 transition-transform duration-500">
                   <Users size={32} />
                 </div>
                 <p className="text-xs font-black tracking-widest mb-4 uppercase opacity-70">Técnico Laboral por Competencias</p>

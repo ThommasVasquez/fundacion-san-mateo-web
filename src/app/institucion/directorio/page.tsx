@@ -58,7 +58,7 @@ export default function DirectoryPage() {
           <Image src="/img/banner11.jpg" alt="Directorio FSM" fill className="object-cover scale-110 brightness-75" priority />
           {/* Gradient removed as per user request */}
           {/* Floating badge */}
-          <div className="absolute bottom-12 right-12 z-20 bg-white/10 backdrop-blur-2xl p-6 rounded-[2.5rem] border border-white/20 shadow-premium">
+          <div className="absolute bottom-12 right-12 z-20 bg-white/10  p-6 rounded-[2.5rem] border border-white/20 shadow-premium">
              <Headphones size={32} className="text-white opacity-50" />
           </div>
         </div>
@@ -106,9 +106,9 @@ export default function DirectoryPage() {
              <div className="lg:col-span-4 space-y-10">
                 <div className="reveal-item sticky top-32 space-y-10">
                    <div className="bg-fsm-blue rounded-[4rem] p-12 text-white shadow-premium relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-fsm-red/40 blur-[50px] rounded-full translate-x-1/2 -translate-y-1/2"></div>
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-fsm-red/40  rounded-full translate-x-1/2 -translate-y-1/2"></div>
                       <div className="flex items-center gap-4 mb-10">
-                         <div className="p-3 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20"><MapPin size={24} /></div>
+                         <div className="p-3 bg-white/10  rounded-2xl border border-white/20"><MapPin size={24} /></div>
                          <h3 className="text-2xl font-black uppercase tracking-tighter leading-none">Ubicación y <br /> Correspondencia</h3>
                       </div>
                       

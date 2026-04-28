@@ -46,7 +46,7 @@ export default function LoginPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow-premium sm:rounded-[2rem] sm:px-10 border border-gray-100 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-fsm-red/5 rounded-full blur-2xl"></div>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-fsm-red/5 rounded-full "></div>
           
           <form className="space-y-6 relative z-10" onSubmit={handleSubmit}>
             {error && (

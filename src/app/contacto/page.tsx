@@ -50,7 +50,7 @@ export default function ContactPage() {
           <Image src="/img/banner16.jpg" alt="Contacto FSM" fill className="object-cover scale-110 brightness-75" priority />
           {/* Gradient removed as per user request */}
           {/* Decorative element */}
-          <div className="absolute bottom-12 right-12 z-20 bg-white/10 backdrop-blur-2xl p-6 rounded-[2.5rem] border border-white/20 shadow-premium">
+          <div className="absolute bottom-12 right-12 z-20 bg-white/10  p-6 rounded-[2.5rem] border border-white/20 shadow-premium">
              <MessageSquare className="text-white opacity-50" size={32} />
           </div>
         </div>
@@ -67,7 +67,7 @@ export default function ContactPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-20">
           {/* Premium Form Block */}
           <div className="reveal-item lg:col-span-7 bg-gray-50/50 p-10 md:p-16 rounded-[4rem] border border-gray-100 shadow-sm relative overflow-hidden">
-             <div className="absolute top-0 right-0 w-64 h-64 bg-fsm-red/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2"></div>
+             <div className="absolute top-0 right-0 w-64 h-64 bg-fsm-red/5 rounded-full  -translate-y-1/2 translate-x-1/2"></div>
              
              <div className="relative z-10">
                 <h2 className="text-3xl font-black text-fsm-blue mb-10 uppercase tracking-tighter">Consulta Digital</h2>
@@ -122,12 +122,12 @@ export default function ContactPage() {
           {/* Contact Info & Map Side */}
           <div className="lg:col-span-5 flex flex-col gap-12">
             <div className="reveal-item bg-fsm-blue p-12 md:p-16 rounded-[4rem] text-white shadow-premium relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-fsm-red/40 blur-[50px] rounded-full translate-x-1/2 -translate-y-1/2"></div>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-fsm-red/40  rounded-full translate-x-1/2 -translate-y-1/2"></div>
               <h2 className="text-2xl font-black mb-12 uppercase tracking-tighter leading-none">Datos de <br /> Contacto</h2>
               
               <div className="space-y-10 relative z-10">
                 <div className="flex gap-6">
-                  <div className="w-12 h-12 bg-white/10 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/20 shrink-0">
+                  <div className="w-12 h-12 bg-white/10  rounded-2xl flex items-center justify-center border border-white/20 shrink-0">
                     <Home size={22} className="text-fsm-red" />
                   </div>
                   <div>
@@ -138,7 +138,7 @@ export default function ContactPage() {
                 </div>
 
                 <div className="flex gap-6">
-                  <div className="w-12 h-12 bg-white/10 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/20 shrink-0">
+                  <div className="w-12 h-12 bg-white/10  rounded-2xl flex items-center justify-center border border-white/20 shrink-0">
                     <Phone size={22} className="text-fsm-red" />
                   </div>
                   <div>
@@ -149,7 +149,7 @@ export default function ContactPage() {
                 </div>
 
                 <div className="flex gap-6">
-                  <div className="w-12 h-12 bg-white/10 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/20 shrink-0">
+                  <div className="w-12 h-12 bg-white/10  rounded-2xl flex items-center justify-center border border-white/20 shrink-0">
                     <Mail size={22} className="text-fsm-red" />
                   </div>
                   <div>
@@ -172,7 +172,7 @@ export default function ContactPage() {
                 className="opacity-90 contrast-[0.9] saturate-[0.8] grayscale-[0.2] hover:grayscale-0 hover:opacity-100 transition-all duration-700"
               ></iframe>
               {/* Floating Map Label */}
-              <div className="absolute top-6 left-6 p-4 bg-white/90 backdrop-blur-md rounded-2xl border border-white shadow-xl flex items-center gap-3">
+              <div className="absolute top-6 left-6 p-4 bg-white/90  rounded-2xl border border-white shadow-xl flex items-center gap-3">
                  <Headphones size={20} className="text-fsm-red" />
                  <span className="text-[10px] font-black text-fsm-blue uppercase tracking-widest">Sede Soacha Centro</span>
               </div>

@@ -153,7 +153,7 @@ const Hero = ({ content = {} }: { content?: Record<string, string> }) => {
         
         {/* Floating Stat Card */}
         <div className="absolute bottom-12 left-12 right-12 lg:right-auto lg:left-8 z-20">
-          <div className="bg-white/80 backdrop-blur-2xl p-8 rounded-[3rem] shadow-premium border border-white/40 max-w-xs animate-float">
+          <div className="bg-white p-8 rounded-[3rem] shadow-premium border border-gray-100 max-w-xs animate-float">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-12 h-12 bg-fsm-red rounded-2xl flex items-center justify-center text-white font-black text-xl">
                 24
@@ -167,7 +167,7 @@ const Hero = ({ content = {} }: { content?: Record<string, string> }) => {
         </div>
 
         {/* Cinematic Elements */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-fsm-red/20 blur-[100px] rounded-full animate-pulse"></div>
+        {/* Blur removed */}
         <div className="absolute top-1/2 left-1/4 w-2 h-[40vh] bg-fsm-red/40 transform -skew-x-12 z-0"></div>
       </div>
     </section>

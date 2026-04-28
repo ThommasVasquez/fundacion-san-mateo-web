@@ -74,7 +74,7 @@ export default function GalleryPage() {
           <Image src="/img/banner10.jpg" alt="Galería FSM" fill className="object-cover scale-110 brightness-75" priority />
           {/* Gradient removed as per user request */}
           {/* Decorative element */}
-          <div className="absolute bottom-12 right-12 z-20 bg-white/10 backdrop-blur-2xl p-6 rounded-[2.5rem] border border-white/20">
+          <div className="absolute bottom-12 right-12 z-20 bg-white/20 p-6 rounded-[2.5rem] border border-white/20">
              <Camera className="text-white opacity-50" size={32} />
           </div>
         </div>
@@ -106,7 +106,7 @@ export default function GalleryPage() {
                 className="object-cover transition-transform duration-1000 group-hover:scale-110 grayscale group-hover:grayscale-0 opacity-80 group-hover:opacity-100"
               />
               <div className="absolute inset-0 bg-fsm-blue/60 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end justify-center pb-12">
-                <div className="p-4 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 transform translate-y-8 group-hover:translate-y-0 transition-all duration-700">
+                <div className="p-4 bg-white/30 rounded-2xl border border-white/20 transform translate-y-8 group-hover:translate-y-0 transition-all duration-700">
                   <Maximize2 className="text-white" size={24} />
                 </div>
               </div>
@@ -117,7 +117,7 @@ export default function GalleryPage() {
 
       {/* Modern Lightbox */}
       {selectedImage !== null && (
-        <div className="fixed inset-0 z-[100] bg-fsm-blue/95 backdrop-blur-2xl flex items-center justify-center p-4 md:p-12 animate-in fade-in duration-500">
+        <div className="fixed inset-0 z-[100] bg-fsm-blue/95 flex items-center justify-center p-4 md:p-12 animate-in fade-in duration-500">
           <button 
             onClick={closeLightbox}
             className="absolute top-8 right-8 text-white/50 hover:text-white transition-all transform hover:rotate-90 z-[110]"

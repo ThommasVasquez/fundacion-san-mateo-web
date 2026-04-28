@@ -116,7 +116,7 @@ export default function BlogForm({ initialData, isNew = false }: BlogFormProps) 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between sticky top-24 z-20 bg-gray-50/80 backdrop-blur-md py-4 rounded-2xl">
+      <div className="flex items-center justify-between sticky top-24 z-20 bg-gray-50/80  py-4 rounded-2xl">
         <Link href="/admin/blog" className="flex items-center gap-2 text-gray-500 hover:text-fsm-blue font-bold transition-all">
           <ArrowLeft size={18} />
           VOLVER AL LISTADO

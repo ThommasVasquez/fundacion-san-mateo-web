@@ -53,8 +53,8 @@ const Navbar = () => {
         className={cn(
           "pointer-events-auto transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] flex items-center justify-between px-6 md:px-8 py-3 md:py-4 rounded-full border shadow-premium",
           scrolled 
-            ? "w-full max-w-6xl bg-white/80 backdrop-blur-2xl border-white/40" 
-            : "w-full max-w-7xl bg-white/40 backdrop-blur-md border-white/20"
+            ? "w-full max-w-6xl bg-white border-gray-100" 
+            : "w-full max-w-7xl bg-white/90 border-gray-100/50"
         )}
       >
         {/* Logo */}
@@ -102,7 +102,7 @@ const Navbar = () => {
                     activeDropdown === link.name ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-4 scale-95 pointer-events-none"
                   )}
                 >
-                  <div className="bg-white/95 backdrop-blur-xl border border-gray-100 rounded-3xl p-4 shadow-2xl min-w-[220px]">
+                  <div className="bg-white border border-gray-100 rounded-3xl p-4 shadow-2xl min-w-[220px]">
                     <div className="flex flex-col gap-1">
                       {link.dropdown.map((item) => (
                         <Link 
@@ -152,7 +152,7 @@ const Navbar = () => {
       {/* Mobile Drawer (Fullscreen) */}
       <div 
         className={cn(
-          "fixed inset-0 bg-fsm-blue/95 backdrop-blur-2xl z-[200] transition-all duration-700 pointer-events-auto",
+          "fixed inset-0 bg-fsm-blue z-[200] transition-all duration-700 pointer-events-auto",
           isOpen ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full pointer-events-none"
         )}
       >

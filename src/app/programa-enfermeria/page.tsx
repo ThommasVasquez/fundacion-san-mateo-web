@@ -133,7 +133,7 @@ export default function NursingProgram() {
               </div>
 
               <div className="bg-gray-50/50 rounded-[4rem] p-10 md:p-16 border border-gray-100 min-h-[500px] shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-fsm-red/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2"></div>
+                {/* Blur removed */}
                 
                 <div className="relative z-10">
                    {activeTab === "plan" && (
@@ -230,19 +230,19 @@ export default function NursingProgram() {
           <div className="lg:col-span-4">
             <div className="sticky top-32 space-y-8">
               <div className="bg-fsm-blue rounded-[4rem] p-12 text-white shadow-premium relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-fsm-red/40 blur-[50px] rounded-full translate-x-1/2 -translate-y-1/2"></div>
+                {/* Blur removed */}
                 <h3 className="text-2xl font-black mb-10 text-balance uppercase leading-tight">Comienza tu <br /> carrera en salud</h3>
                 
                 <div className="space-y-8 mb-12">
                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-white/10 backdrop-blur-xl rounded-2xl flex items-center justify-center"><Calendar size={20} /></div>
+                      <div className="w-12 h-12 bg-fsm-blue-deep rounded-2xl flex items-center justify-center"><Calendar size={20} /></div>
                       <div>
                          <p className="text-[9px] font-black opacity-40 tracking-widest uppercase">Duración</p>
                          <p className="font-black text-sm">3 Semestres</p>
                       </div>
                    </div>
                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-white/10 backdrop-blur-xl rounded-2xl flex items-center justify-center"><Award size={20} /></div>
+                      <div className="w-12 h-12 bg-fsm-blue-deep rounded-2xl flex items-center justify-center"><Award size={20} /></div>
                       <div>
                          <p className="text-[9px] font-black opacity-40 tracking-widest uppercase">Certificado</p>
                          <p className="font-black text-sm">Técnico por Competencias</p>

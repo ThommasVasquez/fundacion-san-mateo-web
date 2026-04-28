@@ -88,7 +88,7 @@ export default function AboutPage() {
                   <Image src="/img/image4.png" alt="Historia FSM" fill className="parallax-img object-cover scale-125 transition-transform duration-700 hover:scale-100" />
                </div>
                {/* Decorative background element */}
-               <div className="absolute -bottom-10 -right-10 w-64 h-64 bg-fsm-red/5 rounded-full -z-0 blur-2xl"></div>
+               {/* Blur removed */}
             </div>
             
             <div className="lg:w-1/2 space-y-10">
@@ -116,8 +116,8 @@ export default function AboutPage() {
           {/* Mission & Vision - Cinematic Cards */}
           <div className="reveal-section grid grid-cols-1 md:grid-cols-2 gap-12">
             <div className="group bg-fsm-blue rounded-[5rem] p-16 text-white shadow-premium relative overflow-hidden transition-all duration-700 hover:-translate-y-4">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
-              <div className="bg-white/10 backdrop-blur-xl p-6 rounded-3xl w-fit mb-12 border border-white/20 group-hover:bg-fsm-red transition-all duration-500">
+              {/* Blur removed */}
+              <div className="bg-fsm-blue/10 p-6 rounded-3xl w-fit mb-12 border border-white/20 group-hover:bg-fsm-red transition-all duration-500">
                 <Target size={48} className="text-white" />
               </div>
               <h2 className="text-4xl font-black mb-8 uppercase tracking-tighter leading-none">Misión</h2>
@@ -127,7 +127,7 @@ export default function AboutPage() {
             </div>
 
             <div className="group bg-gray-50 rounded-[5rem] p-16 text-fsm-blue shadow-premium relative overflow-hidden transition-all duration-700 hover:-translate-y-4 border border-gray-100">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-fsm-red/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
+              {/* Blur removed */}
               <div className="bg-fsm-blue/5 p-6 rounded-3xl w-fit mb-12 border border-fsm-blue/10 group-hover:bg-fsm-blue group-hover:text-white transition-all duration-500">
                 <Eye size={48} className="text-fsm-red group-hover:text-white" />
               </div>
