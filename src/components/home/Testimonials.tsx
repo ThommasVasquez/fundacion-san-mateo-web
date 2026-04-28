@@ -8,7 +8,7 @@ const testimonials = [
   {
     text: "Quiero agradecerle a la Fundación San Mateo porque aprendí mucho y obtuve habilidades en el tema de Auxiliar de Enfermería y crecimiento como persona. Recomendaría la Fundación y a sus docentes sin ninguna duda, además porque me ayudaron a emplearme una vez me gradué.",
     author: "Wilmer Flórez",
-    role: "Egresada de Auxiliar de Enfermería",
+    role: "Egresado de Auxiliar de Enfermería",
   },
   {
     text: "Soy feliz con mi labor, todo gracias a mi Fundación San Mateo de la cual soy egresada, el lugar que me dio la oportunidad de conseguir un trabajo y así avanzar en mi proyecto de vida, el lugar que me vio crecer como estudiante enfermera y sobre todo persona que me guió en este camino.",
@@ -17,7 +17,7 @@ const testimonials = [
   },
   {
     text: "La Fundación San Mateo es un lugar lleno de oportunidades, donde cada esfuerzo vale la pena y es reconocido. Durante mi paso por ella conocí amigos, compañeros, jefes y docentes que me infundieron la confianza y la seguridad en mí.",
-    author: "Luisa Ortiz Carrillo", // Same author in original, but repeated in index.html as separate slide
+    author: "Liset Bustos Gomez",
     role: "Egresada de Auxiliar de Enfermería",
   },
 ];
@@ -71,7 +71,7 @@ const Testimonials = () => {
             </div>
 
             <p className="text-xl md:text-2xl text-gray-700 italic text-center leading-relaxed mb-10">
-              "{testimonials[current].text}"
+              &quot;{testimonials[current].text}&quot;
             </p>
 
             <div className="text-center">

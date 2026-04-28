@@ -52,7 +52,7 @@ export default function EarlyChildhoodProgram() {
             </div>
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-fsm-blue leading-[0.9] mb-10 text-balance uppercase">
               Atención <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-fsm-red to-red-600">INFANTIL</span>
+              <span className="text-fsm-red">INFANTIL</span>
             </h1>
             <p className="text-xl text-gray-400 font-medium leading-relaxed max-w-lg mb-12">
               Formamos expertos en el cuidado y la educación integral de la primera infancia, con bases pedagógicas sólidas y vocación humanista.
@@ -71,7 +71,7 @@ export default function EarlyChildhoodProgram() {
         </div>
         <div className="lg:w-[45%] relative min-h-[400px] lg:min-h-full">
           <Image src="/img/banner13.jpg" alt="Atención Integral a la Primera Infancia" fill className="object-cover" priority />
-          <div className="absolute inset-0 bg-gradient-to-r from-white lg:via-white/5 to-transparent z-10"></div>
+          {/* Gradient removed as per user request */}
           {/* Decorative element */}
           <div className="absolute top-1/2 left-0 w-full h-px bg-fsm-red/20 -translate-y-1/2 -rotate-12"></div>
         </div>
@@ -98,7 +98,7 @@ export default function EarlyChildhoodProgram() {
                 </h2>
                 <p className="text-3xl md:text-4xl font-black text-fsm-blue leading-tight uppercase font-display">
                    DANDO LOS PRIMEROS PASOS <br />
-                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-fsm-blue-deep to-fsm-blue">HACIA EL FUTURO</span>
+                   <span className="text-fsm-blue">HACIA EL FUTURO</span>
                 </p>
               </div>
               

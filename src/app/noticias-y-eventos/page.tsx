@@ -90,7 +90,7 @@ export default function NewsPage() {
             </div>
             <h1 className="text-5xl md:text-7xl font-black text-fsm-blue leading-none mb-8">
               NOTICIAS Y <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-fsm-red to-fsm-red-deep uppercase">Eventos</span>
+              <span className="text-fsm-red uppercase">Eventos</span>
             </h1>
             <p className="text-lg text-gray-400 font-medium leading-relaxed">
               Manténgase al día con los logros, celebraciones y anuncios más importantes de nuestra comunidad académica.
@@ -99,7 +99,7 @@ export default function NewsPage() {
         </div>
         <div className="lg:w-1/2 relative min-h-[300px] lg:min-h-full overflow-hidden bg-fsm-blue">
           <Image src="/img/banner14.jpg" alt="Noticias FSM" fill className="object-cover scale-110 brightness-75" priority />
-          <div className="absolute inset-0 bg-gradient-to-r from-white lg:via-white/20 to-transparent z-10"></div>
+          {/* Gradient removed as per user request */}
           {/* Floating badge */}
           <div className="absolute bottom-12 right-12 z-20 bg-white/10 backdrop-blur-2xl p-6 rounded-[2.5rem] border border-white/20">
              <Newspaper className="text-white opacity-50" size={32} />
@@ -123,7 +123,7 @@ export default function NewsPage() {
                   <div key={i} className="reveal-item group bg-white rounded-[4rem] overflow-hidden shadow-premium border border-gray-100 transition-all duration-700 hover:-translate-y-4">
                     <div className="relative h-72">
                       <Image src={item.image} alt={item.title} fill className="object-cover transition-transform duration-1000 group-hover:scale-110" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-fsm-blue/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      <div className="absolute inset-0 bg-fsm-blue/60 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                       <div className="absolute top-6 left-6 py-2 px-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full text-[9px] font-black text-white tracking-widest uppercase">
                         {item.category}
                       </div>

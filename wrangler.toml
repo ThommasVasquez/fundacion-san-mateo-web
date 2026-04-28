@@ -1,7 +1,17 @@
-name = "fundacionsanmateo"
+name = "fsm-web-app"
+main = ".open-next/worker.js"
 compatibility_date = "2024-11-20"
-compatibility_flags = ["nodejs_compat_v2"]
-pages_build_output_dir = ".open-next"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
 
 [vars]
 NODE_VERSION = "22.16.0"
+DATABASE_URL = "postgresql://neondb_owner:npg_e1zifTH5dZaE@ep-gentle-mouse-ankslyb3-pooler.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+JWT_SECRET = "fsm_super_secret_encryption_key_2024_xyz"
+
+[[r2_buckets]]
+binding = "IMAGES_BUCKET"
+bucket_name = "fsm-images"

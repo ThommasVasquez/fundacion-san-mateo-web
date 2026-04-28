@@ -67,7 +67,7 @@ export default function CourseContent({ title, bannerImg, mainImg, directedTo, o
         </div>
         <div className="lg:w-[45%] relative min-h-[300px] lg:min-h-full">
           <Image src={bannerImg} alt={title} fill className="object-cover" priority />
-          <div className="absolute inset-0 bg-gradient-to-r from-white lg:via-white/5 to-transparent z-10"></div>
+          {/* Gradient removed as per user request */}
           {/* Decorative element */}
           <div className="absolute top-1/2 left-0 w-full h-px bg-fsm-red/20 -translate-y-1/2 -rotate-12"></div>
         </div>
@@ -167,7 +167,7 @@ export default function CourseContent({ title, bannerImg, mainImg, directedTo, o
             <div className="reveal-item sticky top-32 space-y-10">
               <div className="relative aspect-[4/5] rounded-[4rem] overflow-hidden shadow-premium group">
                 <Image src={mainImg} alt={title} fill className="object-cover transition-transform duration-1000 group-hover:scale-110" />
-                <div className="absolute inset-0 bg-gradient-to-t from-fsm-blue/90 via-fsm-blue/20 to-transparent"></div>
+                {/* Gradient removed as per user request */}
                 <div className="absolute inset-0 flex flex-col justify-end p-12">
                    <div className="flex items-center gap-3 mb-6 text-white/60">
                       <ShieldCheck size={20} className="text-fsm-red" />

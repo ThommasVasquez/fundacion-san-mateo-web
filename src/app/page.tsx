@@ -8,13 +8,16 @@ import WhyUs from "@/components/home/WhyUs";
 import Testimonials from "@/components/home/Testimonials";
 import WhatsAppButton from "@/components/common/WhatsAppButton";
 
-export default function Home() {
+import { getContentMap } from "@/lib/content";
+
+export default async function Home() {
+  const content = await getContentMap('/');
   return (
     <main className="min-h-screen bg-white">
       <Navbar />
       
       {/* Hero Section */}
-      <Hero />
+      <Hero content={content} />
       
       {/* Immersive Structural Break: The Bento Grid */}
       <BentoPrograms />

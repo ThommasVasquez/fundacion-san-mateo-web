@@ -39,7 +39,7 @@ export default function ContactPage() {
             </div>
             <h1 className="text-5xl md:text-7xl font-black text-fsm-blue leading-none mb-8">
               ESTAMOS <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-fsm-blue to-fsm-blue-light uppercase">Contigo</span>
+              <span className="text-fsm-blue-light uppercase">Contigo</span>
             </h1>
             <p className="text-lg text-gray-400 font-medium leading-relaxed">
               Resuelva sus dudas de manera personalizada. Nuestro equipo está listo para asesorarle en su camino hacia la excelencia técnica.
@@ -48,7 +48,7 @@ export default function ContactPage() {
         </div>
         <div className="lg:w-1/2 relative min-h-[300px] lg:min-h-full overflow-hidden bg-fsm-blue">
           <Image src="/img/banner16.jpg" alt="Contacto FSM" fill className="object-cover scale-110 brightness-75" priority />
-          <div className="absolute inset-0 bg-gradient-to-r from-white lg:via-white/20 to-transparent z-10"></div>
+          {/* Gradient removed as per user request */}
           {/* Decorative element */}
           <div className="absolute bottom-12 right-12 z-20 bg-white/10 backdrop-blur-2xl p-6 rounded-[2.5rem] border border-white/20 shadow-premium">
              <MessageSquare className="text-white opacity-50" size={32} />

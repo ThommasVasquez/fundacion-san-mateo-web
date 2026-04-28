@@ -47,7 +47,7 @@ export default function DirectoryPage() {
             </div>
             <h1 className="text-5xl md:text-7xl font-black text-fsm-blue leading-none mb-8">
               PUNTOS DE <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-fsm-blue to-fsm-blue-light uppercase">Contacto</span>
+              <span className="text-fsm-blue-light uppercase">Contacto</span>
             </h1>
             <p className="text-lg text-gray-400 font-medium leading-relaxed">
               Nuestro equipo administrativo está listo para brindarle la asesoría técnica y humana que requiere en cada etapa de su formación.
@@ -56,7 +56,7 @@ export default function DirectoryPage() {
         </div>
         <div className="lg:w-1/2 relative min-h-[300px] lg:min-h-full overflow-hidden bg-fsm-blue">
           <Image src="/img/banner11.jpg" alt="Directorio FSM" fill className="object-cover scale-110 brightness-75" priority />
-          <div className="absolute inset-0 bg-gradient-to-r from-white lg:via-white/20 to-transparent z-10"></div>
+          {/* Gradient removed as per user request */}
           {/* Floating badge */}
           <div className="absolute bottom-12 right-12 z-20 bg-white/10 backdrop-blur-2xl p-6 rounded-[2.5rem] border border-white/20 shadow-premium">
              <Headphones size={32} className="text-white opacity-50" />
@@ -139,7 +139,7 @@ export default function DirectoryPage() {
                    </div>
 
                    <div className="p-12 bg-gray-50 rounded-[4rem] text-center border border-gray-100 shadow-sm overflow-hidden relative group">
-                      <div className="absolute inset-0 bg-gradient-to-br from-fsm-red/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                      {/* Gradient removed as per user request */}
                       <div className="relative z-10">
                          <p className="text-fsm-red font-black text-xs tracking-widest uppercase mb-4">Atención Virtual</p>
                          <p className="text-sm text-gray-400 font-bold mb-8">Nuestros asesores también están disponibles vía WhatsApp para trámites rápidos.</p>

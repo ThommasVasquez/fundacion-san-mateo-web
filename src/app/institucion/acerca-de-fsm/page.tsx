@@ -57,7 +57,7 @@ export default function AboutPage() {
             </div>
             <h1 className="text-5xl md:text-7xl font-black text-fsm-blue leading-none mb-8">
               CONOCE LA <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-fsm-blue to-fsm-blue-light uppercase">Historia</span>
+              <span className="text-fsm-blue-light uppercase">Historia</span>
             </h1>
             <p className="text-lg text-gray-400 font-medium leading-relaxed">
               Más de dos décadas transformando vidas a través de la educación técnica de calidad en el municipio de Soacha.
@@ -66,7 +66,7 @@ export default function AboutPage() {
         </div>
         <div className="lg:w-1/2 relative min-h-[300px] lg:min-h-full overflow-hidden bg-fsm-blue">
           <Image src="/img/banner32.jpg" alt="Acerca de FSM" fill className="object-cover scale-110 brightness-75" priority />
-          <div className="absolute inset-0 bg-gradient-to-r from-white lg:via-white/20 to-transparent z-10"></div>
+          {/* Gradient removed as per user request */}
         </div>
       </section>
 
@@ -139,7 +139,7 @@ export default function AboutPage() {
           </div>
 
           {/* Trayectoria Highlight - Bento Style */}
-          <div className="reveal-section bg-gradient-to-br from-fsm-red to-fsm-red-deep p-16 md:p-24 rounded-[5rem] text-center relative overflow-hidden text-white shadow-premium">
+          <div className="reveal-section bg-fsm-red p-16 md:p-24 rounded-[5rem] text-center relative overflow-hidden text-white shadow-premium">
              <div className="absolute inset-0 bg-[url('/img/pattern.png')] opacity-10 mix-blend-overlay"></div>
              <div className="relative z-10 space-y-12">
                 <ShieldCheck className="mx-auto text-white/20 mb-6" size={64} />

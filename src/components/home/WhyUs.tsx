@@ -53,7 +53,7 @@ const WhyUs = () => {
           fill 
           className="object-cover opacity-30 brightness-[0.3]"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#1A3B80] via-transparent to-[#1A3B80]"></div>
+        {/* Gradient removed as per user request */}
       </div>
 
       <div className="container mx-auto px-8 relative z-10">
@@ -62,7 +62,7 @@ const WhyUs = () => {
             <h2 className="text-sm font-black text-fsm-red tracking-[0.5em] uppercase mb-8">Nuestra Identidad</h2>
             <h3 className="text-5xl md:text-7xl lg:text-8xl font-black text-white leading-none uppercase mb-12">
               VALORES QUE <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-fsm-red to-[#FF4D6D]">TRANSFORMAN</span>
+              <span className="text-fsm-red">TRANSFORMAN</span>
             </h3>
             <div className="w-24 h-1.5 bg-fsm-red mx-auto rounded-full"></div>
           </div>
@@ -70,7 +70,7 @@ const WhyUs = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-12">
               <p className="text-2xl text-white/70 leading-relaxed font-light italic">
-                "Formamos con vocación y excelencia técnica, integrando principios éticos y humanistas en cada paso de nuestro proceso educativo."
+                &quot;Formamos con vocación y excelencia técnica, integrando principios éticos y humanistas en cada paso de nuestro proceso educativo.&quot;
               </p>
               
               <div className="flex flex-wrap gap-8">

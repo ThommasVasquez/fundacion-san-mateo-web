@@ -41,7 +41,7 @@ const BentoPrograms = () => {
             </h2>
             <h3 className="text-5xl md:text-6xl font-black text-fsm-blue leading-tight uppercase font-display">
               Elige tu camino hacia la <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-fsm-red to-fsm-red-deep">Excelencia</span>
+              <span className="text-fsm-red">Excelencia</span>
             </h3>
           </div>
           <Link 
@@ -65,7 +65,7 @@ const BentoPrograms = () => {
               fill 
               className="object-cover transition-transform duration-1000 group-hover:scale-110 brightness-75 group-hover:brightness-50"
             />
-            <div className="absolute inset-0 p-12 flex flex-col justify-end text-white z-10 bg-gradient-to-t from-fsm-blue/80 to-transparent">
+            <div className="absolute inset-0 p-12 flex flex-col justify-end text-white z-10 bg-fsm-blue/80">
               <div className="mb-6 w-16 h-16 bg-white/20 backdrop-blur-xl rounded-3xl flex items-center justify-center border border-white/30 transform group-hover:rotate-12 transition-transform duration-500">
                 <GraduationCap size={32} />
               </div>
@@ -89,7 +89,7 @@ const BentoPrograms = () => {
                 fill 
                 className="object-cover transition-transform duration-1000 group-hover:scale-110 brightness-75 group-hover:brightness-50"
               />
-              <div className="absolute inset-0 p-12 flex flex-col justify-end text-white z-10 bg-gradient-to-t from-fsm-red/80 to-transparent">
+              <div className="absolute inset-0 p-12 flex flex-col justify-end text-white z-10 bg-fsm-red/80">
                 <div className="mb-6 w-16 h-16 bg-white/20 backdrop-blur-xl rounded-3xl flex items-center justify-center border border-white/30 transform group-hover:-rotate-12 transition-transform duration-500">
                   <Users size={32} />
                 </div>

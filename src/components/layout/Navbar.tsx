@@ -22,7 +22,7 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const navLinks = [
+  const navLinks: { name: string; href?: string; dropdown?: { name: string; href: string }[]; external?: boolean }[] = [
     { name: "INICIO", href: "/" },
     { 
       name: "INSTITUCIÓN", 
@@ -43,7 +43,7 @@ const Navbar = () => {
         { name: "Preguntas Frecuentes", href: "/preguntas-frecuentes" },
       ]
     },
-    { name: "BLOG", href: "https://www.fundacionsanmateosoacha.edu.co/blog", external: true },
+    { name: "BLOG", href: "/blog" },
     { name: "CONTACTO", href: "/contacto" },
   ];
 
@@ -59,17 +59,17 @@ const Navbar = () => {
       >
         {/* Logo */}
         <Link href="/" className="relative flex items-center gap-3 group">
-          <div className="relative w-10 h-10 md:w-12 md:h-12 transition-transform duration-500 group-hover:scale-110">
+          <div className="relative w-12 h-12 md:w-16 md:h-16 transition-transform duration-500 group-hover:scale-110">
             <Image 
-              src="/img/fsmlogo.jpg" 
+              src="/FSM.png" 
               alt="FSM Logo" 
               fill 
               className="object-contain"
             />
           </div>
-          <div className="hidden lg:block">
-            <p className="text-[10px] font-black text-fsm-red leading-none tracking-widest">FUNDACIÓN</p>
-            <p className="text-sm font-black text-fsm-blue leading-none tracking-tighter">SAN MATEO</p>
+          <div className="hidden lg:flex flex-col justify-center">
+            <p className="text-sm md:text-base font-black text-fsm-blue leading-none tracking-tighter">FUNDACIÓN</p>
+            <p className="text-sm md:text-base font-black text-fsm-blue leading-none tracking-tighter">SAN MATEO</p>
           </div>
         </Link>
 

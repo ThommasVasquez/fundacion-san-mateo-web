@@ -116,8 +116,23 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="border-t border-white/10 mt-16 pt-8 text-center text-xs text-white/50">
+        <div className="border-t border-white/10 mt-16 pt-8 text-center text-xs text-white/50 flex flex-col items-center gap-4">
           <p>Los programas no conducen a la obtención de título profesional. Institución para el Trabajo y Desarrollo Humano.</p>
+          
+          <a 
+            href="https://www.energysoftmedia.com" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-6 mt-4 border-t border-white/5 w-full hover:opacity-80 transition-opacity group cursor-pointer"
+          >
+             <div className="relative w-32 h-10 shrink-0">
+                <Image src="/img/energysoft-logo.png" alt="ENERGYSOFTmedia Logo" fill className="object-contain" />
+             </div>
+             <p className="text-white/70 font-medium text-xs sm:text-sm text-center sm:text-left leading-relaxed">
+               Desarrollado con todo el poder de <strong className="text-white font-bold group-hover:text-fsm-red transition-colors">ENERGYSOFTmedia®</strong><br />
+               | Software con Energía! ⚡️
+             </p>
+          </a>
         </div>
       </div>
     </footer>

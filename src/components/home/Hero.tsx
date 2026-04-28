@@ -6,7 +6,7 @@ import Link from "next/link";
 import gsap from "gsap";
 import { ArrowRight, Play, CheckCircle2 } from "lucide-react";
 
-const Hero = () => {
+const Hero = ({ content = {} }: { content?: Record<string, string> }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const leftRef = useRef<HTMLDivElement>(null);
   const rightRef = useRef<HTMLDivElement>(null);
@@ -71,11 +71,11 @@ const Hero = () => {
   }, []);
 
   return (
-    <section ref={containerRef} className="relative min-h-screen w-full flex flex-col lg:flex-row overflow-hidden bg-white pt-20">
+    <section ref={containerRef} className="relative min-h-screen w-full flex flex-col lg:flex-row overflow-hidden bg-white">
       {/* Left Side: Content */}
       <div 
         ref={leftRef}
-        className="lg:w-[60%] flex items-center justify-start px-8 md:px-20 lg:px-32 relative z-10 bg-white"
+        className="lg:w-1/2 flex items-center justify-start px-8 md:px-16 lg:px-24 relative z-10 bg-white pt-24 lg:pt-32"
       >
         <div className="max-w-xl py-20">
           <span 
@@ -83,23 +83,23 @@ const Hero = () => {
             className="inline-flex items-center gap-2 text-fsm-red font-black tracking-[0.3em] uppercase text-xs mb-8"
           >
             <span className="w-8 h-px bg-fsm-red"></span>
-            Excelencia en Educación Superior
+            {content['home_hero_subtitle'] || 'Excelencia en Educación Superior'}
           </span>
           
           <h1 
             ref={titleRef}
             className="text-5xl md:text-7xl lg:text-8xl font-black text-fsm-blue mb-8 leading-[0.95] text-balance"
           >
-            FORJANDO <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-fsm-blue to-fsm-blue-light">FUTUROS</span> <br />
-            BRILLANTES
+            {content['home_hero_title1'] || 'FORJANDO'} <br />
+            <span className="text-fsm-blue-light">{content['home_hero_title_highlight'] || 'FUTUROS'}</span> <br />
+            {content['home_hero_title2'] || 'BRILLANTES'}
           </h1>
           
           <p 
             ref={descRef}
             className="text-lg md:text-xl text-gray-500 mb-12 max-w-lg leading-relaxed font-medium"
           >
-            Institución de educación para el trabajo y desarrollo humano en Soacha, comprometida con la formación integral y la calidad técnica.
+            {content['home_hero_desc'] || 'Institución de educación para el trabajo y desarrollo humano en Soacha, comprometida con la formación integral y la calidad técnica.'}
           </p>
           
           <div ref={ctaRef} className="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
@@ -136,23 +136,23 @@ const Hero = () => {
       {/* Right Side: Visual */}
       <div 
         ref={rightRef}
-        className="lg:w-[40%] relative min-h-[400px] lg:min-h-screen bg-fsm-blue overflow-hidden"
+        className="lg:w-1/2 relative min-h-[500px] lg:min-h-screen bg-[#1c2b59] overflow-hidden"
       >
-        <div className="absolute inset-0 hero-parallax">
+        <div className="absolute inset-0 flex items-center justify-center p-8">
           <Image 
-            src="/img/banner30.jpg" 
-            alt="FSM Experience" 
+            src={content['home_hero_image'] || "/img/servicio-al-cliente.jpg"} 
+            alt="Auxiliar en Servicio al Cliente" 
             fill 
-            className="object-cover brightness-75 scale-110"
+            className="object-contain"
             priority
           />
         </div>
         
-        {/* Abstract Overlays */}
-        <div className="absolute inset-0 bg-gradient-to-l from-transparent to-white/20 lg:to-transparent lg:bg-gradient-to-r lg:from-white lg:via-white/5 lg:to-transparent z-10"></div>
+        {/* Abstract Overlays Removed as per user request */}
+        <div className="absolute inset-0 bg-transparent z-10"></div>
         
         {/* Floating Stat Card */}
-        <div className="absolute bottom-12 left-12 right-12 lg:right-auto lg:left-[-100px] z-20">
+        <div className="absolute bottom-12 left-12 right-12 lg:right-auto lg:left-8 z-20">
           <div className="bg-white/80 backdrop-blur-2xl p-8 rounded-[3rem] shadow-premium border border-white/40 max-w-xs animate-float">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-12 h-12 bg-fsm-red rounded-2xl flex items-center justify-center text-white font-black text-xl">

@@ -61,7 +61,7 @@ export default function WhyUsPage() {
             </div>
             <h1 className="text-5xl md:text-7xl font-black text-fsm-blue leading-none mb-8">
               ¿POR QUÉ <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-fsm-red to-fsm-red-deep">ELEGIRNOS</span>?
+              <span className="text-fsm-red">ELEGIRNOS</span>?
             </h1>
             <p className="text-lg text-gray-400 font-medium leading-relaxed">
               Formación integral con altos niveles de exigencia, competitividad y calidad certificada bajo estándares internacionales.
@@ -70,7 +70,7 @@ export default function WhyUsPage() {
         </div>
         <div className="lg:w-1/2 relative min-h-[300px] lg:min-h-full overflow-hidden">
           <Image src="/img/banner4.jpg" alt="¿Por qué nosotros?" fill className="object-cover scale-110" priority />
-          <div className="absolute inset-0 bg-gradient-to-r from-white lg:via-white/20 to-transparent z-10"></div>
+          {/* Gradient removed as per user request */}
           {/* Floating badge */}
           <div className="absolute bottom-12 right-12 z-20 bg-white/10 backdrop-blur-2xl p-6 rounded-[2.5rem] border border-white/20">
             <div className="flex items-center gap-3">
@@ -130,7 +130,7 @@ export default function WhyUsPage() {
                 </h2>
                 <h3 className="text-5xl md:text-6xl font-black text-fsm-blue leading-tight uppercase">
                   Objetivos de <br />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-fsm-blue to-fsm-blue-light">Nuestra Gestión</span>
+                  <span className="text-fsm-blue-light">Nuestra Gestión</span>
                 </h3>
               </div>
             </div>
