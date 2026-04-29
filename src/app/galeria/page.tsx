@@ -29,6 +29,7 @@ const galleryItems = Array.from({ length: 92 }, (_, i) => ({
 
 export default function GalleryPage() {
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
+  const [visibleCount, setVisibleCount] = useState(12);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -85,7 +86,7 @@ export default function GalleryPage() {
 
         {/* Bento Grid Gallery */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-8 auto-rows-[250px] md:auto-rows-[300px]">
-          {galleryItems.map((item) => (
+          {galleryItems.slice(0, visibleCount).map((item) => (
             <div 
               key={item.id}
               onClick={() => openLightbox(item.id)}
@@ -108,6 +109,18 @@ export default function GalleryPage() {
             </div>
           ))}
         </div>
+
+        {/* Load More Button */}
+        {visibleCount < galleryItems.length && (
+          <div className="mt-16 flex justify-center">
+            <button 
+              onClick={() => setVisibleCount(prev => Math.min(prev + 12, galleryItems.length))}
+              className="bg-gray-50 border border-gray-100 text-fsm-blue hover:text-fsm-red hover:bg-fsm-red/5 px-10 py-4 rounded-full font-black text-xs tracking-widest uppercase transition-all duration-300 shadow-sm"
+            >
+              Cargar más fotos
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Modern Lightbox */}
