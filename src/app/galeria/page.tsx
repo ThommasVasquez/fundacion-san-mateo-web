@@ -95,11 +95,10 @@ export default function GalleryPage() {
                 item.span
               )}
             >
-              <Image 
+              <img 
                 src={item.thumb} 
                 alt={`Galería FSM ${item.id}`} 
-                fill 
-                className="object-cover transition-transform duration-1000 group-hover:scale-110"
+                className="object-cover w-full h-full transition-transform duration-1000 group-hover:scale-110"
               />
               <div className="absolute inset-0 bg-fsm-blue/60 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end justify-center pb-12">
                 <div className="p-4 bg-white/30 rounded-2xl border border-white/20 transform translate-y-8 group-hover:translate-y-0 transition-all duration-700">
@@ -149,12 +148,10 @@ export default function GalleryPage() {
 
           <div className="relative w-full h-full flex flex-col items-center justify-center">
             <div className="relative w-full h-full max-w-6xl max-h-[75vh] rounded-[4rem] overflow-hidden shadow-premium border border-white/10">
-              <Image 
+              <img 
                 src={galleryItems[selectedImage - 1].full} 
                 alt={`FSM Full Image ${selectedImage}`}
-                fill
-                className="object-contain"
-                priority
+                className="object-contain w-full h-full"
               />
             </div>
             <div className="mt-12">
