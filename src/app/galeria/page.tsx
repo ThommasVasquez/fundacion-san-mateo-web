@@ -33,20 +33,27 @@ export default function GalleryPage() {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.from(".gallery-item", {
-        scrollTrigger: {
-          trigger: containerRef.current,
-          start: "top 80%",
-        },
-        scale: 0.9,
-        opacity: 0,
-        duration: 0.8,
-        stagger: {
-          each: 0.05,
-          grid: "auto",
-        },
-        ease: "power2.out"
-      });
+      gsap.fromTo(".gallery-item", 
+        { scale: 0.9, opacity: 0 },
+        {
+          scrollTrigger: {
+            trigger: containerRef.current,
+            start: "top 80%",
+          },
+          scale: 1,
+          opacity: 1,
+          duration: 0.8,
+          stagger: {
+            each: 0.05,
+            grid: "auto",
+          },
+          ease: "power2.out",
+          onComplete: () => {
+             // ensure opacity is stripped off inline styles after animation
+             gsap.set(".gallery-item", { clearProps: "opacity,transform" });
+          }
+        }
+      );
     }, containerRef);
     return () => ctx.revert();
   }, []);
