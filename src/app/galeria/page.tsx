@@ -103,7 +103,7 @@ export default function GalleryPage() {
                 src={item.thumb} 
                 alt={`Galería FSM ${item.id}`} 
                 fill 
-                className="object-cover transition-transform duration-1000 group-hover:scale-110 group-opacity-80 group-hover:opacity-100"
+                className="object-cover transition-transform duration-1000 group-hover:scale-110"
               />
               <div className="absolute inset-0 bg-fsm-blue/60 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end justify-center pb-12">
                 <div className="p-4 bg-white/30 rounded-2xl border border-white/20 transform translate-y-8 group-hover:translate-y-0 transition-all duration-700">
