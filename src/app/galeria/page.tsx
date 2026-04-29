@@ -10,6 +10,9 @@ import { ChevronRight, X, ChevronLeft, Maximize2, Camera } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(ScrollTrigger);
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -31,6 +34,10 @@ export default function GalleryPage() {
   useEffect(() => {
     const ctx = gsap.context(() => {
       gsap.from(".gallery-item", {
+        scrollTrigger: {
+          trigger: containerRef.current,
+          start: "top 80%",
+        },
         scale: 0.9,
         opacity: 0,
         duration: 0.8,
