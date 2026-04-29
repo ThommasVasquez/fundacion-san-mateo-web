@@ -82,11 +82,6 @@ export default function NormativityPage() {
         </div>
         <div className="lg:w-1/2 relative min-h-[300px] lg:min-h-full overflow-hidden bg-fsm-blue">
           <Image src="/img/banner12.jpg" alt="Normatividad" fill className="object-cover scale-110 brightness-75" priority />
-          {/* Gradient removed as per user request */}
-          {/* Decorative floating icon */}
-          <div className="absolute bottom-12 right-12 z-20 bg-white/10  p-6 rounded-[2.5rem] border border-white/20">
-             <Shield className="text-white opacity-50" size={40} />
-          </div>
         </div>
       </section>
 
@@ -113,7 +108,7 @@ export default function NormativityPage() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 gap-4 lg:ml-20">
+              <div className="grid grid-cols-1 gap-6 lg:ml-20">
                 {group.links.map((link) => (
                   <a 
                     key={link.name} 
@@ -148,7 +143,8 @@ export default function NormativityPage() {
                      Nuestro archivo institucional está disponible para consulta en la sede administrativa para toda la comunidad académica.
                    </p>
                    <Link 
-                    href="/contacto"
+                    href="https://api.whatsapp.com/send?phone=573184349631&text=Hola, quisiera obtener información."
+                    target="_blank"
                     className="inline-flex items-center gap-4 bg-white text-fsm-blue px-10 py-5 rounded-full font-black text-xs tracking-widest uppercase hover:bg-fsm-red hover:text-white transition-all duration-500 shadow-xl"
                    >
                      HABLAR CON SECRETARÍA <ArrowRight size={18} />

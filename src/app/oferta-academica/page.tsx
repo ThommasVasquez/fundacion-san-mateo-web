@@ -87,14 +87,6 @@ export default function AcademicOffer() {
         </div>
         <div className="lg:w-1/2 relative min-h-[300px] lg:min-h-full overflow-hidden">
           <Image src="/img/banner31.jpg" alt="FSM Class" fill className="object-cover scale-110" priority />
-          {/* Gradient removed as per user request */}
-          {/* Floating badge */}
-          <div className="absolute bottom-12 right-12 z-20 bg-white p-6 rounded-[2.5rem] border border-gray-100 hidden md:block">
-            <div className="flex items-center gap-3">
-              <Star className="text-fsm-red fill-fsm-red" size={24} />
-              <p className="text-white text-xs font-black tracking-widest uppercase">Líderes en Soacha</p>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -193,7 +185,6 @@ export default function AcademicOffer() {
 
         {/* Dynamic CTA */}
         <div className="mt-32 p-12 md:p-20 bg-fsm-blue rounded-[5rem] relative overflow-hidden text-center group">
-          {/* Blur removed */}
           <div className="relative z-10 max-w-3xl mx-auto">
             <h4 className="text-4xl md:text-5xl font-black text-white mb-8 uppercase leading-tight">
               ¿LISTO PARA <br /> <span className="text-fsm-red">DAR EL SALTO</span>?

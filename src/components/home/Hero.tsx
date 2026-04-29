@@ -88,7 +88,7 @@ const Hero = ({ content = {} }: { content?: Record<string, string> }) => {
           
           <h1 
             ref={titleRef}
-            className="text-5xl md:text-7xl lg:text-8xl font-black text-fsm-blue mb-8 leading-[0.95] text-balance"
+            className="text-5xl md:text-7xl lg:text-8xl font-black text-white mb-8 leading-[0.95] text-balance"
           >
             {content['home_hero_title1'] || 'FORJANDO'} <br />
             <span className="text-fsm-blue-light">{content['home_hero_title_highlight'] || 'FUTUROS'}</span> <br />
@@ -127,7 +127,7 @@ const Hero = ({ content = {} }: { content?: Record<string, string> }) => {
             </div>
             <div className="flex items-center gap-3">
               <CheckCircle2 size={24} className="text-fsm-red" />
-              <p className="text-[10px] font-black tracking-widest leading-tight">SECRETARÍA EDUCACIÓN <br /> APROBADOS</p>
+              <p className="text-[10px] font-black tracking-widest leading-tight">VIGILADO POR SECRETARÍA <br /> DE EDUCACIÓN</p>
             </div>
           </div>
         </div>

@@ -66,7 +66,7 @@ export default function AboutPage() {
         </div>
         <div className="lg:w-1/2 relative min-h-[300px] lg:min-h-full overflow-hidden bg-fsm-blue">
           <Image src="/img/banner32.jpg" alt="Acerca de FSM" fill className="object-cover scale-110 brightness-75" priority />
-          {/* Gradient removed as per user request */}
+        {/* Gradient removed as per user request */}
         </div>
       </section>
 

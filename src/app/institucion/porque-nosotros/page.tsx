@@ -70,14 +70,6 @@ export default function WhyUsPage() {
         </div>
         <div className="lg:w-1/2 relative min-h-[300px] lg:min-h-full overflow-hidden">
           <Image src="/img/banner4.jpg" alt="¿Por qué nosotros?" fill className="object-cover scale-110" priority />
-          {/* Gradient removed as per user request */}
-          {/* Floating badge */}
-          <div className="absolute bottom-12 right-12 z-20 bg-white/20 p-6 rounded-[2.5rem] border border-white/20">
-            <div className="flex items-center gap-3">
-              <Star className="text-fsm-red fill-fsm-red" size={24} />
-              <p className="text-white text-xs font-black tracking-widest uppercase">Excelencia Técnica</p>
-            </div>
-          </div>
         </div>
       </section>
 

@@ -56,11 +56,6 @@ export default function DirectoryPage() {
         </div>
         <div className="lg:w-1/2 relative min-h-[300px] lg:min-h-full overflow-hidden bg-fsm-blue">
           <Image src="/img/banner11.jpg" alt="Directorio FSM" fill className="object-cover scale-110 brightness-75" priority />
-          {/* Gradient removed as per user request */}
-          {/* Floating badge */}
-          <div className="absolute bottom-12 right-12 z-20 bg-white/10  p-6 rounded-[2.5rem] border border-white/20 shadow-premium">
-             <Headphones size={32} className="text-white opacity-50" />
-          </div>
         </div>
       </section>
 
@@ -115,9 +110,9 @@ export default function DirectoryPage() {
                       <div className="space-y-10">
                          <div>
                             <p className="text-[10px] font-black opacity-40 uppercase tracking-widest mb-4">Sede Administrativa</p>
-                            <p className="text-xl font-bold mb-6">Carrera 7 # 18-99, <br /> Soacha Centro</p>
+                            <p className="text-xl font-bold mb-6">Calle 19 #8-21, <br /> Soacha Cundinamarca</p>
                             <a 
-                              href="https://www.google.com/maps?ll=4.583678,-74.214367&z=16&t=m&hl=en&gl=CO&mapclient=embed&cid=2402955356151310862" 
+                              href="https://maps.google.com/?q=Calle+19+%238-21,+Soacha,+Cundinamarca" 
                               target="_blank"
                               className="text-xs font-black text-fsm-red uppercase tracking-widest flex items-center gap-2 hover:text-white transition-colors"
                             >
@@ -139,7 +134,6 @@ export default function DirectoryPage() {
                    </div>
 
                    <div className="p-12 bg-gray-50 rounded-[4rem] text-center border border-gray-100 shadow-sm overflow-hidden relative group">
-                      {/* Gradient removed as per user request */}
                       <div className="relative z-10">
                          <p className="text-fsm-red font-black text-xs tracking-widest uppercase mb-4">Atención Virtual</p>
                          <p className="text-sm text-gray-400 font-bold mb-8">Nuestros asesores también están disponibles vía WhatsApp para trámites rápidos.</p>
