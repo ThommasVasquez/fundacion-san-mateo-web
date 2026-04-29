@@ -147,7 +147,7 @@ export default function AboutPage() {
                 <p className="max-w-4xl mx-auto text-xl md:text-2xl text-white/70 font-light leading-relaxed">
                   Contamos con certificaciones internacionales <span className="text-white font-black underline decoration-white/30 decoration-wavy underline-offset-8">ISO 9001:2015</span> y Normas Técnicas de Calidad (NTC) que avalan nuestra trayectoria ininterrumpida desde el año 2000.
                 </p>
-                <div className="flex flex-wrap justify-center gap-12 pt-8 opacity-40 grayscale group-hover:grayscale-0 transition-all">
+                <div className="flex flex-wrap justify-center gap-12 pt-8 opacity-40 group-transition-all">
                    <div className="text-center">
                       <p className="text-4xl font-black mb-1">24+</p>
                       <p className="text-[10px] uppercase font-black tracking-widest">Años de Historia</p>

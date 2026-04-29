@@ -132,8 +132,8 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h4 className="font-black text-[9px] opacity-40 uppercase tracking-[0.3em] mb-4">Ubicación Central</h4>
-                    <p className="font-bold text-sm leading-relaxed mb-1">Sede Administrativa: Carrera 7 # 18-99</p>
-                    <p className="font-bold text-sm leading-relaxed">Sede Académica: Calle 19 # 7A-29</p>
+                    <p className="font-bold text-sm leading-relaxed mb-1">Sede Administrativa: Calle 19 #8-21</p>
+                    <p className="font-bold text-sm leading-relaxed">Soacha, Cundinamarca</p>
                   </div>
                 </div>
 
@@ -163,13 +163,13 @@ export default function ContactPage() {
             {/* Immersive Map Section */}
             <div className="reveal-item flex-1 min-h-[400px] rounded-[4rem] overflow-hidden shadow-premium border-[12px] border-gray-50 bg-gray-50 relative group">
               <iframe 
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3977.0576247706867!2d-74.21655598523816!3d4.58367759666995!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e3f9fd6e33585e1%3A0x2159032a3e856a0e!2sSan%20Mateo%20Foundation!5e0!3m2!1sen!2sco!4v1670905879405!5m2!1sen!2sco"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3976.985633364958!2d-74.22019912411933!3d4.596637495378297!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e3f9fcbb9480cc3%3A0x6b2e353272dc645a!2sCl.%2019%20%238-21%2C%20Soacha%2C%20Cundinamarca!5e0!3m2!1ses!2sco!4v1714500000000!5m2!1ses!2sco"
                 width="100%" 
                 height="100%" 
                 style={{ border: 0 }} 
                 allowFullScreen={true} 
                 loading="lazy" 
-                className="opacity-90 contrast-[0.9] saturate-[0.8] grayscale-[0.2] hover:grayscale-0 hover:opacity-100 transition-all duration-700"
+                className="opacity-90 contrast-[0.9] saturate-[0.8] transition-all duration-700"
               ></iframe>
               {/* Floating Map Label */}
               <div className="absolute top-6 left-6 p-4 bg-white/90  rounded-2xl border border-white shadow-xl flex items-center gap-3">

@@ -155,7 +155,7 @@ export default function AcademicOffer() {
                   className="reveal-item group bg-white rounded-[3rem] overflow-hidden shadow-premium border border-gray-50 hover:-translate-y-4 transition-all duration-700"
                 >
                   <div className="relative h-72">
-                    <Image src={program.image} alt={program.title} fill className="object-cover transition-transform duration-1000 group-hover:scale-110 grayscale group-hover:grayscale-0" />
+                    <Image src={program.image} alt={program.title} fill className="object-cover transition-transform duration-1000 group-hover:scale-110 group-hover:grayscale-0" />
                     <div className="absolute inset-0 bg-fsm-blue/10 group-hover:bg-transparent transition-colors duration-500" />
                   </div>
                   <div className="p-10">

@@ -26,14 +26,14 @@
     "@opennextjs/cloudflare": "^1.19.1",
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
-    "@types/node": "^20",
-    "@types/react": "^19",
+    "@types/node": "20.19.39",
+    "@types/react": "19.2.14",
     "@types/react-dom": "^19",
     "esbuild": "^0.28.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
     "tailwindcss": "^4",
-    "typescript": "^5",
+    "typescript": "5.9.3",
     "wrangler": "^4.81.1"
   }
 }
