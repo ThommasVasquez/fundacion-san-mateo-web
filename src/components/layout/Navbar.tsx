@@ -47,8 +47,36 @@ const Navbar = () => {
     { name: "CONTACTO", href: "/contacto" },
   ];
 
+  const utilityLinks = [
+    { name: "Inscripciones", href: "https://fundacionsanmateo.q10.com/Preinscripcion", color: "bg-fsm-blue" },
+    { name: "Pagos estudiantes", href: "https://portalpagos.davivienda.com/#/comercio/6023/FUNDACION%20SAN%20MATEO", color: "bg-fsm-blue" },
+    { name: "Campus virtual", href: "https://site2.q10.com/login?ReturnUrl=%2F&aplentId=21bfe857-977b-4057-b48c-55d9717d0dfe", color: "bg-fsm-red" },
+    { name: "Solicitudes", href: "https://solicitudes.fundacionsanmateosoacha.edu.co/centro-de-solicitudes", color: "bg-fsm-blue" },
+  ];
+
   return (
-    <div className="fixed top-0 left-0 right-0 z-[100] flex justify-center p-4 md:p-6 pointer-events-none">
+    <div className="fixed top-0 left-0 right-0 z-[100] flex flex-col items-center p-4 md:p-6 pointer-events-none gap-2">
+      {/* Utility Bar - Desktop Only */}
+      <div className={cn(
+        "hidden xl:flex items-center gap-2 pointer-events-auto transition-all duration-500",
+        scrolled ? "opacity-0 -translate-y-4 pointer-events-none" : "opacity-100 translate-y-0"
+      )}>
+        {utilityLinks.map((link) => (
+          <a
+            key={link.name}
+            href={link.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              "px-5 py-1.5 rounded-full text-[9px] font-black tracking-[0.2em] uppercase text-white transition-all hover:scale-110 hover:shadow-xl active:scale-95",
+              link.color
+            )}
+          >
+            {link.name}
+          </a>
+        ))}
+      </div>
+
       <nav 
         className={cn(
           "pointer-events-auto transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] flex items-center justify-between px-6 md:px-8 py-3 md:py-4 rounded-full border shadow-premium",
@@ -121,32 +149,15 @@ const Navbar = () => {
           ))}
         </div>
 
-        {/* Action Button */}
-        <div className="hidden md:flex items-center gap-4">
-          <a 
-            href="https://fundacionsanmateo.q10.com/Preinscripcion" 
-            target="_blank"
-            className="group relative px-6 py-2.5 bg-fsm-blue text-white rounded-full text-[11px] font-black tracking-widest overflow-hidden transition-all hover:pr-10 hover:shadow-lg hover:shadow-fsm-blue/20"
-          >
-            <span className="relative z-10 uppercase">Preinscripción</span>
-            <ArrowRight className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300" size={14} />
-          </a>
-          
+        {/* Right Actions */}
+        <div className="flex items-center gap-4 xl:hidden">
           <button 
             onClick={() => setIsOpen(true)}
-            className="xl:hidden p-2 text-fsm-blue hover:text-fsm-red transition-colors"
+            className="p-2 text-fsm-blue hover:text-fsm-red transition-colors"
           >
             <Menu size={28} />
           </button>
         </div>
-
-        {/* Mobile Toggle only for small screens */}
-        <button 
-          onClick={() => setIsOpen(true)}
-          className="md:hidden p-2 text-fsm-blue hover:text-fsm-red transition-colors"
-        >
-          <Menu size={28} />
-        </button>
       </nav>
 
       {/* Mobile Drawer (Fullscreen) */}
@@ -165,6 +176,24 @@ const Navbar = () => {
 
         <div className="h-full flex flex-col justify-center items-center p-8">
           <div className="flex flex-col gap-6 text-center">
+            {/* Utility Links in Mobile */}
+            <div className="flex flex-wrap justify-center gap-2 mb-8">
+              {utilityLinks.map((link) => (
+                <a
+                  key={link.name}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    "px-4 py-2 rounded-full text-[10px] font-black tracking-widest uppercase text-white transition-all active:scale-95",
+                    link.color
+                  )}
+                >
+                  {link.name}
+                </a>
+              ))}
+            </div>
+
             {navLinks.map((link) => (
               <div key={link.name} className="group">
                 {link.dropdown ? (
