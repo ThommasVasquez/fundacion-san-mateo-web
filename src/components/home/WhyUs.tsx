@@ -69,9 +69,6 @@ const WhyUs = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-12">
-              <p className="text-2xl text-white/70 leading-relaxed font-light italic">
-                &quot;Formamos con vocación y excelencia técnica, integrando principios éticos y humanistas en cada paso de nuestro proceso educativo.&quot;
-              </p>
               
               <div className="flex flex-wrap gap-8">
                 <div className="flex items-center gap-4">

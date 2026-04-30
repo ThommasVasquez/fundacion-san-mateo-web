@@ -109,7 +109,7 @@ export default function AcademicOffer() {
                 className={cn(
                   "flex items-center gap-2 px-8 py-3.5 rounded-full text-[10px] font-black tracking-[0.2em] uppercase transition-all duration-500",
                   activeTab === cat.id 
-                    ? "bg-fsm-blue text-white shadow-lg" 
+                    ? (cat.id === "continua" ? "bg-red-600 text-white shadow-lg" : "bg-fsm-blue text-white shadow-lg")
                     : "text-gray-400 hover:text-fsm-blue"
                 )}
               >
@@ -200,12 +200,14 @@ export default function AcademicOffer() {
               >
                 PREINSCRIBIRME YA
               </a>
-              <Link 
-                href="/contacto"
+              <a 
+                href="https://api.whatsapp.com/send?phone=573184349631&text=Hola, quisiera obtener información sobre los programas académicos."
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-white/70 hover:text-white font-black text-xs tracking-widest uppercase flex items-center gap-2"
               >
                 Hablar con un asesor <ArrowRight size={18} />
-              </Link>
+              </a>
             </div>
           </div>
         </div>

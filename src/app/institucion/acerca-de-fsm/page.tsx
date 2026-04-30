@@ -110,6 +110,23 @@ export default function AboutPage() {
                    </p>
                 </div>
               </div>
+
+              {/* Added Excelencia Acreditada Block */}
+              <div className="pt-10 border-t border-gray-100 reveal-section">
+                <p className="text-sm font-bold text-fsm-red uppercase tracking-widest mb-4">Certificaciones de Calidad</p>
+                <h3 className="text-3xl font-black text-fsm-blue uppercase tracking-tighter mb-6">Excelencia Acreditada</h3>
+                <p className="text-lg text-gray-400 font-medium leading-relaxed mb-10">
+                  Nuestra institución está comprometida con los más altos estándares educativos. Contamos con certificaciones ISO que garantizan la calidad en todos nuestros procesos administrativos y pedagógicos.
+                </p>
+                
+                <div className="flex flex-wrap gap-8">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="w-24 h-24 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-center group hover:bg-white hover:shadow-xl transition-all duration-500">
+                      <Award size={40} className="text-gray-200 group-hover:text-fsm-red transition-colors" />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </section>
 

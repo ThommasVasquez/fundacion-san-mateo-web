@@ -143,7 +143,7 @@ export default function NormativityPage() {
                      Nuestro archivo institucional está disponible para consulta en la sede administrativa para toda la comunidad académica.
                    </p>
                    <Link 
-                    href="https://api.whatsapp.com/send?phone=573184349631&text=Hola, quisiera obtener información."
+                    href="https://api.whatsapp.com/send?phone=573184349631&text=Hola, quisiera obtener información sobre los programas académicos."
                     target="_blank"
                     className="inline-flex items-center gap-4 bg-white text-fsm-blue px-10 py-5 rounded-full font-black text-xs tracking-widest uppercase hover:bg-fsm-red hover:text-white transition-all duration-500 shadow-xl"
                    >
