@@ -61,16 +61,16 @@ const CertificationSection = () => {
 
           <div className="lg:w-1/2 grid grid-cols-2 lg:grid-cols-4 gap-6">
              {[
-               { img: "/img/icon-certif.png", name: "ISO 9001" },
-               { img: "/img/footerlog1.png", name: "NTC 5555" },
-               { img: "/img/footerlog2.png", name: "SGS" },
-               { img: "/img/footerlog3.png", name: "IQNET" }
+               { img: "/img/logo-ISO9001.jpg", name: "ISO 9001" },
+               { img: "/img/logo-NTC5555.jpg", name: "NTC 5555" },
+               { img: "/img/logo-NTC5581.jpg", name: "NTC 5581" },
+               { img: "/img/logo-NTC5663.jpg", name: "NTC 5663" }
              ].map((cert, i) => (
                 <div 
                   key={i} 
                   className="cert-badge aspect-square bg-white rounded-[2.5rem] p-6 flex items-center justify-center shadow-premium hover:-translate-y-2 transition-transform duration-500 border border-gray-50"
                 >
-                  <div className="relative w-full h-full opacity-60 hover:opacity-100 transition-opacity">
+                  <div className="relative w-full h-full">
                     <Image 
                       src={cert.img} 
                       alt={cert.name} 

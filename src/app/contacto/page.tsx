@@ -8,18 +8,26 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChevronRight, Send, Phone, Home, Mail, ArrowRight, MessageSquare, Headphones } from "lucide-react";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(ScrollTrigger);
 
 export default function ContactPage() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.from(".reveal-item", {
-        y: 20,
-        opacity: 0,
-        duration: 0.8,
-        stagger: 0.1,
-        ease: "power3.out"
+      gsap.utils.toArray(".reveal-item").forEach((el: any) => {
+        gsap.from(el, {
+          scrollTrigger: {
+            trigger: el,
+            start: "top 90%",
+          },
+          y: 20,
+          opacity: 0,
+          duration: 0.8,
+          ease: "power3.out"
+        });
       });
     }, containerRef);
     return () => ctx.revert();
@@ -128,7 +136,7 @@ export default function ContactPage() {
               <div className="space-y-10 relative z-10">
                 <div className="flex gap-6">
                   <div className="w-12 h-12 bg-white/10  rounded-2xl flex items-center justify-center border border-white/20 shrink-0">
-                    <Home size={22} className="text-fsm-red" />
+                    <Home size={22} className="text-white" />
                   </div>
                   <div>
                     <h4 className="font-black text-[9px] opacity-40 uppercase tracking-[0.3em] mb-4">Ubicación Central</h4>
@@ -139,7 +147,7 @@ export default function ContactPage() {
 
                 <div className="flex gap-6">
                   <div className="w-12 h-12 bg-white/10  rounded-2xl flex items-center justify-center border border-white/20 shrink-0">
-                    <Phone size={22} className="text-fsm-red" />
+                    <Phone size={22} className="text-white" />
                   </div>
                   <div>
                     <h4 className="font-black text-[9px] opacity-40 uppercase tracking-[0.3em] mb-4">Líneas Telefónicas</h4>
@@ -150,7 +158,7 @@ export default function ContactPage() {
 
                 <div className="flex gap-6">
                   <div className="w-12 h-12 bg-white/10  rounded-2xl flex items-center justify-center border border-white/20 shrink-0">
-                    <Mail size={22} className="text-fsm-red" />
+                    <Mail size={22} className="text-white" />
                   </div>
                   <div>
                     <h4 className="font-black text-[9px] opacity-40 uppercase tracking-[0.3em] mb-4">E-mail Oficial</h4>

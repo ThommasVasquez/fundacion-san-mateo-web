@@ -69,3 +69,22 @@
   opacity: 0;
   transform: translateY(20px);
 }
+/* Animations */
+@keyframes glow-pulse {
+  0%, 100% {
+    background-color: #761C30; /* fsm-red */
+    filter: blur(25px);
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    background-color: #1A3B80; /* fsm-blue */
+    filter: blur(30px);
+    opacity: 0.9;
+    transform: scale(1.6);
+  }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 5s infinite ease-in-out;
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import WhatsAppButton from "@/components/common/WhatsAppButton";
@@ -14,19 +14,56 @@ gsap.registerPlugin(ScrollTrigger);
 
 export default function AboutPage() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [selectedNorm, setSelectedNorm] = useState<number | null>(null);
+
+  const normsData = [
+    {
+      id: 0,
+      src: "/img/logo-ISO9001.jpg", 
+      alt: "ISO 9001",
+      title: "ISO 9001:2015",
+      subtitle: "Gestión de Calidad Global",
+      desc: "Garantiza que todos nuestros procesos administrativos y académicos cumplen con estándares internacionales de eficiencia y mejora continua."
+    },
+    {
+      id: 1,
+      src: "/img/logo-NTC5555.jpg", 
+      alt: "NTC 5555",
+      title: "NTC 5555",
+      subtitle: "Calidad Institucional",
+      desc: "Certifica nuestro sistema de gestión específico para instituciones de Formación para el Trabajo y el Desarrollo Humano."
+    },
+    {
+      id: 2,
+      src: "/img/logo-NTC5581.jpg", 
+      alt: "NTC 5581",
+      title: "NTC 5581",
+      subtitle: "Excelencia en Programas",
+      desc: "Avala el diseño y la prestación de nuestros servicios de formación, asegurando pertinencia y calidad en el mercado laboral."
+    },
+    {
+      id: 3,
+      src: "/img/logo-NTC5663.jpg", 
+      alt: "NTC 5663",
+      title: "NTC 5663",
+      subtitle: "Especialidad en Salud",
+      desc: "Certificación rigurosa exclusiva para programas del área de la salud, garantizando prácticas seguras e idóneas y laboratorios equipados."
+    }
+  ];
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.from(".reveal-section", {
-        scrollTrigger: {
-          trigger: ".reveal-section",
-          start: "top 80%",
-        },
-        y: 50,
-        opacity: 0,
-        duration: 1.2,
-        stagger: 0.3,
-        ease: "power4.out",
+      gsap.utils.toArray(".reveal-section").forEach((el: any) => {
+        gsap.from(el, {
+          scrollTrigger: {
+            trigger: el,
+            start: "top 85%",
+          },
+          y: 50,
+          opacity: 0,
+          duration: 1.2,
+          ease: "power4.out"
+        });
       });
 
       gsap.from(".parallax-img", {
@@ -120,9 +157,21 @@ export default function AboutPage() {
                 </p>
                 
                 <div className="flex flex-wrap gap-8">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="w-24 h-24 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-center group hover:bg-white hover:shadow-xl transition-all duration-500">
-                      <Award size={40} className="text-gray-200 group-hover:text-fsm-red transition-colors" />
+                  {[
+                    { src: "/img/logo-ISO9001.jpg", alt: "ISO 9001" },
+                    { src: "/img/logo-NTC5555.jpg", alt: "NTC 5555" },
+                    { src: "/img/logo-NTC5581.jpg", alt: "NTC 5581" },
+                    { src: "/img/logo-NTC5663.jpg", alt: "NTC 5663" }
+                  ].map((cert, i) => (
+                    <div key={i} className="w-24 h-24 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-center group hover:bg-white hover:shadow-xl transition-all duration-500 overflow-hidden p-3">
+                      <div className="relative w-full h-full">
+                        <Image 
+                          src={cert.src} 
+                          alt={cert.alt} 
+                          fill 
+                          className="object-contain" 
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -156,23 +205,48 @@ export default function AboutPage() {
           </div>
 
           {/* Trayectoria Highlight - Bento Style */}
-          <div className="reveal-section bg-fsm-red p-16 md:p-24 rounded-[5rem] text-center relative overflow-hidden text-white shadow-premium">
+          <div className="reveal-section bg-fsm-red p-16 md:p-24 rounded-[5rem] text-center relative overflow-hidden text-white shadow-premium transition-all duration-500">
              <div className="absolute inset-0 bg-[url('/img/pattern.png')] opacity-10 mix-blend-overlay"></div>
              <div className="relative z-10 space-y-12">
                 <ShieldCheck className="mx-auto text-white/20 mb-6" size={64} />
-                <h3 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter leading-none">Excelencia Acreditada</h3>
-                <p className="max-w-4xl mx-auto text-xl md:text-2xl text-white/70 font-light leading-relaxed">
-                  Contamos con certificaciones internacionales <span className="text-white font-black underline decoration-white/30 decoration-wavy underline-offset-8">ISO 9001:2015</span> y Normas Técnicas de Calidad (NTC) que avalan nuestra trayectoria ininterrumpida desde el año 2000.
-                </p>
-                <div className="flex flex-wrap justify-center gap-12 pt-8 opacity-40 group-transition-all">
-                   <div className="text-center">
-                      <p className="text-4xl font-black mb-1">24+</p>
-                      <p className="text-[10px] uppercase font-black tracking-widest">Años de Historia</p>
-                   </div>
-                   <div className="text-center">
-                      <p className="text-4xl font-black mb-1">4</p>
-                      <p className="text-[10px] uppercase font-black tracking-widest">Normas Técnicas</p>
-                   </div>
+                
+                <div className="min-h-[180px] flex flex-col justify-center transition-opacity duration-500">
+                  {selectedNorm === null ? (
+                    <div>
+                      <h3 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter leading-none mb-6">Excelencia Acreditada</h3>
+                      <p className="max-w-4xl mx-auto text-xl md:text-2xl text-white/70 font-light leading-relaxed">
+                        Contamos con certificaciones internacionales <span className="text-white font-black underline decoration-white/30 decoration-wavy underline-offset-8">ISO 9001:2015</span> y Normas Técnicas de Calidad (NTC) que avalan nuestra trayectoria ininterrumpida desde el año 2000.
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-sm font-black text-white/60 tracking-widest uppercase mb-4">{normsData[selectedNorm].title}</p>
+                      <h3 className="text-4xl md:text-5xl font-black uppercase tracking-tighter leading-none mb-6">{normsData[selectedNorm].subtitle}</h3>
+                      <p className="max-w-4xl mx-auto text-xl text-white/80 font-light leading-relaxed mb-8">
+                        {normsData[selectedNorm].desc}
+                      </p>
+                      <button 
+                        onClick={() => setSelectedNorm(null)}
+                        className="text-xs font-black tracking-widest uppercase bg-white/10 hover:bg-white/20 px-6 py-2 rounded-full transition-colors cursor-pointer"
+                      >
+                        Volver a vista general
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap justify-center gap-6 pt-8 border-t border-white/10">
+                  {normsData.map((cert) => (
+                    <button 
+                      key={cert.id}
+                      onClick={() => setSelectedNorm(cert.id)}
+                      className={`w-20 h-20 md:w-24 md:h-24 bg-white rounded-3xl p-3 shadow-lg flex items-center justify-center transition-all duration-300 ${selectedNorm === cert.id ? 'ring-4 ring-white scale-110' : 'hover:scale-105 opacity-70 hover:opacity-100 cursor-pointer'}`}
+                    >
+                      <div className="relative w-full h-full pointer-events-none">
+                        <Image src={cert.src} alt={cert.alt} fill className="object-contain" />
+                      </div>
+                    </button>
+                  ))}
                 </div>
              </div>
           </div>

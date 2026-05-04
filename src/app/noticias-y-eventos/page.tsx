@@ -6,8 +6,11 @@ import Footer from "@/components/layout/Footer";
 import WhatsAppButton from "@/components/common/WhatsAppButton";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronRight, Newspaper, Calendar, ArrowUpRight, ArrowRight, Share2, Facebook, Instagram } from "lucide-react";
+import { ChevronRight, Newspaper, Calendar, ArrowUpRight, ArrowRight, Share2, Facebook, Instagram, Twitter, Video } from "lucide-react";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(ScrollTrigger);
 
 const newsItems = [
   {
@@ -65,12 +68,17 @@ export default function NewsPage() {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.from(".reveal-item", {
-        y: 30,
-        opacity: 0,
-        duration: 0.8,
-        stagger: 0.1,
-        ease: "power3.out"
+      gsap.utils.toArray(".reveal-item").forEach((el: any) => {
+        gsap.from(el, {
+          scrollTrigger: {
+            trigger: el,
+            start: "top 90%",
+          },
+          y: 30,
+          opacity: 0,
+          duration: 0.8,
+          ease: "power3.out"
+        });
       });
     }, containerRef);
     return () => ctx.revert();
@@ -163,7 +171,7 @@ export default function NewsPage() {
                     Síguenos en nuestras redes oficiales para interactuar con la comunidad Mateista en tiempo real.
                   </p>
                   <div className="space-y-4">
-                     <a 
+                      <a 
                       href="https://facebook.com" 
                       target="_blank"
                       className="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white hover:text-fsm-blue transition-all duration-500 font-black text-[10px] tracking-widest uppercase group/social"
@@ -182,6 +190,50 @@ export default function NewsPage() {
                        <span className="flex items-center gap-3">
                          <Instagram size={18} className="text-fsm-red group-hover/social:text-fsm-blue transition-colors" />
                          Instagram
+                       </span>
+                       <ArrowUpRight size={18} className="opacity-40" />
+                     </a>
+                     <a 
+                      href="https://tiktok.com/@fundacionsanmateo" 
+                      target="_blank" 
+                      className="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white hover:text-fsm-blue transition-all duration-500 font-black text-[10px] tracking-widest uppercase group/social"
+                     >
+                       <span className="flex items-center gap-3">
+                         <Video size={18} className="text-fsm-red group-hover/social:text-fsm-blue transition-colors" />
+                         TikTok
+                       </span>
+                       <ArrowUpRight size={18} className="opacity-40" />
+                     </a>
+                     <a 
+                      href="https://x.com/SanMateoF" 
+                      target="_blank" 
+                      className="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white hover:text-fsm-blue transition-all duration-500 font-black text-[10px] tracking-widest uppercase group/social"
+                     >
+                       <span className="flex items-center gap-3">
+                         <Twitter size={18} className="text-fsm-red group-hover/social:text-fsm-blue transition-colors" />
+                         X (Twitter)
+                       </span>
+                       <ArrowUpRight size={18} className="opacity-40" />
+                     </a>
+                     <a 
+                      href="https://tiktok.com" 
+                      target="_blank" 
+                      className="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white hover:text-fsm-blue transition-all duration-500 font-black text-[10px] tracking-widest uppercase group/social"
+                     >
+                       <span className="flex items-center gap-3">
+                         <Video size={18} className="text-fsm-red group-hover/social:text-fsm-blue transition-colors" />
+                         TikTok
+                       </span>
+                       <ArrowUpRight size={18} className="opacity-40" />
+                     </a>
+                     <a 
+                      href="https://twitter.com" 
+                      target="_blank" 
+                      className="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white hover:text-fsm-blue transition-all duration-500 font-black text-[10px] tracking-widest uppercase group/social"
+                     >
+                       <span className="flex items-center gap-3">
+                         <Twitter size={18} className="text-fsm-red group-hover/social:text-fsm-blue transition-colors" />
+                         X (Twitter)
                        </span>
                        <ArrowUpRight size={18} className="opacity-40" />
                      </a>

@@ -3,7 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, GraduationCap, Users, BookOpen, Award } from "lucide-react";
+import { ArrowRight, GraduationCap, Users, BookOpen, Award, Laptop, Calculator } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -53,7 +53,7 @@ const BentoPrograms = () => {
         </div>
 
         {/* Bento Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 h-full min-h-[800px]">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 h-full">
           {/* Main Program: Nursing (Large Vertical) */}
           <Link 
             href="/programa-enfermeria"
@@ -101,50 +101,70 @@ const BentoPrograms = () => {
               </div>
             </Link>
 
-            {/* Sub-card: Continuing Education */}
+            {/* Sistemas */}
             <Link 
-              href="/oferta-academica#cursos"
-              className="bento-item relative group rounded-[4rem] overflow-hidden shadow-premium h-[320px] bg-fsm-blue flex flex-col p-10 justify-between text-white"
+              href="/programa-sistemas"
+              className="bento-item relative group rounded-[4rem] overflow-hidden shadow-premium h-[320px]"
             >
-              <div className="relative z-10">
-                <BookOpen size={40} className="text-fsm-red mb-6" />
-                <h4 className="text-2xl font-black mb-2 uppercase">Educación Continua</h4>
-                <p className="text-white/60 text-sm font-medium">Cursos y diplomados especializados para el sector salud.</p>
+              <Image 
+                src="/img/image11.jpg" 
+                alt="Sistemas" 
+                fill 
+                className="object-cover transition-transform duration-1000 group-hover:scale-110 brightness-75 group-hover:brightness-50"
+              />
+              <div className="absolute inset-0 p-8 flex flex-col justify-end text-white z-10 bg-fsm-blue/80">
+                <div className="mb-4 w-12 h-12 bg-white/30 rounded-2xl flex items-center justify-center border border-white/30 transform group-hover:rotate-12 transition-transform duration-500">
+                  <Laptop size={24} />
+                </div>
+                <h4 className="text-xl md:text-2xl font-black mb-2 uppercase">Sistemas e <br />Informática</h4>
+                <div className="flex items-center gap-2 font-black text-[10px] tracking-widest uppercase mt-4 group-hover:text-fsm-red transition-colors">
+                  Explorar programa <ArrowRight size={14} />
+                </div>
               </div>
-              <div className="flex items-center gap-2 font-black text-[10px] tracking-widest uppercase relative z-10 group-hover:text-fsm-red transition-colors">
-                Ver 7 cursos <ArrowRight size={14} />
-              </div>
-              {/* Decorative background element */}
-              <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/5 rounded-full transform group-hover:scale-150 transition-transform duration-700"></div>
             </Link>
 
-            {/* Sub-card: Why Us Feature */}
-            <div 
-              className="bento-item relative group rounded-[4rem] overflow-hidden shadow-premium h-[320px] bg-gray-50 flex flex-col p-10 justify-between border border-gray-100"
+            {/* Contabilidad */}
+            <Link 
+              href="/programa-contabilidad"
+              className="bento-item relative group rounded-[4rem] overflow-hidden shadow-premium h-[320px]"
             >
-              <div>
-                <Award size={40} className="text-fsm-blue mb-6" />
-                <h4 className="text-2xl font-black text-fsm-blue mb-2 uppercase">Calidad ISO</h4>
-                <p className="text-gray-500 text-sm font-medium">Contamos con cuatro normas técnicas de calidad vigentes.</p>
+              <Image 
+                src="/img/image12.jpg" 
+                alt="Contabilidad" 
+                fill 
+                className="object-cover transition-transform duration-1000 group-hover:scale-110 brightness-75 group-hover:brightness-50"
+              />
+              <div className="absolute inset-0 p-8 flex flex-col justify-end text-white z-10 bg-fsm-red/80">
+                <div className="mb-4 w-12 h-12 bg-white/30 rounded-2xl flex items-center justify-center border border-white/30 transform group-hover:-rotate-12 transition-transform duration-500">
+                  <Calculator size={24} />
+                </div>
+                <h4 className="text-xl md:text-2xl font-black mb-2 uppercase">Contabilidad y <br />Finanzas</h4>
+                <div className="flex items-center gap-2 font-black text-[10px] tracking-widest uppercase mt-4 group-hover:text-fsm-blue transition-colors">
+                  Explorar programa <ArrowRight size={14} />
+                </div>
               </div>
-              <div className="w-12 h-1 bg-fsm-red rounded-full"></div>
-            </div>
+            </Link>
           </div>
+
+
+
         </div>
 
-        {/* Floating Tag */}
         <div className="mt-20 flex justify-center">
-          <div className="bg-fsm-red/5 p-8 rounded-[3rem] border border-fsm-red/10 flex flex-col md:flex-row items-center gap-8 justify-between w-full max-w-4xl shadow-sm">
-            <p className="text-fsm-red font-black text-xl italic uppercase tracking-tighter text-center md:text-left">
+          <div className="bg-fsm-red/5 p-12 md:p-16 lg:p-20 rounded-[4rem] border border-fsm-red/10 flex flex-col lg:flex-row items-center gap-12 justify-between w-full max-w-7xl shadow-sm relative overflow-hidden">
+            <p className="text-fsm-red font-black text-3xl md:text-4xl lg:text-5xl italic uppercase tracking-tighter text-center lg:text-left leading-none relative z-10">
               ¡Matricúlate hoy y obtén tu <span className="underline decoration-wavy">Uniforme Gratis</span>!
             </p>
-            <Link 
-              href="https://fundacionsanmateo.q10.com/Preinscripcion"
-              target="_blank"
-              className="bg-fsm-red text-white px-8 py-4 rounded-2xl font-black text-xs tracking-widest hover:bg-fsm-blue transition-all"
-            >
-              INSCRIBIRSE AHORA
-            </Link>
+            <div className="relative group">
+              <div className="absolute inset-4 animate-glow-pulse rounded-full -z-10"></div>
+              <Link 
+                href="https://fundacionsanmateo.q10.com/Preinscripcion"
+                target="_blank"
+                className="relative z-10 bg-fsm-red text-white px-12 py-6 rounded-3xl font-black text-sm md:text-base tracking-widest hover:scale-105 active:scale-95 transition-all shadow-premium whitespace-nowrap block"
+              >
+                INSCRIBIRSE AHORA
+              </Link>
+            </div>
           </div>
         </div>
       </div>

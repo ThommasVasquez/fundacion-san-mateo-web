@@ -10,7 +10,9 @@ import { ChevronRight, GraduationCap, BookOpen, UserPlus, ArrowRight, Star } fro
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
+gsap.registerPlugin(ScrollTrigger);
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -53,12 +55,17 @@ export default function AcademicOffer() {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.from(".reveal-item", {
-        y: 30,
-        opacity: 0,
-        duration: 0.8,
-        stagger: 0.1,
-        ease: "power3.out"
+      gsap.utils.toArray(".reveal-item").forEach((el: any) => {
+        gsap.from(el, {
+          scrollTrigger: {
+            trigger: el,
+            start: "top 90%",
+          },
+          y: 30,
+          opacity: 0,
+          duration: 0.8,
+          ease: "power3.out"
+        });
       });
     }, containerRef);
     return () => ctx.revert();
@@ -149,35 +156,38 @@ export default function AcademicOffer() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {continuousEducation.map((program) => (
-                <Link 
-                  href={program.href} 
+                <div 
                   key={program.title}
-                  className="reveal-item group bg-white rounded-[3rem] overflow-hidden shadow-premium border border-gray-50 hover:-translate-y-4 transition-all duration-700"
+                  className="reveal-item group relative bg-white rounded-[3rem] overflow-hidden shadow-premium border border-gray-50 hover:-translate-y-4 transition-all duration-700 flex flex-col"
                 >
-                  <div className="relative h-72">
+                  <Link href={program.href} className="absolute inset-0 z-0" aria-label={`Ver detalles de ${program.title}`} />
+                  
+                  <div className="relative h-72 pointer-events-none">
                     <Image src={program.image} alt={program.title} fill className="object-cover transition-transform duration-1000 group-hover:scale-110 group-hover:grayscale-0" />
                     <div className="absolute inset-0 bg-fsm-blue/10 group-hover:bg-transparent transition-colors duration-500" />
                   </div>
-                  <div className="p-10">
+                  
+                  <div className="p-10 relative z-10 pointer-events-none flex-grow flex flex-col">
                     <div className="flex items-center gap-2 mb-6">
                       <span className="w-8 h-px bg-fsm-red"></span>
                       <span className="text-[9px] font-black tracking-widest text-fsm-red uppercase">Educación Continua</span>
                     </div>
                     <h3 className="text-xl md:text-2xl font-black text-fsm-blue group-hover:text-fsm-red transition-colors leading-[1.1] mb-8 min-h-[3rem]">{program.title}</h3>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 font-black text-[9px] tracking-widest text-fsm-blue group-hover:gap-4 transition-all transition-all duration-500 uppercase">
+                    
+                    <div className="flex items-center justify-between mt-auto pointer-events-auto">
+                      <div className="flex items-center gap-2 font-black text-[9px] tracking-widest text-fsm-blue group-hover:gap-4 transition-all duration-500 uppercase pointer-events-none">
                         Detalles <ArrowRight size={14} className="text-fsm-red" />
                       </div>
-                      <Link 
+                      <a 
                         href="https://fundacionsanmateo.q10.com/Preinscripcion"
                         target="_blank"
-                        className="p-3 bg-gray-50 rounded-xl hover:bg-fsm-red hover:text-white transition-all text-fsm-blue"
+                        className="p-3 bg-gray-50 rounded-xl hover:bg-fsm-red hover:text-white transition-all text-fsm-blue relative z-20"
                       >
                          <UserPlus size={16} />
-                      </Link>
+                      </a>
                     </div>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}

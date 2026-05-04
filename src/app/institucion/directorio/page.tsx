@@ -8,18 +8,26 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChevronRight, Phone, MapPin, Clock, Headphones, ArrowRight, Star } from "lucide-react";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(ScrollTrigger);
 
 export default function DirectoryPage() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.from(".reveal-item", {
-        y: 20,
-        opacity: 0,
-        duration: 0.8,
-        stagger: 0.1,
-        ease: "power3.out"
+      gsap.utils.toArray(".reveal-item").forEach((el: any) => {
+        gsap.from(el, {
+          scrollTrigger: {
+            trigger: el,
+            start: "top 90%",
+          },
+          y: 20,
+          opacity: 0,
+          duration: 0.8,
+          ease: "power3.out"
+        });
       });
     }, containerRef);
     return () => ctx.revert();
@@ -114,7 +122,7 @@ export default function DirectoryPage() {
                             <a 
                               href="https://maps.google.com/?q=Calle+19+%238-21,+Soacha,+Cundinamarca" 
                               target="_blank"
-                              className="text-xs font-black text-fsm-red uppercase tracking-widest flex items-center gap-2 hover:text-white transition-colors"
+                              className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2 hover:text-white/70 transition-colors"
                             >
                               Explorar en Google Maps <ArrowRight size={18} />
                             </a>
