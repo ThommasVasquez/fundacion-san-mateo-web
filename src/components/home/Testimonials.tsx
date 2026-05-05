@@ -22,7 +22,7 @@ const testimonials = [
   },
 ];
 
-const Testimonials = () => {
+const Testimonials = ({ content = {} }: { content?: Record<string, string> }) => {
   const [current, setCurrent] = useState(0);
   const textRef = useRef<HTMLDivElement>(null);
 
@@ -50,10 +50,9 @@ const Testimonials = () => {
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center mb-16">
           <h2 className="text-sm font-black text-fsm-red tracking-[0.3em] uppercase mb-4">
-            Testimonios
+            {content['home_test_subtitle'] || 'Testimonios'}
           </h2>
-          <h3 className="text-4xl font-black text-white">
-            VOCES DE NUESTROS EGRESADOS
+          <h3 className="text-4xl font-black text-white" dangerouslySetInnerHTML={{ __html: content['home_test_title'] || 'VOCES DE NUESTROS EGRESADOS' }}>
           </h3>
         </div>
 

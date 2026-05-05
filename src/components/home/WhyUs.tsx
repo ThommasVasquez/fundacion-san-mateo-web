@@ -8,7 +8,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const WhyUs = () => {
+const WhyUs = ({ content = {} }: { content?: Record<string, string> }) => {
   const sectionRef = useRef<HTMLDivElement>(null);
   const bgRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -59,10 +59,10 @@ const WhyUs = () => {
       <div className="container mx-auto px-8 relative z-10">
         <div ref={contentRef} className="max-w-5xl mx-auto">
           <div className="text-center mb-20">
-            <h2 className="text-sm font-black text-white tracking-[0.5em] uppercase mb-8">Nuestra Identidad</h2>
-            <h3 className="text-5xl md:text-7xl lg:text-8xl font-black text-white leading-none uppercase mb-12">
-              VALORES QUE <br />
-              <span className="text-fsm-red">TRANSFORMAN</span>
+            <h2 className="text-sm font-black text-white tracking-[0.5em] uppercase mb-8">
+               {content['home_why_subtitle'] || 'Nuestra Identidad'}
+            </h2>
+            <h3 className="text-5xl md:text-7xl lg:text-8xl font-black text-white leading-none uppercase mb-12" dangerouslySetInnerHTML={{ __html: content['home_why_title'] || 'VALORES QUE <br /><span class="text-fsm-red">TRANSFORMAN</span>' }}>
             </h3>
             <div className="w-24 h-1.5 bg-fsm-red mx-auto rounded-full"></div>
           </div>
@@ -70,7 +70,7 @@ const WhyUs = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-12">
               <p className="text-xl text-white/70 leading-relaxed font-light italic">
-                "Formamos con vocación y excelencia técnica, integrando principios éticos y humanistas en cada paso de nuestro proceso educativo."
+                {content['home_why_quote'] || '"Formamos con vocación y excelencia técnica, integrando principios éticos y humanistas en cada paso de nuestro proceso educativo."'}
               </p>
               
               <div className="flex flex-col gap-8">

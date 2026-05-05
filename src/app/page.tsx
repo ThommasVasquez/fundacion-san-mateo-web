@@ -26,11 +26,11 @@ export default async function Home() {
       <CertificationSection content={content} />
       
       {/* Storytelling Immersive Section */}
-      <WhyUs />
+      <WhyUs content={content} />
       
       {/* Social Proof */}
       <div className="bg-fsm-blue py-32">
-        <Testimonials />
+        <Testimonials content={content} />
       </div>
       
       <Footer />
