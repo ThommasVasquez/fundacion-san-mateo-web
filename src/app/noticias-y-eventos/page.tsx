@@ -215,28 +215,7 @@ export default function NewsPage() {
                        </span>
                        <ArrowUpRight size={18} className="opacity-40" />
                      </a>
-                     <a 
-                      href="https://tiktok.com" 
-                      target="_blank" 
-                      className="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white hover:text-fsm-blue transition-all duration-500 font-black text-[10px] tracking-widest uppercase group/social"
-                     >
-                       <span className="flex items-center gap-3">
-                         <Video size={18} className="text-fsm-red group-hover/social:text-fsm-blue transition-colors" />
-                         TikTok
-                       </span>
-                       <ArrowUpRight size={18} className="opacity-40" />
-                     </a>
-                     <a 
-                      href="https://twitter.com" 
-                      target="_blank" 
-                      className="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white hover:text-fsm-blue transition-all duration-500 font-black text-[10px] tracking-widest uppercase group/social"
-                     >
-                       <span className="flex items-center gap-3">
-                         <Twitter size={18} className="text-fsm-red group-hover/social:text-fsm-blue transition-colors" />
-                         X (Twitter)
-                       </span>
-                       <ArrowUpRight size={18} className="opacity-40" />
-                     </a>
+
                   </div>
                 </div>
 
