@@ -48,12 +48,13 @@ export async function logout() {
   (await cookies()).delete('session');
 }
 
-export async function updateContent(contentKey: string, newValue: string) {
+export async function updateContent(contentKey: string, newValue: string, pagePath: string = '/', contentType: string = 'text') {
   try {
     await sql`
-      UPDATE site_content 
-      SET value = ${newValue}, updated_at = CURRENT_TIMESTAMP
-      WHERE content_key = ${contentKey}
+      INSERT INTO site_content (content_key, value, page_path, content_type)
+      VALUES (${contentKey}, ${newValue}, ${pagePath}, ${contentType})
+      ON CONFLICT (content_key) DO UPDATE 
+      SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
     `;
     return { success: true };
   } catch (error) {

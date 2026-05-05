@@ -20,10 +20,10 @@ export default async function Home() {
       <Hero content={content} />
       
       {/* Immersive Structural Break: The Bento Grid */}
-      <BentoPrograms />
+      <BentoPrograms content={content} />
       
       {/* Elegant Integration of Trust */}
-      <CertificationSection />
+      <CertificationSection content={content} />
       
       {/* Storytelling Immersive Section */}
       <WhyUs />

@@ -34,6 +34,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
              <Link href="/admin" className="px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase hover:bg-white transition-all text-fsm-blue">
                Contenido
              </Link>
+             <Link href="/admin/pages/home" className="px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase hover:bg-white transition-all text-fsm-blue">
+               Inicio
+             </Link>
              <Link href="/admin/blog" className="px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase hover:bg-white transition-all text-fsm-blue">
                Blog
              </Link>

@@ -8,7 +8,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const CertificationSection = () => {
+const CertificationSection = ({ content = {} }: { content?: Record<string, string> }) => {
   const sectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -38,11 +38,10 @@ const CertificationSection = () => {
               <span className="w-12 h-px bg-fsm-red"></span>
               Calidad & Legalidad
             </h2>
-            <h3 className="text-4xl md:text-5xl font-black text-fsm-blue mb-8 leading-tight uppercase">
-              RECONOCIMIENTO <br /> INSTITUCIONAL
+            <h3 className="text-4xl md:text-5xl font-black text-fsm-blue mb-8 leading-tight uppercase" dangerouslySetInnerHTML={{ __html: content['home_cert_title'] || 'RECONOCIMIENTO <br /> INSTITUCIONAL' }}>
             </h3>
             <p className="text-lg text-gray-500 mb-10 leading-relaxed font-medium">
-              Operamos bajo la aprobación oficial de la Secretaría de Educación de Soacha y contamos con certificaciones internacionales que avalan nuestros procesos pedagógicos.
+              {content['home_cert_desc'] || 'Operamos bajo la aprobación oficial de la Secretaría de Educación de Soacha y contamos con certificaciones internacionales que avalan nuestros procesos pedagógicos.'}
             </p>
             
             <div className="flex flex-wrap gap-4">

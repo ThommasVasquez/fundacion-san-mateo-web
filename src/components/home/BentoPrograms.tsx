@@ -9,7 +9,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const BentoPrograms = () => {
+const BentoPrograms = ({ content = {} }: { content?: Record<string, string> }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,11 +37,9 @@ const BentoPrograms = () => {
           <div className="max-w-2xl">
             <h2 className="text-sm font-black text-fsm-red tracking-[0.4em] uppercase mb-6 flex items-center gap-4">
               <span className="w-12 h-px bg-fsm-red"></span>
-              Oferta Programática
+              {content['home_programs_subtitle'] || 'Oferta Programática'}
             </h2>
-            <h3 className="text-5xl md:text-6xl font-black text-fsm-blue leading-tight uppercase font-display">
-              Elige tu camino hacia la <br />
-              <span className="text-fsm-red">Excelencia</span>
+            <h3 className="text-5xl md:text-6xl font-black text-fsm-blue leading-tight uppercase font-display" dangerouslySetInnerHTML={{ __html: content['home_programs_title'] || 'Elige tu camino hacia la <br /><span class="text-fsm-red">Excelencia</span>' }}>
             </h3>
           </div>
           <Link 
