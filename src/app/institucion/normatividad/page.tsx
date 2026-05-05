@@ -6,20 +6,28 @@ import Footer from "@/components/layout/Footer";
 import WhatsAppButton from "@/components/common/WhatsAppButton";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronRight, FileText, Download, Shield, Scale, ArrowRight, Gavel } from "lucide-react";
+import { ChevronRight, FileText, Download, Shield, Scale, ArrowRight, Gavel, FileSignature, BookOpen } from "lucide-react";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(ScrollTrigger);
 
 export default function NormativityPage() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.from(".reveal-item", {
-        y: 30,
-        opacity: 0,
-        duration: 0.8,
-        stagger: 0.1,
-        ease: "power3.out"
+      gsap.utils.toArray(".reveal-item").forEach((el: any) => {
+        gsap.from(el, {
+          scrollTrigger: {
+            trigger: el,
+            start: "top 90%",
+          },
+          y: 30,
+          opacity: 0,
+          duration: 0.8,
+          ease: "power3.out"
+        });
       });
     }, containerRef);
     return () => ctx.revert();
@@ -55,6 +63,23 @@ export default function NormativityPage() {
       links: [
         { name: "Manual de Convivencia", href: "/docs/ManualDeConvivencia.pdf" },
         { name: "Política de Tratamiento de Datos Personales", href: "/tratamiento-datos" },
+        { name: "Proyecto Educativo Institucional (PEI)", href: "#" },
+        { name: "Reglamento Estudiantil", href: "#" },
+        { name: "Reglamento Docente", href: "#" },
+      ],
+    },
+    {
+      category: "Aprobación Programa Servicios Farmacéuticos",
+      icon: <FileSignature className="text-fsm-red" size={24} />,
+      links: [
+        { name: "Resolución pendiente de cargar", href: "#" },
+      ],
+    },
+    {
+      category: "Aprobación Programa Asistencia Administrativa",
+      icon: <BookOpen className="text-fsm-blue" size={24} />,
+      links: [
+        { name: "Resolución pendiente de cargar", href: "#" },
       ],
     },
   ];
