@@ -1,11 +1,11 @@
 import React from "react";
 import { getContentMap } from "@/lib/content";
-import HomePageForm from "@/components/admin/HomePageForm";
+import GlobalCMSForm from "@/components/admin/GlobalCMSForm";
 import Link from "next/link";
 import { ChevronRight, Home } from "lucide-react";
 
 export const metadata = {
-  title: "Editar Página de Inicio | FSM Admin",
+  title: "Gestor Global de Contenido | FSM Admin",
 };
 
 export default async function AdminHomePage() {
@@ -20,16 +20,16 @@ export default async function AdminHomePage() {
           <Home size={14} /> Dashboard
         </Link>
         <ChevronRight size={14} />
-        <span className="text-fsm-blue">Página de Inicio</span>
+        <span className="text-fsm-blue">Gestor Global</span>
       </div>
 
       <div>
-        <h1 className="text-3xl font-black text-fsm-blue uppercase tracking-tighter mb-2">Editar Página de Inicio</h1>
-        <p className="text-gray-500 font-medium">Gestiona los textos, títulos e imágenes de la página principal.</p>
+        <h1 className="text-3xl font-black text-fsm-blue uppercase tracking-tighter mb-2">GESTOR GLOBAL DE CONTENIDO</h1>
+        <p className="text-gray-500 font-medium">Gestiona los textos, títulos e imágenes de todas las páginas de la institución.</p>
       </div>
 
-      {/* Formulario Cliente */}
-      <HomePageForm initialContent={content} />
+      {/* Formulario Cliente Unificado */}
+      <GlobalCMSForm initialContent={content} />
     </div>
   );
 }
