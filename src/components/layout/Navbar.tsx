@@ -48,10 +48,10 @@ const Navbar = () => {
   ];
 
   const utilityLinks = [
-    { name: "Inscripciones", href: "https://fundacionsanmateo.q10.com/Preinscripcion", color: "bg-fsm-blue" },
-    { name: "Pagos estudiantes", href: "https://portalpagos.davivienda.com/#/comercio/6023/FUNDACION%20SAN%20MATEO", color: "bg-fsm-blue" },
+    { name: "Inscripciones", href: "https://fundacionsanmateo.q10.com/Preinscripcion", color: "bg-fsm-red" },
+    { name: "Pagos estudiantes", href: "https://portalpagos.davivienda.com/#/comercio/6023/FUNDACION%20SAN%20MATEO", color: "bg-fsm-red" },
     { name: "Campus virtual", href: "https://site2.q10.com/login?ReturnUrl=%2F&aplentId=21bfe857-977b-4057-b48c-55d9717d0dfe", color: "bg-fsm-red" },
-    { name: "Solicitudes", href: "https://solicitudes.fundacionsanmateosoacha.edu.co/centro-de-solicitudes", color: "bg-fsm-blue" },
+    { name: "Solicitudes", href: "https://solicitudes.fundacionsanmateosoacha.edu.co/centro-de-solicitudes", color: "bg-fsm-red" },
   ];
 
   return (
