@@ -225,7 +225,7 @@ export default function NewsPage() {
                      {[
                        { name: "Oferta Académica", href: "/oferta-academica" },
                        { name: "Galería de Momentos", href: "/galeria" },
-                       { name: "Calendario 2024", href: "/calendario-academico" }
+                       { name: `Calendario ${new Date().getFullYear()}`, href: "/calendario-academico" }
                      ].map((link, i) => (
                        <Link key={i} href={link.href} className="flex items-center justify-center gap-3 text-sm font-black text-fsm-blue hover:text-fsm-red transition-all group">
                          {link.name} <ChevronRight size={16} className="text-fsm-red group-hover:translate-x-2 transition-transform" />
