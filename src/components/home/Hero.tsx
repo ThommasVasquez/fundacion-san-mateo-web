@@ -103,20 +103,27 @@ const Hero = ({ content = {} }: { content?: Record<string, string> }) => {
           </p>
           
           <div ref={ctaRef} className="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
-            <Link 
-              href="/oferta-academica"
-              className="group flex items-center gap-4 bg-fsm-blue text-white px-10 py-5 rounded-full font-black text-xs tracking-widest hover:bg-fsm-red transition-all duration-500 shadow-premium"
-            >
-              EXPLORAR PROGRAMAS
-              <ArrowRight className="group-hover:translate-x-2 transition-transform" size={18} />
-            </Link>
+            {content['home_hero_cta_primary_show'] !== 'false' && (
+              <Link 
+                href={content['home_hero_cta_primary_link'] || "/oferta-academica"}
+                className="group flex items-center gap-4 bg-fsm-blue text-white px-10 py-5 rounded-full font-black text-xs tracking-widest hover:bg-fsm-red transition-all duration-500 shadow-premium"
+              >
+                {content['home_hero_cta_primary_text'] || 'EXPLORAR PROGRAMAS'}
+                <ArrowRight className="group-hover:translate-x-2 transition-transform" size={18} />
+              </Link>
+            )}
             
-            <button className="flex items-center gap-3 text-fsm-blue font-black text-xs tracking-widest group">
-              <span className="w-12 h-12 flex items-center justify-center bg-fsm-blue/5 rounded-full group-hover:bg-fsm-blue/10 transition-colors">
-                <Play className="fill-fsm-blue ml-1" size={16} />
-              </span>
-              VER VIDEO INSTITUCIONAL
-            </button>
+            {content['home_hero_cta_secondary_show'] !== 'false' && (
+              <Link 
+                href={content['home_hero_cta_secondary_link'] || "#"}
+                className="flex items-center gap-3 text-fsm-blue font-black text-xs tracking-widest group"
+              >
+                <span className="w-12 h-12 flex items-center justify-center bg-fsm-blue/5 rounded-full group-hover:bg-fsm-blue/10 transition-colors">
+                  <Play className="fill-fsm-blue ml-1" size={16} />
+                </span>
+                {content['home_hero_cta_secondary_text'] || 'VER VIDEO INSTITUCIONAL'}
+              </Link>
+            )}
           </div>
 
           {/* Trust Badges */}

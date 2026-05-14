@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { updateContent } from '@/app/actions';
-import { Save, Image as ImageIcon, FileText, CheckCircle, Loader2, ChevronDown, FolderTree } from 'lucide-react';
+import { Save, Image as ImageIcon, FileText, CheckCircle, Loader2, ChevronDown, FolderTree, ToggleLeft, ToggleRight } from 'lucide-react';
 import Image from 'next/image';
 
 interface GlobalCMSFormProps {
@@ -18,6 +18,12 @@ export const cmsStructure: Record<string, any> = {
     { group: 'Hero Section', key: 'home_hero_title2', label: 'Título Línea 3', type: 'text', default: 'BRILLANTES' },
     { group: 'Hero Section', key: 'home_hero_desc', label: 'Descripción Principal', type: 'text', default: 'Institución de educación para el trabajo y desarrollo humano en Soacha, comprometida con la formación integral y la calidad técnica.' },
     { group: 'Hero Section', key: 'home_hero_image', label: 'Imagen Hero', type: 'image', default: '/img/servicio-al-cliente.jpg' },
+    { group: 'Hero Section (Botón Primario)', key: 'home_hero_cta_primary_show', label: 'Mostrar Botón Primario', type: 'toggle', default: 'true' },
+    { group: 'Hero Section (Botón Primario)', key: 'home_hero_cta_primary_text', label: 'Texto Botón Primario', type: 'text', default: 'EXPLORAR PROGRAMAS' },
+    { group: 'Hero Section (Botón Primario)', key: 'home_hero_cta_primary_link', label: 'Enlace Botón Primario', type: 'text', default: '/oferta-academica' },
+    { group: 'Hero Section (Botón Secundario)', key: 'home_hero_cta_secondary_show', label: 'Mostrar Botón Secundario', type: 'toggle', default: 'true' },
+    { group: 'Hero Section (Botón Secundario)', key: 'home_hero_cta_secondary_text', label: 'Texto Botón Secundario', type: 'text', default: 'VER VIDEO INSTITUCIONAL' },
+    { group: 'Hero Section (Botón Secundario)', key: 'home_hero_cta_secondary_link', label: 'Enlace Botón Secundario', type: 'text', default: '#' },
     { group: 'Sección Programas', key: 'home_programs_subtitle', label: 'Subtítulo', type: 'text', default: 'Oferta Programática' },
     { group: 'Sección Programas', key: 'home_programs_title', label: 'Título HTML', type: 'text', default: 'Elige tu camino hacia la <br /><span class="text-fsm-red">Excelencia</span>' },
     { group: 'Sección Certificaciones', key: 'home_cert_title', label: 'Título', type: 'text', default: 'RECONOCIMIENTO <br /> INSTITUCIONAL' },
@@ -214,7 +220,9 @@ export default function GlobalCMSForm({ initialContent }: GlobalCMSFormProps) {
                     {/* Left Column: Label and Key */}
                     <div className="md:col-span-3 flex flex-col justify-start">
                       <div className="flex items-center gap-2 mb-1">
-                        {field.type === 'image' ? <ImageIcon size={16} className="text-fsm-red" /> : <FileText size={16} className="text-fsm-blue" />}
+                        {field.type === 'image' ? <ImageIcon size={16} className="text-fsm-red" /> : 
+                         field.type === 'toggle' ? <ToggleRight size={16} className="text-green-500" /> :
+                         <FileText size={16} className="text-fsm-blue" />}
                         <span className="font-bold text-gray-700 text-sm">{field.key}</span>
                       </div>
                       <span className="text-xs text-gray-700 uppercase tracking-widest">{field.type}</span>
@@ -233,6 +241,18 @@ export default function GlobalCMSForm({ initialContent }: GlobalCMSFormProps) {
                             }
                           }}
                         />
+                      ) : field.type === 'toggle' ? (
+                        <div className="flex items-center gap-4">
+                          <button 
+                            onClick={() => handleUpdate(field.key, currentValue === 'true' ? 'false' : 'true', 'toggle')}
+                            className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-fsm-red focus:ring-offset-2 ${currentValue === 'true' ? 'bg-green-500' : 'bg-gray-300'}`}
+                          >
+                            <span 
+                              className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${currentValue === 'true' ? 'translate-x-7' : 'translate-x-1'}`}
+                            />
+                          </button>
+                          <span className="text-sm font-bold text-gray-700 uppercase">{currentValue === 'true' ? 'Activado' : 'Desactivado'}</span>
+                        </div>
                       ) : (
                         <div className="flex flex-col gap-4">
                           {currentValue && (

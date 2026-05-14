@@ -117,17 +117,29 @@ export default function ContentEditor({ initialData }: { initialData: ContentIte
                 </div>
 
                 <div className="md:col-span-7">
-                  {item.content_type === 'text' ? (
-                    <textarea 
-                      defaultValue={item.value}
-                      className="w-full p-4 rounded-xl border border-gray-200 focus:ring-2 focus:ring-fsm-red outline-none min-h-[100px]"
-                      onBlur={(e) => {
-                        if(e.target.value !== item.value) {
-                           handleUpdate(item, e.target.value);
-                        }
-                      }}
-                    />
-                  ) : (
+                    {item.content_type === 'text' ? (
+                      <textarea 
+                        defaultValue={item.value}
+                        className="w-full p-4 rounded-xl border border-gray-200 focus:ring-2 focus:ring-fsm-red outline-none min-h-[100px]"
+                        onBlur={(e) => {
+                          if(e.target.value !== item.value) {
+                             handleUpdate(item, e.target.value);
+                          }
+                        }}
+                      />
+                    ) : item.content_type === 'toggle' ? (
+                      <div className="flex items-center gap-4">
+                        <button 
+                          onClick={() => handleUpdate(item, item.value === 'true' ? 'false' : 'true')}
+                          className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-fsm-red focus:ring-offset-2 ${item.value === 'true' ? 'bg-green-500' : 'bg-gray-300'}`}
+                        >
+                          <span 
+                            className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${item.value === 'true' ? 'translate-x-7' : 'translate-x-1'}`}
+                          />
+                        </button>
+                        <span className="text-sm font-bold text-gray-700 uppercase">{item.value === 'true' ? 'Activado' : 'Desactivado'}</span>
+                      </div>
+                    ) : (
                     <div className="flex flex-col gap-4">
                       {item.value && (
                         <div className="relative w-full h-40 rounded-xl overflow-hidden bg-gray-200">
