@@ -100,7 +100,7 @@ const WhyUs = ({ content = {} }: { content?: Record<string, string> }) => {
                 {[
                   { icon: <Target size={24} />, title: "Propósito Claro", desc: "Nuestra misión es la superación constante de cada estudiante." },
                   { icon: <BookOpen size={24} />, title: "Metodología", desc: "Aprendizaje teórico-práctico en escenarios reales de salud." },
-                  { icon: <Award size={24} />, title: "Reconocimiento", desc: "Más de 20 años siendo la institución de referencia en Soacha." },
+                  { icon: <Award size={24} />, title: "Reconocimiento", desc: `Más de ${new Date().getFullYear() - 2000} años siendo la institución de referencia en Soacha.` },
                 ].map((item, i) => (
                   <div key={i} className="flex gap-6 group">
                     <div className="text-fsm-red transition-transform group-hover:scale-110 duration-500">

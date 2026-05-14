@@ -156,7 +156,7 @@ const Hero = ({ content = {} }: { content?: Record<string, string> }) => {
           <div className="bg-white p-8 rounded-[3rem] shadow-premium border border-gray-100 max-w-xs animate-float">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-12 h-12 bg-fsm-red rounded-2xl flex items-center justify-center text-white font-black text-xl">
-                24
+                {new Date().getFullYear() - 2000}
               </div>
               <p className="text-xs font-black text-fsm-blue tracking-widest uppercase">Años de <br /> Trayectoria</p>
             </div>

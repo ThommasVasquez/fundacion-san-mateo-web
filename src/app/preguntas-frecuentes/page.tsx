@@ -25,7 +25,7 @@ const faqs = [
       },
       {
         question: "¿Cuántos años lleva la FUNDACIÓN SAN MATEO en el mercado?",
-        answer: "La FUNDACIÓN SAN MATEO fue fundada en noviembre del año 2000 como respuesta a las necesidades educativas del municipio de Soacha, contando con más de 24 años de trayectoria ininterrumpida."
+        answer: `La FUNDACIÓN SAN MATEO fue fundada en noviembre del año 2000 como respuesta a las necesidades educativas del municipio de Soacha, contando con más de ${new Date().getFullYear() - 2000} años de trayectoria ininterrumpida.`
       }
     ]
   },
