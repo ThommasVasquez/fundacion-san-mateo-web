@@ -35,7 +35,7 @@ export default function NormativityPage() {
 
   const documents = [
     {
-      category: "Aprobación oficial Secretaría de Educación",
+      category: "Aprobación oficial Secretaría de Educación de Soacha",
       icon: <FileText className="text-fsm-blue" size={24} />,
       links: [
         { name: "Personería Jurídica - Resolución No. 14 del 23 de mayo de 2001", href: "/docs/PersoneriaJuridica.pdf" },

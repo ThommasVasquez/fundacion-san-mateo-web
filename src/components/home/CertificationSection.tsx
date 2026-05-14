@@ -53,7 +53,7 @@ const CertificationSection = ({ content = {} }: { content?: Record<string, strin
               </a>
               <div className="flex items-center gap-3 px-6 py-4 bg-white rounded-full border border-gray-100 shadow-sm">
                 <ShieldCheck size={20} className="text-fsm-red" />
-                <span className="text-[10px] font-black tracking-widest text-fsm-blue uppercase">Vigilado por Secretaría de Educación</span>
+                <span className="text-[10px] font-black tracking-widest text-fsm-blue uppercase">Vigilado por Secretaría de Educación de Soacha</span>
               </div>
             </div>
           </div>

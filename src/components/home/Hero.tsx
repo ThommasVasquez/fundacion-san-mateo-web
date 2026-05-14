@@ -127,7 +127,7 @@ const Hero = ({ content = {} }: { content?: Record<string, string> }) => {
             </div>
             <div className="flex items-center gap-3">
               <CheckCircle2 size={24} className="text-fsm-red" />
-              <p className="text-[10px] font-black tracking-widest leading-tight">VIGILADO POR SECRETARÍA <br /> DE EDUCACIÓN</p>
+              <p className="text-[10px] font-black tracking-widest leading-tight">VIGILADO POR SECRETARÍA <br /> DE EDUCACIÓN DE SOACHA</p>
             </div>
           </div>
         </div>

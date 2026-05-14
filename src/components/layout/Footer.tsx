@@ -104,7 +104,7 @@ const Footer = () => {
             <h4 className="text-xl font-bold mb-6 lg:ml-auto border-b-2 border-fsm-red w-fit pb-1">Legado</h4>
             <p className="text-sm mb-6 leading-relaxed">
               &copy; Fundación San Mateo - Soacha, {currentYear}<br />
-              Vigilado por Secretaría de Educación
+              Vigilado por Secretaría de Educación de Soacha
             </p>
             <div className="grid grid-cols-4 gap-2 lg:justify-items-end">
               {certifications.map((cert) => (
