@@ -59,7 +59,7 @@ export default function NormativityPage() {
     },
     {
       category: "Documentos Institucionales",
-      icon: <Gavel className="text-gray-400" size={24} />,
+      icon: <Gavel className="text-gray-700" size={24} />,
       links: [
         { name: "Manual de Convivencia", href: "/docs/ManualDeConvivencia.pdf" },
         { name: "Política de Tratamiento de Datos Personales", href: "/tratamiento-datos" },
@@ -100,7 +100,7 @@ export default function NormativityPage() {
               TRANSPARENCIA <br />
               <span className="text-fsm-blue-light">NORMATIVA</span>
             </h1>
-            <p className="text-lg text-gray-400 font-medium leading-relaxed">
+            <p className="text-lg text-gray-700 font-medium leading-relaxed">
               Consulte nuestra base documental, resoluciones de aprobación y manuales institucionales que garantizan nuestra excelencia académica.
             </p>
           </div>
@@ -112,10 +112,10 @@ export default function NormativityPage() {
 
       <div ref={containerRef} className="container mx-auto px-8 py-24">
         {/* Breadcrumbs */}
-        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-300 mb-20">
+        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-800 mb-20">
           <Link href="/" className="hover:text-fsm-red transition-colors">Inicio</Link>
           <ChevronRight size={14} className="text-fsm-red" />
-          <span className="text-gray-400">Institución</span>
+          <span className="text-gray-700">Institución</span>
           <ChevronRight size={14} className="text-fsm-red" />
           <span className="text-fsm-blue">Normatividad</span>
         </div>

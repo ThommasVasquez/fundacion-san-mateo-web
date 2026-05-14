@@ -26,7 +26,7 @@ export default function DeletePostButton({ id, onDelete }: DeletePostButtonProps
       <button 
         type="submit" 
         disabled={isDeleting}
-        className="p-3 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all disabled:opacity-30"
+        className="p-3 text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all disabled:opacity-30"
         title="Eliminar"
       >
         <Trash2 size={20} className={isDeleting ? "animate-pulse" : ""} />

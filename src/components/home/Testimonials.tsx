@@ -75,7 +75,7 @@ const Testimonials = ({ content = {} }: { content?: Record<string, string> }) =>
 
             <div className="text-center">
               <h4 className="text-fsm-blue font-black text-xl mb-1">{testimonials[current].author}</h4>
-              <span className="text-gray-400 text-sm font-bold uppercase tracking-widest">
+              <span className="text-gray-700 text-sm font-bold uppercase tracking-widest">
                 {testimonials[current].role}
               </span>
             </div>

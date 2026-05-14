@@ -41,7 +41,7 @@ export default function AcademicCalendarPage() {
               CALENDARIO <br />
               <span className="text-fsm-blue-light">Académico</span>
             </h1>
-            <p className="text-lg text-gray-400 font-medium leading-relaxed">
+            <p className="text-lg text-gray-700 font-medium leading-relaxed">
               Planifique su semestre con nuestra programación oficial de clases, eventos, periodos de matrícula y fechas institucionales.
             </p>
           </div>
@@ -58,7 +58,7 @@ export default function AcademicCalendarPage() {
 
       <div ref={containerRef} className="container mx-auto px-8 py-24">
         {/* Breadcrumbs */}
-        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-300 mb-20">
+        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-800 mb-20">
           <Link href="/" className="hover:text-fsm-red transition-colors">Inicio</Link>
           <ChevronRight size={14} className="text-fsm-red" />
           <span className="text-fsm-blue">Calendario Académico</span>
@@ -77,7 +77,7 @@ export default function AcademicCalendarPage() {
             
             <div className="bg-gray-50/50 px-10 py-6 rounded-3xl border border-gray-100 flex items-center gap-4 max-w-md">
               <Info className="text-fsm-red shrink-0" size={24} />
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-relaxed">
+              <p className="text-[10px] font-black text-gray-700 uppercase tracking-widest leading-relaxed">
                 Actualizado en tiempo real por la Dirección Académica institucional.
               </p>
             </div>
@@ -116,7 +116,7 @@ export default function AcademicCalendarPage() {
             <div className="reveal-item p-12 bg-gray-50 rounded-[4rem] border border-gray-100 shadow-sm relative overflow-hidden group">
                <ShieldCheck className="absolute top-8 right-8 text-fsm-red/10" size={64} />
                <h4 className="text-2xl font-black text-fsm-blue mb-8 uppercase tracking-tighter">Soporte Académico</h4>
-               <p className="text-gray-400 text-lg font-medium leading-relaxed mb-10">
+               <p className="text-gray-700 text-lg font-medium leading-relaxed mb-10">
                  Para consultas específicas sobre cambios de horario o reserva de auditorios, contacte a secretaría en:
                </p>
                <div className="flex flex-col gap-4">

@@ -117,7 +117,7 @@ export default function BlogForm({ initialData, isNew = false }: BlogFormProps) 
   return (
     <form onSubmit={handleSubmit} className="space-y-8 max-w-5xl mx-auto">
       <div className="flex items-center justify-between sticky top-24 z-20 bg-gray-50/80  py-4 rounded-2xl">
-        <Link href="/admin/blog" className="flex items-center gap-2 text-gray-500 hover:text-fsm-blue font-bold transition-all">
+        <Link href="/admin/blog" className="flex items-center gap-2 text-gray-900 hover:text-fsm-blue font-bold transition-all">
           <ArrowLeft size={18} />
           VOLVER AL LISTADO
         </Link>
@@ -160,7 +160,7 @@ export default function BlogForm({ initialData, isNew = false }: BlogFormProps) 
                 required
                 value={formData.excerpt}
                 onChange={(e) => setFormData(prev => ({ ...prev, excerpt: e.target.value }))}
-                className="w-full text-sm font-medium text-gray-500 p-4 rounded-2xl bg-gray-50 border-none focus:ring-2 focus:ring-fsm-red outline-none min-h-[100px] resize-none"
+                className="w-full text-sm font-medium text-gray-900 p-4 rounded-2xl bg-gray-50 border-none focus:ring-2 focus:ring-fsm-red outline-none min-h-[100px] resize-none"
                 placeholder="Un breve resumen que invite a leer..."
               />
             </div>
@@ -206,7 +206,7 @@ export default function BlogForm({ initialData, isNew = false }: BlogFormProps) 
                 {formData.image_base64 ? (
                   <img src={formData.image_base64} alt="Preview" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-300">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-800">
                     <ImageIcon size={48} strokeWidth={1} />
                     <span className="text-[10px] font-black mt-2">SELECCIONAR IMAGEN</span>
                   </div>
@@ -218,7 +218,7 @@ export default function BlogForm({ initialData, isNew = false }: BlogFormProps) 
                   className="absolute inset-0 opacity-0 cursor-pointer"
                 />
               </div>
-              <p className="text-[9px] text-gray-400 mt-2 text-center">Recomendado: 1200x800px. Se optimizará automáticamente.</p>
+              <p className="text-[9px] text-gray-700 mt-2 text-center">Recomendado: 1200x800px. Se optimizará automáticamente.</p>
             </div>
 
             <div className="pt-6 border-t border-gray-100">
@@ -235,7 +235,7 @@ export default function BlogForm({ initialData, isNew = false }: BlogFormProps) 
             <div className="pt-6 border-t border-gray-100 flex items-center justify-between">
               <div>
                 <label className="block text-[10px] font-black text-fsm-blue tracking-widest uppercase">Estado</label>
-                <p className="text-[10px] text-gray-400">¿Visible en la web?</p>
+                <p className="text-[10px] text-gray-700">¿Visible en la web?</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input 

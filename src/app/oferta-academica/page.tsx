@@ -87,7 +87,7 @@ export default function AcademicOffer() {
               TU FUTURO <br />
               <span className="text-fsm-red">EMPIEZA AQUÍ</span>
             </h1>
-            <p className="text-lg text-gray-400 font-medium leading-relaxed">
+            <p className="text-lg text-gray-700 font-medium leading-relaxed">
               Descubre nuestra amplia gama de programas técnicos y cursos de actualización diseñados para potenciar tu perfil profesional en el sector real.
             </p>
           </div>
@@ -101,7 +101,7 @@ export default function AcademicOffer() {
         {/* Navigation & Filter */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-12 mb-20">
           {/* Breadcrumbs */}
-          <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-300">
+          <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-800">
             <Link href="/" className="hover:text-fsm-red transition-colors">Inicio</Link>
             <ChevronRight size={14} className="text-fsm-red" />
             <span className="text-fsm-blue">Oferta académica</span>
@@ -117,7 +117,7 @@ export default function AcademicOffer() {
                   "flex items-center gap-2 px-8 py-3.5 rounded-full text-[10px] font-black tracking-[0.2em] uppercase transition-all duration-500",
                   activeTab === cat.id 
                     ? (cat.id === "continua" ? "bg-red-600 text-white shadow-lg" : "bg-fsm-blue text-white shadow-lg")
-                    : "text-gray-400 hover:text-fsm-blue"
+                    : "text-gray-700 hover:text-fsm-blue"
                 )}
               >
                 {cat.icon}

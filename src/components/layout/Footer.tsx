@@ -85,6 +85,13 @@ const Footer = () => {
                 </p>
               </div>
               <div className="flex gap-3">
+                <MapPin className="text-fsm-red shrink-0" size={18} />
+                <p>
+                  <strong className="block">Sede de Soacha:</strong>
+                  Calle 19 # 7A - 29 Soacha
+                </p>
+              </div>
+              <div className="flex gap-3">
                 <Phone className="text-fsm-red shrink-0" size={18} />
                 <p>(601) 732 1080 – (601) 900 2302</p>
               </div>

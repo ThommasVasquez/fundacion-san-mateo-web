@@ -113,7 +113,7 @@ export default function ContentEditor({ initialData }: { initialData: ContentIte
                     {item.content_type === 'image' ? <ImageIcon size={16} className="text-fsm-red" /> : <FileText size={16} className="text-fsm-blue" />}
                     <span className="font-bold text-gray-700 text-sm">{item.content_key}</span>
                   </div>
-                  <span className="text-xs text-gray-400 uppercase tracking-widest">{item.content_type}</span>
+                  <span className="text-xs text-gray-700 uppercase tracking-widest">{item.content_type}</span>
                 </div>
 
                 <div className="md:col-span-7">

@@ -61,7 +61,7 @@ export default function GalleryPage() {
               NUESTRA <br />
               <span className="text-fsm-red uppercase">Experiencia</span>
             </h1>
-            <p className="text-lg text-gray-400 font-medium leading-relaxed">
+            <p className="text-lg text-gray-700 font-medium leading-relaxed">
               Un recorrido visual por las prácticas, eventos y momentos que definen nuestra excelencia educativa en la Fundación San Mateo.
             </p>
           </div>
@@ -73,7 +73,7 @@ export default function GalleryPage() {
 
       <div ref={containerRef} className="container mx-auto px-8 py-24">
         {/* Breadcrumbs */}
-        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-300 mb-20">
+        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-800 mb-20">
           <Link href="/" className="hover:text-fsm-red transition-colors">Inicio</Link>
           <ChevronRight size={14} className="text-fsm-red" />
           <span className="text-fsm-blue">Galería fotográfica</span>

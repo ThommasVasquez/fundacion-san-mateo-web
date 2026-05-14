@@ -39,7 +39,7 @@ export default function LoginPage() {
         <h2 className="mt-6 text-center text-3xl font-black text-fsm-blue uppercase tracking-tighter">
           Panel de Control
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-500">
+        <p className="mt-2 text-center text-sm text-gray-900">
           Inicia sesión para gestionar el contenido.
         </p>
       </div>
@@ -58,7 +58,7 @@ export default function LoginPage() {
             <div>
               <label className="block text-xs font-bold text-gray-700 tracking-widest uppercase mb-2">Correo Electrónico</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-700">
                    <Mail size={16} />
                 </div>
                 <input
@@ -74,7 +74,7 @@ export default function LoginPage() {
             <div>
               <label className="block text-xs font-bold text-gray-700 tracking-widest uppercase mb-2">Contraseña</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-700">
                    <Lock size={16} />
                 </div>
                 <input

@@ -40,7 +40,7 @@ const CertificationSection = ({ content = {} }: { content?: Record<string, strin
             </h2>
             <h3 className="text-4xl md:text-5xl font-black text-fsm-blue mb-8 leading-tight uppercase" dangerouslySetInnerHTML={{ __html: content['home_cert_title'] || 'RECONOCIMIENTO <br /> INSTITUCIONAL' }}>
             </h3>
-            <p className="text-lg text-gray-500 mb-10 leading-relaxed font-medium">
+            <p className="text-lg text-gray-900 mb-10 leading-relaxed font-medium">
               {content['home_cert_desc'] || 'Operamos bajo la aprobación oficial de la Secretaría de Educación de Soacha y contamos con certificaciones internacionales que avalan nuestros procesos pedagógicos.'}
             </p>
             

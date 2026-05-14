@@ -63,7 +63,7 @@ export default function WhyUsPage() {
               ¿POR QUÉ <br />
               <span className="text-fsm-red">ELEGIRNOS</span>?
             </h1>
-            <p className="text-lg text-gray-400 font-medium leading-relaxed">
+            <p className="text-lg text-gray-700 font-medium leading-relaxed">
               Formación integral con altos niveles de exigencia, competitividad y calidad certificada bajo estándares internacionales.
             </p>
           </div>
@@ -75,10 +75,10 @@ export default function WhyUsPage() {
 
       <div ref={containerRef} className="container mx-auto px-8 py-24">
         {/* Breadcrumbs */}
-        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-300 mb-24">
+        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-800 mb-24">
           <Link href="/" className="hover:text-fsm-red transition-colors">Inicio</Link>
           <ChevronRight size={14} className="text-fsm-red" />
-          <span className="text-gray-400">Institución</span>
+          <span className="text-gray-700">Institución</span>
           <ChevronRight size={14} className="text-fsm-red" />
           <span className="text-fsm-blue">¿Por qué nosotros?</span>
         </div>
@@ -91,7 +91,7 @@ export default function WhyUsPage() {
                  <ShieldCheck size={40} className="text-fsm-red" />
                  <h2 className="text-4xl font-black text-fsm-blue uppercase tracking-tighter">Política de Calidad</h2>
                </div>
-               <div className="space-y-8 text-xl text-gray-400 font-medium leading-relaxed">
+               <div className="space-y-8 text-xl text-gray-700 font-medium leading-relaxed">
                  <p>
                    En la <strong>FUNDACIÓN SAN MATEO</strong> brindamos un servicio de educación para el trabajo y el desarrollo humano comprometido con la mejora continua.
                  </p>
@@ -135,7 +135,7 @@ export default function WhyUsPage() {
                       <Award size={40} className="text-fsm-red group-hover:text-white" />
                     </div>
                     <h4 className="text-2xl font-black text-fsm-blue mb-6 leading-tight uppercase tracking-tighter">{obj.title}</h4>
-                    <p className="text-gray-400 font-medium text-lg leading-relaxed">{obj.desc}</p>
+                    <p className="text-gray-700 font-medium text-lg leading-relaxed">{obj.desc}</p>
                   </div>
                   <div className="mt-12 flex items-center gap-3">
                     <CheckCircle2 size={24} className="text-fsm-red/20 group-hover:text-fsm-red transition-colors" />

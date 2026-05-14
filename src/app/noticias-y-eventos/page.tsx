@@ -100,7 +100,7 @@ export default function NewsPage() {
               NOTICIAS Y <br />
               <span className="text-fsm-red uppercase">Eventos</span>
             </h1>
-            <p className="text-lg text-gray-400 font-medium leading-relaxed">
+            <p className="text-lg text-gray-700 font-medium leading-relaxed">
               Manténgase al día con los logros, celebraciones y anuncios más importantes de nuestra comunidad académica.
             </p>
           </div>
@@ -117,7 +117,7 @@ export default function NewsPage() {
 
       <div ref={containerRef} className="container mx-auto px-8 py-24">
         {/* Breadcrumbs */}
-        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-300 mb-20">
+        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-800 mb-20">
           <Link href="/" className="hover:text-fsm-red transition-colors">Inicio</Link>
           <ChevronRight size={14} className="text-fsm-red" />
           <span className="text-fsm-blue">Noticias y eventos</span>
@@ -142,7 +142,7 @@ export default function NewsPage() {
                           {item.date}
                        </div>
                        <h3 className="text-2xl font-black text-fsm-blue mb-6 leading-[1.1] group-hover:text-fsm-red transition-colors text-balance">{item.title}</h3>
-                       <p className="text-gray-400 font-medium leading-relaxed mb-10 line-clamp-2">
+                       <p className="text-gray-700 font-medium leading-relaxed mb-10 line-clamp-2">
                           {item.description}
                        </p>
                        <a 
@@ -220,7 +220,7 @@ export default function NewsPage() {
                 </div>
 
                 <div className="p-12 bg-gray-50 rounded-[4rem] border border-gray-100 text-center">
-                  <h4 className="text-[10px] font-black text-gray-300 mb-8 uppercase tracking-[0.3em]">Enlaces de Interés</h4>
+                  <h4 className="text-[10px] font-black text-gray-800 mb-8 uppercase tracking-[0.3em]">Enlaces de Interés</h4>
                   <div className="space-y-6">
                      {[
                        { name: "Oferta Académica", href: "/oferta-academica" },

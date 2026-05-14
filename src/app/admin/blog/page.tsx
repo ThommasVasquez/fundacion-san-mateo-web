@@ -30,7 +30,7 @@ export default async function AdminBlogPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-black text-fsm-blue tracking-tighter uppercase">Gestión de Blog</h1>
-          <p className="text-gray-500 mt-2">Crea y administra los artículos de la institución.</p>
+          <p className="text-gray-900 mt-2">Crea y administra los artículos de la institución.</p>
         </div>
         <Link 
           href="/admin/blog/new" 
@@ -44,7 +44,7 @@ export default async function AdminBlogPage() {
       <div className="grid grid-cols-1 gap-4">
         {posts.length === 0 ? (
           <div className="bg-white p-12 rounded-[2rem] border border-dashed border-gray-200 text-center">
-            <p className="text-gray-400 font-medium">No hay artículos publicados aún.</p>
+            <p className="text-gray-700 font-medium">No hay artículos publicados aún.</p>
           </div>
         ) : (
           posts.map(post => (
@@ -53,7 +53,7 @@ export default async function AdminBlogPage() {
                 {post.image_base64 ? (
                    <img src={post.image_base64} alt={post.title} className="w-full h-full object-cover" />
                 ) : (
-                   <div className="w-full h-full flex items-center justify-center text-gray-300">
+                   <div className="w-full h-full flex items-center justify-center text-gray-800">
                       <Calendar size={32} />
                    </div>
                 )}
@@ -64,27 +64,27 @@ export default async function AdminBlogPage() {
                   <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${post.published ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600'}`}>
                     {post.published ? 'Publicado' : 'Borrador'}
                   </span>
-                  <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
+                  <span className="text-xs text-gray-700 font-medium flex items-center gap-1">
                     <Calendar size={12} />
                     {new Date(post.created_at).toLocaleDateString('es-CO')}
                   </span>
                 </div>
                 <h3 className="text-xl font-bold text-fsm-blue truncate">{post.title}</h3>
-                <p className="text-sm text-gray-500 line-clamp-1">{post.excerpt}</p>
+                <p className="text-sm text-gray-900 line-clamp-1">{post.excerpt}</p>
               </div>
 
               <div className="flex items-center gap-2">
                 <Link 
                   href={`/blog/${post.slug}`} 
                   target="_blank"
-                  className="p-3 text-gray-400 hover:text-fsm-blue hover:bg-fsm-blue/5 rounded-xl transition-all"
+                  className="p-3 text-gray-700 hover:text-fsm-blue hover:bg-fsm-blue/5 rounded-xl transition-all"
                   title="Ver publicado"
                 >
                   <Eye size={20} />
                 </Link>
                 <Link 
                   href={`/admin/blog/edit/${post.id}`}
-                  className="p-3 text-gray-400 hover:text-fsm-red hover:bg-fsm-red/5 rounded-xl transition-all"
+                  className="p-3 text-gray-700 hover:text-fsm-red hover:bg-fsm-red/5 rounded-xl transition-all"
                   title="Editar"
                 >
                   <Edit2 size={20} />

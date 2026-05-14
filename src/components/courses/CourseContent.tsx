@@ -50,7 +50,7 @@ export default function CourseContent({ title, bannerImg, mainImg, directedTo, o
             <h1 className="text-4xl md:text-6xl font-black text-fsm-blue leading-none mb-10 text-balance uppercase">
               {title}
             </h1>
-            <p className="text-lg text-gray-400 font-medium leading-relaxed max-w-lg mb-12">
+            <p className="text-lg text-gray-700 font-medium leading-relaxed max-w-lg mb-12">
               Actualización profesional certificada por la Fundación San Mateo, con metodología teórico-práctica intensiva.
             </p>
             <div className="flex flex-wrap gap-8 opacity-40">
@@ -75,7 +75,7 @@ export default function CourseContent({ title, bannerImg, mainImg, directedTo, o
 
       <div ref={containerRef} className="container mx-auto px-8 py-24">
         {/* Breadcrumbs */}
-        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-300 mb-20">
+        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-800 mb-20">
           <Link href="/" className="hover:text-fsm-red transition-colors">Inicio</Link>
           <ChevronRight size={14} className="text-fsm-red" />
           <Link href="/oferta-academica" className="hover:text-fsm-red transition-colors">Oferta académica</Link>
@@ -93,7 +93,7 @@ export default function CourseContent({ title, bannerImg, mainImg, directedTo, o
                       <div className="p-3 bg-fsm-red/10 text-fsm-red rounded-xl"><Users size={24} /></div>
                       <h3 className="font-black text-fsm-blue uppercase tracking-[0.2em] text-[10px]">Dirigido a</h3>
                     </div>
-                    <p className="text-gray-500 font-bold leading-relaxed">{directedTo}</p>
+                    <p className="text-gray-900 font-bold leading-relaxed">{directedTo}</p>
                   </div>
 
                   <div>
@@ -101,7 +101,7 @@ export default function CourseContent({ title, bannerImg, mainImg, directedTo, o
                       <div className="p-3 bg-fsm-red/10 text-fsm-red rounded-xl"><Target size={24} /></div>
                       <h3 className="font-black text-fsm-blue uppercase tracking-[0.2em] text-[10px]">Objetivo General</h3>
                     </div>
-                    <p className="text-gray-500 leading-relaxed font-medium italic border-l-4 border-fsm-red/20 pl-6">{objective}</p>
+                    <p className="text-gray-900 leading-relaxed font-medium italic border-l-4 border-fsm-red/20 pl-6">{objective}</p>
                   </div>
                </div>
 
@@ -123,7 +123,7 @@ export default function CourseContent({ title, bannerImg, mainImg, directedTo, o
                     </div>
                     <ul className="grid grid-cols-1 gap-4">
                       {resources.map((res, i) => (
-                        <li key={i} className="flex items-center gap-3 text-xs font-black text-gray-400 uppercase tracking-tighter">
+                        <li key={i} className="flex items-center gap-3 text-xs font-black text-gray-700 uppercase tracking-tighter">
                           <CheckCircle2 size={16} className="text-fsm-red" />
                           {res}
                         </li>
@@ -142,12 +142,12 @@ export default function CourseContent({ title, bannerImg, mainImg, directedTo, o
                 <div className="space-y-6 group">
                   <div className="w-14 h-14 bg-white text-fsm-red font-black flex items-center justify-center rounded-2xl shadow-sm text-xl group-hover:bg-fsm-red group-hover:text-white transition-all duration-500">01</div>
                   <h4 className="font-black text-fsm-blue uppercase text-[10px] tracking-widest">Inscripción</h4>
-                  <p className="text-xs text-gray-500 font-medium leading-relaxed uppercase tracking-tighter">Preinscripción digital para reserva de cupo en la plataforma Q10.</p>
+                  <p className="text-xs text-gray-900 font-medium leading-relaxed uppercase tracking-tighter">Preinscripción digital para reserva de cupo en la plataforma Q10.</p>
                 </div>
                 <div className="space-y-6 group">
                   <div className="w-14 h-14 bg-white text-fsm-red font-black flex items-center justify-center rounded-2xl shadow-sm text-xl group-hover:bg-fsm-red group-hover:text-white transition-all duration-500">02</div>
                   <h4 className="font-black text-fsm-blue uppercase text-[10px] tracking-widest">Documentos</h4>
-                  <ul className="text-[10px] text-gray-500 font-black uppercase tracking-tighter space-y-2 opacity-60">
+                  <ul className="text-[10px] text-gray-900 font-black uppercase tracking-tighter space-y-2 opacity-60">
                     <li>• Cédula de Ciudadanía</li>
                     <li>• Soporte Académico</li>
                     <li>• Foto 3x4</li>
@@ -156,7 +156,7 @@ export default function CourseContent({ title, bannerImg, mainImg, directedTo, o
                 <div className="space-y-6 group">
                   <div className="w-14 h-14 bg-white text-fsm-red font-black flex items-center justify-center rounded-2xl shadow-sm text-xl group-hover:bg-fsm-red group-hover:text-white transition-all duration-500">03</div>
                   <h4 className="font-black text-fsm-blue uppercase text-[10px] tracking-widest">Matrícula</h4>
-                  <p className="text-xs text-gray-500 font-medium leading-relaxed uppercase tracking-tighter">Formalización presencial y pago en nuestra sede administrativa.</p>
+                  <p className="text-xs text-gray-900 font-medium leading-relaxed uppercase tracking-tighter">Formalización presencial y pago en nuestra sede administrativa.</p>
                 </div>
               </div>
             </div>
@@ -186,7 +186,7 @@ export default function CourseContent({ title, bannerImg, mainImg, directedTo, o
                <div className="p-12 bg-gray-50 rounded-[4rem] text-center border border-gray-100 shadow-sm">
                  <div className="w-12 h-1 bg-fsm-red mx-auto mb-8 rounded-full"></div>
                  <p className="font-black text-[10px] tracking-[0.3em] mb-6 text-fsm-blue uppercase">Infraestructura</p>
-                 <p className="font-bold text-gray-400 text-sm leading-relaxed">Laboratorios equipados con tecnología biomédica de punta para simulación real.</p>
+                 <p className="font-bold text-gray-700 text-sm leading-relaxed">Laboratorios equipados con tecnología biomédica de punta para simulación real.</p>
                </div>
             </div>
           </div>

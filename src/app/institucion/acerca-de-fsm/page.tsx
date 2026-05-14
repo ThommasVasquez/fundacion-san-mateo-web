@@ -96,7 +96,7 @@ export default function AboutPage() {
               CONOCE LA <br />
               <span className="text-fsm-blue-light uppercase">Historia</span>
             </h1>
-            <p className="text-lg text-gray-400 font-medium leading-relaxed">
+            <p className="text-lg text-gray-700 font-medium leading-relaxed">
               Más de dos décadas transformando vidas a través de la educación técnica de calidad en el municipio de Soacha.
             </p>
           </div>
@@ -109,10 +109,10 @@ export default function AboutPage() {
 
       <div ref={containerRef} className="container mx-auto px-8 py-24">
         {/* Breadcrumbs */}
-        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-300 mb-24">
+        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-800 mb-24">
           <Link href="/" className="hover:text-fsm-red transition-colors">Inicio</Link>
           <ChevronRight size={14} className="text-fsm-red" />
-          <span className="text-gray-400">Institución</span>
+          <span className="text-gray-700">Institución</span>
           <ChevronRight size={14} className="text-fsm-red" />
           <span className="text-fsm-blue">Acerca de la FSM</span>
         </div>
@@ -133,7 +133,7 @@ export default function AboutPage() {
                 <History size={40} className="text-fsm-red" />
                 <h2 className="text-4xl font-black text-fsm-blue uppercase tracking-tighter">Nuestra Trayectoria</h2>
               </div>
-              <div className="space-y-8 text-xl text-gray-400 font-medium leading-relaxed text-balance">
+              <div className="space-y-8 text-xl text-gray-700 font-medium leading-relaxed text-balance">
                 <p>
                   La <strong>FUNDACIÓN SAN MATEO</strong> nació en noviembre del año 2000 como una respuesta valiente a las crecientes necesidades educativas de las comunidades en riesgo de Soacha.
                 </p>
@@ -152,7 +152,7 @@ export default function AboutPage() {
               <div className="pt-10 border-t border-gray-100 reveal-section">
                 <p className="text-sm font-bold text-fsm-red uppercase tracking-widest mb-4">Certificaciones de Calidad</p>
                 <h3 className="text-3xl font-black text-fsm-blue uppercase tracking-tighter mb-6">Excelencia Acreditada</h3>
-                <p className="text-lg text-gray-400 font-medium leading-relaxed mb-10">
+                <p className="text-lg text-gray-700 font-medium leading-relaxed mb-10">
                   Nuestra institución está comprometida con los más altos estándares educativos. Contamos con certificaciones ISO que garantizan la calidad en todos nuestros procesos administrativos y pedagógicos.
                 </p>
                 
@@ -198,7 +198,7 @@ export default function AboutPage() {
                 <Eye size={48} className="text-fsm-red group-hover:text-white" />
               </div>
               <h2 className="text-4xl font-black mb-8 uppercase tracking-tighter leading-none">Visión</h2>
-              <p className="text-xl text-gray-400 leading-relaxed font-medium">
+              <p className="text-xl text-gray-700 leading-relaxed font-medium">
                 Ser reconocidos en todo Cundinamarca por la excelencia educativa, compromiso social y el liderazgo en la formación técnica certificada bajo rigurosos sistemas de gestión de calidad.
               </p>
             </div>

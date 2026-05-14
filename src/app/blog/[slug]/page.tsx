@@ -36,7 +36,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               {post.title}
             </h1>
 
-            <div className="flex flex-wrap items-center gap-8 text-xs font-black tracking-widest uppercase text-gray-400">
+            <div className="flex flex-wrap items-center gap-8 text-xs font-black tracking-widest uppercase text-gray-700">
               <div className="flex items-center gap-2">
                 <Calendar size={16} className="text-fsm-red" />
                 {new Date(post.created_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -62,7 +62,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         {/* Content */}
         <div className="px-8 md:px-16 lg:px-24">
           <div className="max-w-3xl mx-auto">
-            <div className="prose prose-lg prose-slate max-w-none prose-headings:text-fsm-blue prose-headings:font-black prose-headings:uppercase prose-headings:tracking-widest prose-p:text-gray-500 prose-p:leading-relaxed prose-strong:text-fsm-blue prose-img:rounded-3xl">
+            <div className="prose prose-lg prose-slate max-w-none prose-headings:text-fsm-blue prose-headings:font-black prose-headings:uppercase prose-headings:tracking-widest prose-p:text-gray-900 prose-p:leading-relaxed prose-strong:text-fsm-blue prose-img:rounded-3xl">
                {/* Converting line breaks to paragraph tags for basic formatting */}
                <div dangerouslySetInnerHTML={{ __html: post.content.replace(/\n\s*\n/g, '</p><p>').replace(/\n/g, '<br />') }} />
             </div>
@@ -79,7 +79,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                </div>
                
                <div className="bg-fsm-blue/5 p-6 rounded-3xl max-w-xs">
-                  <p className="text-xs font-bold text-gray-500 leading-relaxed italic">
+                  <p className="text-xs font-bold text-gray-900 leading-relaxed italic">
                     "Comprometidos con la formación integral y el desarrollo humano de nuestra comunidad."
                   </p>
                </div>

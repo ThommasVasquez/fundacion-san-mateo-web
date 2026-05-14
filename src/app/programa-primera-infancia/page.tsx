@@ -54,7 +54,7 @@ export default function EarlyChildhoodProgram() {
               Atención <br />
               <span className="text-fsm-red">INFANTIL</span>
             </h1>
-            <p className="text-xl text-gray-400 font-medium leading-relaxed max-w-lg mb-12">
+            <p className="text-xl text-gray-700 font-medium leading-relaxed max-w-lg mb-12">
               Formamos expertos en el cuidado y la educación integral de la primera infancia, con bases pedagógicas sólidas y vocación humanista.
             </p>
             <div className="flex flex-wrap gap-8 opacity-40">
@@ -79,7 +79,7 @@ export default function EarlyChildhoodProgram() {
 
       <div className="container mx-auto px-8 py-24">
         {/* Breadcrumbs */}
-        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-300 mb-20">
+        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-800 mb-20">
           <Link href="/" className="hover:text-fsm-red transition-colors">Inicio</Link>
           <ChevronRight size={14} className="text-fsm-red" />
           <Link href="/oferta-academica" className="hover:text-fsm-red transition-colors">Oferta académica</Link>
@@ -102,7 +102,7 @@ export default function EarlyChildhoodProgram() {
                 </p>
               </div>
               
-              <div className="space-y-8 text-lg text-gray-500 font-medium leading-[1.8]">
+              <div className="space-y-8 text-lg text-gray-900 font-medium leading-[1.8]">
                 <p>
                   El Programa <strong>Técnico Laboral por Competencias en Atención Integral a la Primera Infancia</strong> de la Fundación San Mateo, promueve el desarrollo de competencias relacionadas con el cuidado y la atención integral (protección, nutrición, salud y educación) de los niños y las niñas de 0 a 6 años.
                 </p>
@@ -123,7 +123,7 @@ export default function EarlyChildhoodProgram() {
                       "flex items-center gap-2 px-8 py-4 rounded-full text-[10px] font-black tracking-widest transition-all duration-500 whitespace-nowrap",
                       activeTab === tab.id 
                         ? "bg-fsm-blue text-white shadow-premium scale-105" 
-                        : "text-gray-400 hover:text-fsm-blue"
+                        : "text-gray-700 hover:text-fsm-blue"
                     )}
                   >
                     {tab.icon}
@@ -152,7 +152,7 @@ export default function EarlyChildhoodProgram() {
                                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-[10px] font-black text-fsm-red shadow-sm group-hover:bg-fsm-red group-hover:text-white transition-all">
                                  {String(i + 1).padStart(2, '0')}
                                </div>
-                               <span className="text-sm font-bold text-gray-600 uppercase tracking-tighter">{item}</span>
+                               <span className="text-sm font-bold text-gray-800 uppercase tracking-tighter">{item}</span>
                              </div>
                            ))}
                         </div>
@@ -191,14 +191,14 @@ export default function EarlyChildhoodProgram() {
                                <Award className="text-fsm-red shrink-0" size={32} />
                                <div>
                                   <p className="font-black text-fsm-blue mb-2">RESOLUCIÓN OFICIAL</p>
-                                  <p className="text-sm text-gray-500 font-medium">Resolución No. 0883 del 29 de mayo de 2023 - Secretaría de Educación de Soacha.</p>
+                                  <p className="text-sm text-gray-900 font-medium">Resolución No. 0883 del 29 de mayo de 2023 - Secretaría de Educación de Soacha.</p>
                                </div>
                             </div>
                             <div className="p-8 bg-white rounded-3xl border border-gray-100 shadow-sm flex gap-6">
                                <ShieldCheck className="text-fsm-red shrink-0" size={32} />
                                <div>
                                   <p className="font-black text-fsm-blue mb-2">CERTIFICACIÓN ESPECÍFICA</p>
-                                  <p className="text-sm text-gray-500 font-medium">Programa certificado bajo la Norma Técnica NTC 5581:2011.</p>
+                                  <p className="text-sm text-gray-900 font-medium">Programa certificado bajo la Norma Técnica NTC 5581:2011.</p>
                                </div>
                             </div>
                          </div>
@@ -208,7 +208,7 @@ export default function EarlyChildhoodProgram() {
                    {activeTab === "practicas" && (
                       <div className="space-y-12">
                          <h3 className="text-2xl font-black text-fsm-blue uppercase">Convenios de Práctica</h3>
-                         <p className="text-gray-500 font-medium italic">Experiencia real en los mejores centros educativos y jardines infantiles de la zona.</p>
+                         <p className="text-gray-900 font-medium italic">Experiencia real en los mejores centros educativos y jardines infantiles de la zona.</p>
                          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                             {[
                               "Jean Fritz Piaget", "Mundo Activo", "Abraham Lincoln", "British School",
@@ -268,7 +268,7 @@ export default function EarlyChildhoodProgram() {
                     ].map((job) => (
                       <li key={job} className="flex items-center gap-3">
                          <div className="w-1.5 h-1.5 bg-fsm-red rounded-full" />
-                         <span className="text-xs font-bold text-gray-500 uppercase tracking-tighter">{job}</span>
+                         <span className="text-xs font-bold text-gray-900 uppercase tracking-tighter">{job}</span>
                       </li>
                     ))}
                  </ul>

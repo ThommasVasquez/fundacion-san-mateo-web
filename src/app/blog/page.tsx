@@ -22,14 +22,14 @@ export default async function BlogListingPage() {
               NUESTRO <br />
               <span className="text-fsm-blue-light">BLOG</span>
             </h1>
-            <p className="text-xl text-gray-400 mt-6 max-w-xl font-medium">
+            <p className="text-xl text-gray-700 mt-6 max-w-xl font-medium">
               Historias, noticias y consejos para potenciar tu desarrollo profesional y personal.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
             {posts.length === 0 ? (
-              <p className="col-span-full text-center py-20 text-gray-400 font-bold uppercase tracking-widest border-2 border-dashed border-gray-100 rounded-[3rem]">
+              <p className="col-span-full text-center py-20 text-gray-700 font-bold uppercase tracking-widest border-2 border-dashed border-gray-100 rounded-[3rem]">
                 Próximamente más historias...
               </p>
             ) : (
@@ -63,7 +63,7 @@ export default async function BlogListingPage() {
                     <h3 className="text-2xl font-black text-fsm-blue mb-4 leading-snug line-clamp-2 group-hover:text-fsm-red transition-colors">
                       {post.title}
                     </h3>
-                    <p className="text-gray-500 text-sm font-medium line-clamp-3 mb-8 leading-relaxed">
+                    <p className="text-gray-900 text-sm font-medium line-clamp-3 mb-8 leading-relaxed">
                       {post.excerpt}
                     </p>
                     <div className="mt-auto flex items-center gap-4 text-fsm-blue font-black text-xs tracking-widest uppercase">

@@ -23,7 +23,7 @@ export default async function EditBlogPostPage({ params }: { params: Promise<{ i
     <div className="space-y-8">
       <div>
         <h1 className="text-4xl font-black text-fsm-blue tracking-tighter uppercase">Editar Artículo</h1>
-        <p className="text-gray-500 mt-2">Modifica el contenido de "{post.title}".</p>
+        <p className="text-gray-900 mt-2">Modifica el contenido de "{post.title}".</p>
       </div>
       <BlogForm initialData={serializedPost} />
     </div>

@@ -18,7 +18,7 @@ export default async function AdminDashboard() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-4xl font-black text-fsm-blue tracking-tighter uppercase">Gestor Educativo</h1>
-          <p className="text-gray-500 mt-2">Administra el alma digital de la Fundación San Mateo.</p>
+          <p className="text-gray-900 mt-2">Administra el alma digital de la Fundación San Mateo.</p>
         </div>
         
         <div className="flex items-center gap-4">
@@ -30,7 +30,7 @@ export default async function AdminDashboard() {
                 <Layout size={20} />
               </div>
               <div>
-                <p className="text-[10px] font-black tracking-widest text-gray-400 uppercase leading-none mb-1">Módulo</p>
+                <p className="text-[10px] font-black tracking-widest text-gray-700 uppercase leading-none mb-1">Módulo</p>
                 <p className="text-sm font-black text-fsm-blue uppercase">Gestionar Blog</p>
               </div>
            </Link>
@@ -40,7 +40,7 @@ export default async function AdminDashboard() {
       <div className="pt-8 border-t border-gray-100">
         <div className="mb-8">
             <h2 className="text-xl font-black text-fsm-blue tracking-tighter uppercase">Contenido General</h2>
-            <p className="text-sm text-gray-400">Edita los textos de la página principal y subpáginas.</p>
+            <p className="text-sm text-gray-700">Edita los textos de la página principal y subpáginas.</p>
         </div>
         <ContentEditor initialData={serializedDocs} />
       </div>

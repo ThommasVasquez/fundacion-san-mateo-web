@@ -49,7 +49,7 @@ export default function ContactPage() {
               ESTAMOS <br />
               <span className="text-fsm-blue-light uppercase">Contigo</span>
             </h1>
-            <p className="text-lg text-gray-400 font-medium leading-relaxed">
+            <p className="text-lg text-gray-700 font-medium leading-relaxed">
               Resuelva sus dudas de manera personalizada. Nuestro equipo está listo para asesorarle en su camino hacia la excelencia técnica.
             </p>
           </div>
@@ -66,7 +66,7 @@ export default function ContactPage() {
 
       <div ref={containerRef} className="container mx-auto px-8 py-24">
         {/* Breadcrumbs */}
-        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-300 mb-20">
+        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-800 mb-20">
           <Link href="/" className="hover:text-fsm-red transition-colors">Inicio</Link>
           <ChevronRight size={14} className="text-fsm-red" />
           <span className="text-fsm-blue">Canales de Contacto</span>
@@ -83,22 +83,22 @@ export default function ContactPage() {
                 <form className="space-y-8">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-4">Nombre Completo</label>
+                      <label className="text-[10px] font-black uppercase text-gray-700 tracking-widest ml-4">Nombre Completo</label>
                       <input type="text" className="w-full bg-white border border-gray-100 rounded-[2rem] px-8 py-5 outline-none focus:border-fsm-red transition-all shadow-sm font-medium" placeholder="Escriba su nombre" required />
                     </div>
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-4">Teléfono Móvil</label>
+                      <label className="text-[10px] font-black uppercase text-gray-700 tracking-widest ml-4">Teléfono Móvil</label>
                       <input type="tel" className="w-full bg-white border border-gray-100 rounded-[2rem] px-8 py-5 outline-none focus:border-fsm-red transition-all shadow-sm font-medium" placeholder="300 000 0000" required />
                     </div>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-4">Correo Institucional / Personal</label>
+                    <label className="text-[10px] font-black uppercase text-gray-700 tracking-widest ml-4">Correo Institucional / Personal</label>
                     <input type="email" className="w-full bg-white border border-gray-100 rounded-[2rem] px-8 py-5 outline-none focus:border-fsm-red transition-all shadow-sm font-medium" placeholder="ejemplo@correo.com" required />
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-4">Programa de Interés</label>
+                    <label className="text-[10px] font-black uppercase text-gray-700 tracking-widest ml-4">Programa de Interés</label>
                     <select className="w-full bg-white border border-gray-100 rounded-[2rem] px-8 py-5 outline-none focus:border-fsm-red transition-all shadow-sm appearance-none font-medium cursor-pointer" required>
                       <option value="">Seleccione una opción</option>
                       <option>Técnico Laboral en Auxiliar de Enfermería</option>
@@ -109,13 +109,13 @@ export default function ContactPage() {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-4">Su Mensaje</label>
+                    <label className="text-[10px] font-black uppercase text-gray-700 tracking-widest ml-4">Su Mensaje</label>
                     <textarea rows={4} className="w-full bg-white border border-gray-100 rounded-[2rem] px-8 py-5 outline-none focus:border-fsm-red transition-all shadow-sm resize-none font-medium" placeholder="¿En qué podemos ayudarle?" required></textarea>
                   </div>
 
                   <div className="flex items-start gap-4 p-6 bg-white rounded-3xl border border-gray-100 shadow-sm">
                     <input type="checkbox" className="mt-1 w-5 h-5 accent-fsm-red cursor-pointer" required id="terms" />
-                    <label htmlFor="terms" className="text-[10px] text-gray-400 font-bold leading-relaxed uppercase tracking-tighter">
+                    <label htmlFor="terms" className="text-[10px] text-gray-700 font-bold leading-relaxed uppercase tracking-tighter">
                       Acepto la <Link href="/institucion/tratamiento-datos" className="text-fsm-red hover:underline">Política de Protección de Datos</Link> (Ley 1581 de 2012).
                     </label>
                   </div>
@@ -134,6 +134,16 @@ export default function ContactPage() {
               <h2 className="text-2xl font-black mb-12 uppercase tracking-tighter leading-none">Datos de <br /> Contacto</h2>
               
               <div className="space-y-10 relative z-10">
+                <div className="flex gap-6">
+                  <div className="w-12 h-12 bg-white/10  rounded-2xl flex items-center justify-center border border-white/20 shrink-0">
+                    <Home size={22} className="text-white" />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-[9px] opacity-40 uppercase tracking-[0.3em] mb-4">Ubicación Académica</h4>
+                    <p className="font-bold text-sm leading-relaxed mb-1">Calle 19 # 7A - 29 Soacha</p>
+                  </div>
+                </div>
+
                 <div className="flex gap-6">
                   <div className="w-12 h-12 bg-white/10  rounded-2xl flex items-center justify-center border border-white/20 shrink-0">
                     <Home size={22} className="text-white" />

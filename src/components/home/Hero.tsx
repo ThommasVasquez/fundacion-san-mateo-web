@@ -97,7 +97,7 @@ const Hero = ({ content = {} }: { content?: Record<string, string> }) => {
           
           <p 
             ref={descRef}
-            className="text-lg md:text-xl text-gray-500 mb-12 max-w-lg leading-relaxed font-medium"
+            className="text-lg md:text-xl text-gray-900 mb-12 max-w-lg leading-relaxed font-medium"
           >
             {content['home_hero_desc'] || 'Institución de educación para el trabajo y desarrollo humano en Soacha, comprometida con la formación integral y la calidad técnica.'}
           </p>
@@ -160,7 +160,7 @@ const Hero = ({ content = {} }: { content?: Record<string, string> }) => {
               </div>
               <p className="text-xs font-black text-fsm-blue tracking-widest uppercase">Años de <br /> Trayectoria</p>
             </div>
-            <p className="text-sm font-bold text-gray-500 leading-relaxed">
+            <p className="text-sm font-bold text-gray-900 leading-relaxed">
               Liderando la formación técnica en Soacha desde el año 2000.
             </p>
           </div>

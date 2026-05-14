@@ -136,7 +136,7 @@ const Navbar = () => {
                         <Link 
                           key={item.name} 
                           href={item.href}
-                          className="px-4 py-2.5 text-xs font-bold text-gray-600 hover:text-fsm-red hover:bg-fsm-red/5 rounded-xl transition-all"
+                          className="px-4 py-2.5 text-xs font-bold text-gray-800 hover:text-fsm-red hover:bg-fsm-red/5 rounded-xl transition-all"
                         >
                           {item.name}
                         </Link>

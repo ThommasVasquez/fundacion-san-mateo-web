@@ -108,7 +108,7 @@ const WhyUs = ({ content = {} }: { content?: Record<string, string> }) => {
                     </div>
                     <div>
                       <h4 className="font-black text-fsm-blue text-xl mb-2 tracking-tight uppercase">{item.title}</h4>
-                      <p className="text-gray-500 text-sm leading-relaxed font-medium">{item.desc}</p>
+                      <p className="text-gray-900 text-sm leading-relaxed font-medium">{item.desc}</p>
                     </div>
                   </div>
                 ))}

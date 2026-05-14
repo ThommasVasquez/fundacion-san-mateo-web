@@ -57,7 +57,7 @@ export default function DirectoryPage() {
               PUNTOS DE <br />
               <span className="text-fsm-blue-light uppercase">Contacto</span>
             </h1>
-            <p className="text-lg text-gray-400 font-medium leading-relaxed">
+            <p className="text-lg text-gray-700 font-medium leading-relaxed">
               Nuestro equipo administrativo está listo para brindarle la asesoría técnica y humana que requiere en cada etapa de su formación.
             </p>
           </div>
@@ -69,10 +69,10 @@ export default function DirectoryPage() {
 
       <div ref={containerRef} className="container mx-auto px-8 py-24">
         {/* Breadcrumbs */}
-        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-300 mb-20">
+        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-800 mb-20">
           <Link href="/" className="hover:text-fsm-red transition-colors">Inicio</Link>
           <ChevronRight size={14} className="text-fsm-red" />
-          <span className="text-gray-400">Institución</span>
+          <span className="text-gray-700">Institución</span>
           <ChevronRight size={14} className="text-fsm-red" />
           <span className="text-fsm-blue">Directorio</span>
         </div>
@@ -83,7 +83,7 @@ export default function DirectoryPage() {
              <div className="lg:col-span-8 flex flex-col gap-6">
                 <div className="mb-10">
                    <h3 className="text-3xl font-black text-fsm-blue uppercase tracking-tighter leading-none mb-4">Líneas de Atención</h3>
-                   <p className="text-gray-400 font-medium">Comuníquese directamente con el área de su interés.</p>
+                   <p className="text-gray-700 font-medium">Comuníquese directamente con el área de su interés.</p>
                 </div>
                 
                 {directory.map((item, i) => (
@@ -96,7 +96,7 @@ export default function DirectoryPage() {
                     </div>
                     <a 
                       href={`tel:${item.phone.split("/")[0].trim()}`} 
-                      className="inline-flex items-center gap-4 text-sm font-black text-gray-400 group-hover:text-fsm-red transition-colors"
+                      className="inline-flex items-center gap-4 text-sm font-black text-gray-700 group-hover:text-fsm-red transition-colors"
                     >
                       <Phone size={20} className="text-fsm-red/20 group-hover:text-fsm-red transition-colors" />
                       {item.phone}
@@ -119,6 +119,10 @@ export default function DirectoryPage() {
                          <div>
                             <p className="text-[10px] font-black opacity-40 uppercase tracking-widest mb-4">Sede Administrativa</p>
                             <p className="text-xl font-bold mb-6">Calle 19 #8-21, <br /> Soacha Cundinamarca</p>
+                            <div className="pt-6 mt-6 border-t border-white/10">
+                               <p className="text-[10px] font-black opacity-40 uppercase tracking-widest mb-4">Sede Académica</p>
+                               <p className="text-xl font-bold mb-6">Calle 19 # 7A - 29, <br /> Soacha Cundinamarca</p>
+                            </div>
                             <a 
                               href="https://maps.google.com/?q=Calle+19+%238-21,+Soacha,+Cundinamarca" 
                               target="_blank"
@@ -144,7 +148,7 @@ export default function DirectoryPage() {
                    <div className="p-12 bg-gray-50 rounded-[4rem] text-center border border-gray-100 shadow-sm overflow-hidden relative group">
                       <div className="relative z-10">
                          <p className="text-fsm-red font-black text-xs tracking-widest uppercase mb-4">Atención Virtual</p>
-                         <p className="text-sm text-gray-400 font-bold mb-8">Nuestros asesores también están disponibles vía WhatsApp para trámites rápidos.</p>
+                         <p className="text-sm text-gray-700 font-bold mb-8">Nuestros asesores también están disponibles vía WhatsApp para trámites rápidos.</p>
                          <Link 
                            href="/contacto"
                            className="text-[10px] font-black text-fsm-blue hover:text-fsm-red transition-colors flex items-center justify-center gap-2"

@@ -102,7 +102,7 @@ export default function FAQPage() {
               PREGUNTAS <br />
               <span className="text-fsm-blue-light uppercase">Frecuentes</span>
             </h1>
-            <p className="text-lg text-gray-400 font-medium leading-relaxed">
+            <p className="text-lg text-gray-700 font-medium leading-relaxed">
               Resuelva sus dudas sobre nuestros programas, procesos de matrícula, requisitos legales y formas de financiación en un solo lugar.
             </p>
           </div>
@@ -119,7 +119,7 @@ export default function FAQPage() {
 
       <div ref={containerRef} className="container mx-auto px-8 py-24">
         {/* Breadcrumbs */}
-        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-300 mb-20">
+        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-800 mb-20">
           <Link href="/" className="hover:text-fsm-red transition-colors">Inicio</Link>
           <ChevronRight size={14} className="text-fsm-red" />
           <span className="text-fsm-blue">Preguntas frecuentes</span>
@@ -156,7 +156,7 @@ export default function FAQPage() {
                         </span>
                         <div className={cn(
                           "w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500",
-                          isOpen ? "bg-fsm-red text-white rotate-180" : "bg-white text-gray-400 border border-gray-100 group-hover:bg-fsm-red group-hover:text-white"
+                          isOpen ? "bg-fsm-red text-white rotate-180" : "bg-white text-gray-700 border border-gray-100 group-hover:bg-fsm-red group-hover:text-white"
                         )}>
                           {isOpen ? <Minus size={20} /> : <Plus size={20} />}
                         </div>
@@ -166,7 +166,7 @@ export default function FAQPage() {
                         "px-10 overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)]",
                         isOpen ? "max-h-[500px] pb-10" : "max-h-0"
                       )}>
-                        <p className="text-gray-400 text-lg leading-relaxed font-medium pl-6 border-l-2 border-fsm-red/20 text-balance">
+                        <p className="text-gray-700 text-lg leading-relaxed font-medium pl-6 border-l-2 border-fsm-red/20 text-balance">
                           {faq.answer}
                         </p>
                       </div>
@@ -197,7 +197,7 @@ export default function FAQPage() {
                 <Headphones className="text-fsm-red" size={32} />
                 <div className="space-y-4">
                    <h4 className="text-2xl font-black text-fsm-blue uppercase tracking-tighter">¿Aún con dudas?</h4>
-                   <p className="text-sm text-gray-400 font-bold max-w-xs mx-auto">Nuestro equipo de admisiones está listo para asesorarte de manera personalizada.</p>
+                   <p className="text-sm text-gray-700 font-bold max-w-xs mx-auto">Nuestro equipo de admisiones está listo para asesorarte de manera personalizada.</p>
                 </div>
                 <Link 
                   href="/contacto"

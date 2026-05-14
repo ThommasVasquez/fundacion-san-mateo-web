@@ -148,7 +148,7 @@ export default function GlobalCMSForm({ initialContent }: GlobalCMSFormProps) {
                <FolderTree size={24} />
              </div>
              <div>
-               <p className="text-[10px] font-black tracking-widest text-gray-400 uppercase">Sección Activa</p>
+               <p className="text-[10px] font-black tracking-widest text-gray-700 uppercase">Sección Activa</p>
                <h2 className="text-xl font-black text-fsm-blue uppercase tracking-tight">Gestor Global</h2>
              </div>
           </div>
@@ -156,7 +156,7 @@ export default function GlobalCMSForm({ initialContent }: GlobalCMSFormProps) {
           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Main Category Selector */}
             <div className="relative">
-              <label className="text-xs font-bold text-gray-500 mb-2 block uppercase tracking-widest">Página Principal</label>
+              <label className="text-xs font-bold text-gray-900 mb-2 block uppercase tracking-widest">Página Principal</label>
               <div className="relative">
                 <select 
                   className="w-full appearance-none bg-gray-50 border border-gray-200 text-gray-800 text-sm font-bold rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-fsm-red cursor-pointer uppercase"
@@ -170,14 +170,14 @@ export default function GlobalCMSForm({ initialContent }: GlobalCMSFormProps) {
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-700 pointer-events-none" size={16} />
               </div>
             </div>
 
             {/* Subcategory Selector (Only visible if the category is a submenu) */}
             {isSubmenu && (
               <div className="relative">
-                <label className="text-xs font-bold text-gray-500 mb-2 block uppercase tracking-widest">Sub-Sección</label>
+                <label className="text-xs font-bold text-gray-900 mb-2 block uppercase tracking-widest">Sub-Sección</label>
                 <div className="relative">
                   <select 
                     className="w-full appearance-none bg-gray-50 border border-gray-200 text-gray-800 text-sm font-bold rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-fsm-red cursor-pointer uppercase"
@@ -188,7 +188,7 @@ export default function GlobalCMSForm({ initialContent }: GlobalCMSFormProps) {
                       <option key={subcat} value={subcat}>{subcat}</option>
                     ))}
                   </select>
-                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-700 pointer-events-none" size={16} />
                 </div>
               </div>
             )}
@@ -217,7 +217,7 @@ export default function GlobalCMSForm({ initialContent }: GlobalCMSFormProps) {
                         {field.type === 'image' ? <ImageIcon size={16} className="text-fsm-red" /> : <FileText size={16} className="text-fsm-blue" />}
                         <span className="font-bold text-gray-700 text-sm">{field.key}</span>
                       </div>
-                      <span className="text-xs text-gray-400 uppercase tracking-widest">{field.type}</span>
+                      <span className="text-xs text-gray-700 uppercase tracking-widest">{field.type}</span>
                       <span className="text-[10px] font-bold text-fsm-blue mt-2 block">{field.label}</span>
                     </div>
 

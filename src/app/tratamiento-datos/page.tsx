@@ -41,7 +41,7 @@ export default function DataTreatmentPage() {
               PRIVACIDAD Y <br />
               <span className="text-fsm-blue-light uppercase">Datos</span>
             </h1>
-            <p className="text-lg text-gray-400 font-medium leading-relaxed">
+            <p className="text-lg text-gray-700 font-medium leading-relaxed">
               Dando cumplimiento a la Ley 1581 de 2012, garantizamos la protección y el tratamiento ético de su información personal.
             </p>
           </div>
@@ -58,7 +58,7 @@ export default function DataTreatmentPage() {
 
       <div ref={containerRef} className="container mx-auto px-8 py-24">
         {/* Breadcrumbs */}
-        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-300 mb-20">
+        <div className="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-gray-800 mb-20">
           <Link href="/" className="hover:text-fsm-red transition-colors">Inicio</Link>
           <ChevronRight size={14} className="text-fsm-red" />
           <Link href="/institucion/normatividad" className="hover:text-fsm-red transition-colors">Normatividad</Link>
@@ -78,7 +78,7 @@ export default function DataTreatmentPage() {
             </div>
           </div>
 
-          <div className="prose prose-lg max-w-none text-gray-400 font-medium leading-relaxed space-y-12">
+          <div className="prose prose-lg max-w-none text-gray-700 font-medium leading-relaxed space-y-12">
             <div className="reveal-item bg-gray-50/50 p-10 md:p-16 rounded-[4rem] border border-gray-100 shadow-sm relative overflow-hidden group">
                <div className="absolute -top-12 -right-12 w-48 h-48 bg-fsm-red/5 rounded-full  group-hover:scale-125 transition-transform duration-1000"></div>
                <p className="m-0 italic text-fsm-blue font-bold text-xl relative z-10">
@@ -114,8 +114,8 @@ export default function DataTreatmentPage() {
                     {item.icon}
                   </div>
                   <div className="space-y-4">
-                    <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Artículo {item.id.toString().padStart(2, '0')}</span>
-                    <p className="m-0 text-gray-500 font-bold leading-relaxed">{item.text}</p>
+                    <span className="text-[10px] font-black text-gray-800 uppercase tracking-widest">Artículo {item.id.toString().padStart(2, '0')}</span>
+                    <p className="m-0 text-gray-900 font-bold leading-relaxed">{item.text}</p>
                   </div>
                 </div>
               ))}
@@ -139,7 +139,7 @@ export default function DataTreatmentPage() {
                   <div className="flex items-start gap-6 relative z-10">
                     <div>
                       <h4 className="font-black text-fsm-blue uppercase text-sm tracking-widest mb-4">Aviso Legal</h4>
-                      <p className="text-sm font-bold text-gray-400 leading-relaxed">
+                      <p className="text-sm font-bold text-gray-700 leading-relaxed">
                         La institución se reserva el derecho de modificar su Política de Tratamiento de Datos Personales en cualquier momento. Cualquier cambio será informado oportunamente a través de este canal oficial.
                       </p>
                     </div>

@@ -43,8 +43,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </nav>
         </div>
         <div className="flex items-center gap-4 text-sm font-medium">
-           <Link href="/blog" target="_blank" className="text-gray-400 hover:text-fsm-blue text-xs font-bold uppercase tracking-widest mr-4">Vista Blog</Link>
-           <Link href="/" target="_blank" className="text-gray-400 hover:text-fsm-blue text-xs font-bold uppercase tracking-widest">Ver Sitio</Link>
+           <Link href="/blog" target="_blank" className="text-gray-700 hover:text-fsm-blue text-xs font-bold uppercase tracking-widest mr-4">Vista Blog</Link>
+           <Link href="/" target="_blank" className="text-gray-700 hover:text-fsm-blue text-xs font-bold uppercase tracking-widest">Ver Sitio</Link>
            <div className="w-px h-4 bg-gray-200 mx-2"></div>
            <form action={async () => { "use server"; await logout(); redirect("/auth/login"); }}>
              <button type="submit" className="text-fsm-red text-xs font-black tracking-widest uppercase hover:opacity-70 transition-opacity">Salir</button>
