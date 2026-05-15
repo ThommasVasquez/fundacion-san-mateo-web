@@ -108,3 +108,203 @@ export async function deleteBlogPost(id: string) {
     return { error: 'Failed to delete post' };
   }
 }
+
+export async function updateTestimonial(id: string, data: { text: string; author: string; role: string }) {
+  try {
+    await sql`
+      UPDATE testimonials 
+      SET text = ${data.text}, author = ${data.author}, role = ${data.role}
+      WHERE id = ${id}
+    `;
+    return { success: true };
+  } catch (error) {
+    console.error('Update testimonial error:', error);
+    return { error: 'Failed to update testimonial' };
+  }
+}
+
+export async function addTestimonial(data: { text: string; author: string; role: string }) {
+  try {
+    await sql`
+      INSERT INTO testimonials (text, author, role)
+      VALUES (${data.text}, ${data.author}, ${data.role})
+    `;
+    return { success: true };
+  } catch (error) {
+    console.error('Add testimonial error:', error);
+    return { error: 'Failed to add testimonial' };
+  }
+}
+
+export async function deleteTestimonial(id: string) {
+  try {
+    await sql`DELETE FROM testimonials WHERE id = ${id}`;
+    return { success: true };
+  } catch (error) {
+    console.error('Delete testimonial error:', error);
+    return { error: 'Failed to delete testimonial' };
+  }
+}
+export async function updateDirectoryItem(id: string, data: { title: string; phone: string }) {
+  try {
+    await sql`
+      UPDATE directory_items 
+      SET title = ${data.title}, phone = ${data.phone}
+      WHERE id = ${id}
+    `;
+    return { success: true };
+  } catch (error) {
+    console.error('Update directory item error:', error);
+    return { error: 'Failed to update directory item' };
+  }
+}
+
+export async function addDirectoryItem(data: { title: string; phone: string }) {
+  try {
+    await sql`
+      INSERT INTO directory_items (title, phone)
+      VALUES (${data.title}, ${data.phone})
+    `;
+    return { success: true };
+  } catch (error) {
+    console.error('Add directory item error:', error);
+    return { error: 'Failed to add directory item' };
+  }
+}
+
+export async function deleteDirectoryItem(id: string) {
+  try {
+    await sql`DELETE FROM directory_items WHERE id = ${id}`;
+    return { success: true };
+  } catch (error) {
+    console.error('Delete directory item error:', error);
+    return { error: 'Failed to delete directory item' };
+  }
+}
+
+export async function updateProgram(id: string, data: { title: string; subtitle: string; description: string; image_url: string; href: string; category: string; is_featured: boolean }) {
+  try {
+    await sql`
+      UPDATE academic_programs 
+      SET 
+        title = ${data.title}, 
+        subtitle = ${data.subtitle}, 
+        description = ${data.description}, 
+        image_url = ${data.image_url}, 
+        href = ${data.href}, 
+        category = ${data.category},
+        is_featured = ${data.is_featured}
+      WHERE id = ${id}
+    `;
+    return { success: true };
+  } catch (error) {
+    console.error('Update program error:', error);
+    return { error: 'Failed to update program' };
+  }
+}
+
+export async function addProgram(data: { title: string; subtitle: string; description: string; image_url: string; href: string; category: string; is_featured: boolean }) {
+  try {
+    await sql`
+      INSERT INTO academic_programs (title, subtitle, description, image_url, href, category, is_featured)
+      VALUES (${data.title}, ${data.subtitle}, ${data.description}, ${data.image_url}, ${data.href}, ${data.category}, ${data.is_featured})
+    `;
+    return { success: true };
+  } catch (error) {
+    console.error('Add program error:', error);
+    return { error: 'Failed to add program' };
+  }
+}
+
+export async function deleteProgram(id: string) {
+  try {
+    await sql`DELETE FROM academic_programs WHERE id = ${id}`;
+    return { success: true };
+  } catch (error) {
+    console.error('Delete program error:', error);
+    return { error: 'Failed to delete program' };
+  }
+}
+
+export async function updateNewsEvent(id: string, data: { title: string; description: string; image_url: string; date_text: string; category: string; link: string }) {
+  try {
+    await sql`
+      UPDATE news_events 
+      SET 
+        title = ${data.title}, 
+        description = ${data.description}, 
+        image_url = ${data.image_url}, 
+        date_text = ${data.date_text}, 
+        category = ${data.category},
+        link = ${data.link}
+      WHERE id = ${id}
+    `;
+    return { success: true };
+  } catch (error) {
+    console.error('Update news error:', error);
+    return { error: 'Failed to update news event' };
+  }
+}
+
+export async function addNewsEvent(data: { title: string; description: string; image_url: string; date_text: string; category: string; link: string }) {
+  try {
+    await sql`
+      INSERT INTO news_events (title, description, image_url, date_text, category, link)
+      VALUES (${data.title}, ${data.description}, ${data.image_url}, ${data.date_text}, ${data.category}, ${data.link})
+    `;
+    return { success: true };
+  } catch (error) {
+    console.error('Add news error:', error);
+    return { error: 'Failed to add news event' };
+  }
+}
+
+export async function deleteNewsEvent(id: string) {
+  try {
+    await sql`DELETE FROM news_events WHERE id = ${id}`;
+    return { success: true };
+  } catch (error) {
+    console.error('Delete news error:', error);
+    return { error: 'Failed to delete news event' };
+  }
+}
+
+export async function updateGalleryItem(id: string, data: { image_url: string; thumb_url: string; span_class: string }) {
+  try {
+    await sql`
+      UPDATE gallery_items 
+      SET 
+        image_url = ${data.image_url}, 
+        thumb_url = ${data.thumb_url}, 
+        span_class = ${data.span_class}
+      WHERE id = ${id}
+    `;
+    return { success: true };
+  } catch (error) {
+    console.error('Update gallery error:', error);
+    return { error: 'Failed to update gallery item' };
+  }
+}
+
+export async function addGalleryItem(data: { image_url: string; thumb_url: string; span_class: string }) {
+  try {
+    await sql`
+      INSERT INTO gallery_items (image_url, thumb_url, span_class)
+      VALUES (${data.image_url}, ${data.thumb_url}, ${data.span_class})
+    `;
+    return { success: true };
+  } catch (error) {
+    console.error('Add gallery error:', error);
+    return { error: 'Failed to add gallery item' };
+  }
+}
+
+export async function deleteGalleryItem(id: string) {
+  try {
+    await sql`DELETE FROM gallery_items WHERE id = ${id}`;
+    return { success: true };
+  } catch (error) {
+    console.error('Delete gallery error:', error);
+    return { error: 'Failed to delete gallery item' };
+  }
+}

@@ -145,7 +145,7 @@ const Hero = ({ content = {} }: { content?: Record<string, string> }) => {
         ref={rightRef}
         className="lg:w-1/2 relative min-h-[500px] lg:min-h-screen bg-[#1c2b59] overflow-hidden"
       >
-        <div className="absolute inset-0 flex items-center justify-center p-8">
+        <div className="absolute inset-0 flex items-center justify-center p-8 hero-parallax">
           <Image 
             src={content['home_hero_image'] || "/img/servicio-al-cliente.jpg"} 
             alt="Auxiliar en Servicio al Cliente" 
@@ -160,7 +160,7 @@ const Hero = ({ content = {} }: { content?: Record<string, string> }) => {
         
         {/* Floating Stat Card */}
         <div className="absolute bottom-12 left-12 right-12 lg:right-auto lg:left-8 z-20">
-          <div className="bg-white p-8 rounded-[3rem] shadow-premium border border-gray-100 max-w-xs animate-float">
+          <div className="bg-white p-8 rounded-[3rem] shadow-premium border border-gray-100 max-w-xs animate-float hero-parallax">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-12 h-12 bg-fsm-red rounded-2xl flex items-center justify-center text-white font-black text-xl">
                 {new Date().getFullYear() - 2000}

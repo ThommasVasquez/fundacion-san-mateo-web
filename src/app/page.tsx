@@ -8,10 +8,24 @@ import WhyUs from "@/components/home/WhyUs";
 import Testimonials from "@/components/home/Testimonials";
 import WhatsAppButton from "@/components/common/WhatsAppButton";
 
-import { getContentMap } from "@/lib/content";
+import { getContentMap, getTestimonials, getPrograms } from "@/lib/content";
 
 export default async function Home() {
   const content = await getContentMap('/');
+  const testimonials = await getTestimonials();
+  const programs = await getPrograms();
+  
+  // Filter and format featured programs for the Bento grid
+  const featuredPrograms = programs
+    .filter((p: any) => p.is_featured)
+    .map((p: any) => ({
+      id: p.id.toString(),
+      title: p.title,
+      subtitle: p.subtitle || '',
+      image_url: p.image_url,
+      href: p.href
+    }));
+
   return (
     <main className="min-h-screen bg-white">
       <Navbar />
@@ -20,7 +34,7 @@ export default async function Home() {
       <Hero content={content} />
       
       {/* Immersive Structural Break: The Bento Grid */}
-      <BentoPrograms content={content} />
+      <BentoPrograms content={content} programs={featuredPrograms} />
       
       {/* Elegant Integration of Trust */}
       <CertificationSection content={content} />
@@ -30,7 +44,7 @@ export default async function Home() {
       
       {/* Social Proof */}
       <div className="bg-fsm-blue py-32">
-        <Testimonials content={content} />
+        <Testimonials content={content} data={testimonials} />
       </div>
       
       <Footer />

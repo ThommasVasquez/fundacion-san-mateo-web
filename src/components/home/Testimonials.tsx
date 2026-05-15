@@ -4,39 +4,33 @@ import React, { useState, useEffect, useRef } from "react";
 import { Quote, ChevronLeft, ChevronRight, Star } from "lucide-react";
 import gsap from "gsap";
 
-const testimonials = [
-  {
-    text: "Quiero agradecerle a la Fundación San Mateo porque aprendí mucho y obtuve habilidades en el tema de Auxiliar de Enfermería y crecimiento como persona. Recomendaría la Fundación y a sus docentes sin ninguna duda, además porque me ayudaron a emplearme una vez me gradué.",
-    author: "Wilmer Flórez",
-    role: "Egresado de Auxiliar de Enfermería",
-  },
-  {
-    text: "Soy feliz con mi labor, todo gracias a mi Fundación San Mateo de la cual soy egresada, el lugar que me dio la oportunidad de conseguir un trabajo y así avanzar en mi proyecto de vida, el lugar que me vio crecer como estudiante enfermera y sobre todo persona que me guió en este camino.",
-    author: "Luisa Ortiz Carrillo",
-    role: "Egresada de Auxiliar de Enfermería",
-  },
-  {
-    text: "La Fundación San Mateo es un lugar lleno de oportunidades, donde cada esfuerzo vale la pena y es reconocido. Durante mi paso por ella conocí amigos, compañeros, jefes y docentes que me infundieron la confianza y la seguridad en mí.",
-    author: "Liset Bustos Gomez",
-    role: "Egresada de Auxiliar de Enfermería",
-  },
-];
+interface TestimonialData {
+  id: string;
+  text: string;
+  author: string;
+  role: string;
+}
 
-const Testimonials = ({ content = {} }: { content?: Record<string, string> }) => {
+const Testimonials = ({ content = {}, data = [] }: { content?: Record<string, string>, data?: any[] }) => {
   const [current, setCurrent] = useState(0);
   const textRef = useRef<HTMLDivElement>(null);
+  
+  const testimonials = data.length > 0 ? data : [
+    { text: "Cargando testimonios...", author: "FSM", role: "Institución" }
+  ];
 
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        textRef.current,
-        { opacity: 0, scale: 0.95 },
-        { opacity: 1, scale: 1, duration: 0.5, ease: "power2.out" }
-      );
-    }, textRef);
-
-    return () => ctx.revert();
-  }, [current]);
+    if (testimonials.length > 0) {
+      const ctx = gsap.context(() => {
+        gsap.fromTo(
+          textRef.current,
+          { opacity: 0, scale: 0.95 },
+          { opacity: 1, scale: 1, duration: 0.5, ease: "power2.out" }
+        );
+      }, textRef);
+      return () => ctx.revert();
+    }
+  }, [current, testimonials.length]);
 
   const handleNext = () => setCurrent((prev) => (prev + 1) % testimonials.length);
   const handlePrev = () => setCurrent((prev) => (prev - 1 + testimonials.length) % testimonials.length);

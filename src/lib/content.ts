@@ -28,3 +28,41 @@ export async function getAllContent() {
     return [];
   }
 }
+
+export async function getTestimonials() {
+  try {
+    return await sql`SELECT id, text, author, role FROM testimonials ORDER BY order_index ASC`;
+  } catch (e) {
+    console.error("Error fetching testimonials:", e);
+    return [];
+  }
+}
+export async function getDirectoryItems() {
+  try {
+    return await sql`SELECT id, title, phone FROM directory_items ORDER BY order_index ASC`;
+  } catch (e) {
+    console.error("Error fetching directory items:", e);
+    return [];
+  }
+}
+export async function getPrograms() {
+  try {
+    return await sql`SELECT * FROM academic_programs ORDER BY order_index ASC`;
+  } catch (e) {
+    console.error("Error fetching programs:", e);
+    return [];
+  }
+}
+export async function getNewsEvents() {
+  try {
+    return await sql`SELECT * FROM news_events ORDER BY created_at DESC`;
+  } catch (e) {
+    console.error("Error fetching news events:", e);
+    return [];
+  }
+}
+
+export async function getGallery() {
+  const items = await sql`SELECT * FROM gallery_items ORDER BY order_index ASC, created_at DESC`;
+  return items;
+}

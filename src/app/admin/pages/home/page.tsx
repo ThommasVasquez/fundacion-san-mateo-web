@@ -1,8 +1,8 @@
 import React from "react";
-import { getContentMap } from "@/lib/content";
 import GlobalCMSForm from "@/components/admin/GlobalCMSForm";
 import Link from "next/link";
 import { ChevronRight, Home } from "lucide-react";
+import { getAllContent, getTestimonials, getDirectoryItems, getPrograms, getNewsEvents, getGallery } from "@/lib/content";
 
 export const metadata = {
   title: "Gestor Global de Contenido | FSM Admin",
@@ -10,7 +10,60 @@ export const metadata = {
 
 export default async function AdminHomePage() {
   // Obtenemos los valores actuales de la base de datos
-  const content = await getContentMap("/");
+  const content = await getAllContent();
+  const testimonials = await getTestimonials();
+  const directoryItems = await getDirectoryItems();
+  const programs = await getPrograms();
+  const newsEvents = await getNewsEvents();
+  const galleryItems = await getGallery();
+  
+  // Serialize for client component
+  const initialContentMap: Record<string, string> = {};
+  content.forEach((item: any) => {
+    initialContentMap[item.content_key] = item.value;
+  });
+
+  const serializedNews = newsEvents.map((item: any) => ({
+    id: item.id.toString(),
+    title: item.title,
+    description: item.description || '',
+    image_url: item.image_url || '',
+    date_text: item.date_text || '',
+    category: item.category || '',
+    link: item.link || ''
+  }));
+
+  const serializedTestimonials = testimonials.map((t: any) => ({
+    id: t.id.toString(),
+    text: t.text,
+    author: t.author,
+    role: t.role
+  }));
+
+  const serializedDirectoryItems = directoryItems.map((item: any) => ({
+    id: item.id.toString(),
+    title: item.title,
+    phone: item.phone
+  }));
+
+  const serializedPrograms = programs.map((p: any) => ({
+    id: p.id.toString(),
+    title: p.title,
+    subtitle: p.subtitle || '',
+    description: p.description || '',
+    image_url: p.image_url,
+    href: p.href,
+    category: p.category,
+    is_featured: p.is_featured
+  }));
+
+  const serializedGallery = galleryItems.map((item: any) => ({
+    id: item.id.toString(),
+    image_url: item.image_url,
+    thumb_url: item.thumb_url || '',
+    span_class: item.span_class || 'col-span-1 row-span-1',
+    order_index: item.order_index
+  }));
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
@@ -29,7 +82,14 @@ export default async function AdminHomePage() {
       </div>
 
       {/* Formulario Cliente Unificado */}
-      <GlobalCMSForm initialContent={content} />
+      <GlobalCMSForm 
+        initialContent={initialContentMap} 
+        initialTestimonials={serializedTestimonials} 
+        initialDirectoryItems={serializedDirectoryItems}
+        initialPrograms={serializedPrograms}
+        initialNews={serializedNews}
+        initialGallery={serializedGallery}
+      />
     </div>
   );
 }

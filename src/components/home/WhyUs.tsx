@@ -31,12 +31,13 @@ const WhyUs = ({ content = {} }: { content?: Record<string, string> }) => {
       gsap.from(contentRef.current, {
         scrollTrigger: {
           trigger: sectionRef.current,
-          start: "top 60%",
+          start: "top 85%",
+          once: true,
         },
-        y: 100,
+        y: 50,
         opacity: 0,
-        duration: 1.5,
-        ease: "power4.out",
+        duration: 1,
+        ease: "power3.out",
       });
     }, sectionRef);
 

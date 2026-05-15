@@ -16,13 +16,14 @@ const CertificationSection = ({ content = {} }: { content?: Record<string, strin
       gsap.from(".cert-badge", {
         scrollTrigger: {
           trigger: sectionRef.current,
-          start: "top 80%",
+          start: "top 95%",
+          once: true,
         },
-        scale: 0.8,
+        scale: 0.9,
         opacity: 0,
-        duration: 1,
+        duration: 0.8,
         stagger: 0.1,
-        ease: "back.out(1.7)",
+        ease: "power2.out",
       });
     }, sectionRef);
 
@@ -74,6 +75,7 @@ const CertificationSection = ({ content = {} }: { content?: Record<string, strin
                       src={cert.img} 
                       alt={cert.name} 
                       fill 
+                      priority
                       className="object-contain"
                     />
                   </div>

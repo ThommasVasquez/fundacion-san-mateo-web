@@ -19,8 +19,38 @@ const Navbar = () => {
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    
+    // Refresh ScrollTrigger on mount and resize for mobile stability
+    const refreshGSAP = () => {
+      ScrollTrigger.refresh();
+    };
+
+    const timer = setTimeout(refreshGSAP, 1500);
+    window.addEventListener("resize", refreshGSAP);
+    window.addEventListener("load", refreshGSAP);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", refreshGSAP);
+      window.removeEventListener("load", refreshGSAP);
+      clearTimeout(timer);
+    };
   }, []);
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+      document.body.style.touchAction = "none";
+    } else {
+      document.body.style.overflow = "unset";
+      document.body.style.touchAction = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+      document.body.style.touchAction = "unset";
+    };
+  }, [isOpen]);
 
   const navLinks: { name: string; href?: string; dropdown?: { name: string; href: string }[]; external?: boolean }[] = [
     { name: "INICIO", href: "/" },
@@ -55,26 +85,38 @@ const Navbar = () => {
   ];
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[100] flex flex-col items-center p-4 md:p-6 pointer-events-none gap-2">
-      {/* Utility Bar - Desktop Only */}
+    <div className="fixed top-0 left-0 right-0 z-[100] flex flex-col items-center p-4 md:p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pointer-events-none gap-2">
+      {/* Utility Bar - Always Fixed/Visible */}
       <div className={cn(
-        "hidden xl:flex items-center gap-2 pointer-events-auto transition-all duration-500",
-        scrolled ? "opacity-0 -translate-y-4 pointer-events-none" : "opacity-100 translate-y-0"
+        "flex flex-wrap justify-center items-center gap-2 pointer-events-auto transition-all duration-500 relative z-[110]",
+        scrolled ? "scale-90 opacity-90 -mb-1" : "opacity-100"
       )}>
-        {utilityLinks.map((link) => (
+        {utilityLinks.slice(0, 3).map((link) => (
           <a
             key={link.name}
             href={link.href}
             target="_blank"
             rel="noopener noreferrer"
             className={cn(
-              "px-5 py-1.5 rounded-full text-[9px] font-black tracking-[0.2em] uppercase text-white transition-all hover:scale-110 hover:shadow-xl active:scale-95",
+              "px-3 md:px-5 py-1 md:py-1.5 rounded-full text-[8px] md:text-[9px] font-black tracking-[0.1em] md:tracking-[0.2em] uppercase text-white transition-all hover:scale-110 hover:shadow-xl active:scale-95 shadow-md",
               link.color
             )}
           >
             {link.name}
           </a>
         ))}
+        {/* Solicitudes (4th) visible only when not scrolled or on large screens */}
+        <a
+          href={utilityLinks[3].href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(
+            "hidden md:inline-block px-5 py-1.5 rounded-full text-[9px] font-black tracking-[0.2em] uppercase text-white bg-fsm-blue border border-white/20 transition-all hover:scale-110 hover:shadow-xl active:scale-95 shadow-md",
+            scrolled && "xl:hidden"
+          )}
+        >
+          {utilityLinks[3].name}
+        </a>
       </div>
 
       <nav 
@@ -169,29 +211,42 @@ const Navbar = () => {
       >
         <button 
           onClick={() => setIsOpen(false)}
-          className="absolute top-8 right-8 text-white/50 hover:text-white transition-colors"
+          className="absolute top-10 right-8 text-white/50 hover:text-white transition-colors z-[210] mt-[env(safe-area-inset-top)]"
         >
           <X size={48} />
         </button>
 
-        <div className="h-full flex flex-col justify-center items-center p-8">
-          <div className="flex flex-col gap-6 text-center">
-            {/* Utility Links in Mobile */}
-            <div className="flex flex-wrap justify-center gap-2 mb-8">
-              {utilityLinks.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(
-                    "px-4 py-2 rounded-full text-[10px] font-black tracking-widest uppercase text-white transition-all active:scale-95",
-                    link.color
-                  )}
-                >
-                  {link.name}
-                </a>
-              ))}
+        <div className="h-full flex flex-col justify-start items-center p-8 pt-24 overflow-y-auto">
+          <div className="flex flex-col gap-10 text-center w-full max-w-sm mt-[env(safe-area-inset-top)] pb-20">
+            {/* Utility Links in Mobile - Sticky at top of menu */}
+            <div className="sticky top-0 bg-fsm-blue py-4 flex flex-col gap-3 mb-4 relative z-[220] -mt-4">
+              <div className="flex flex-wrap justify-center gap-2">
+                {utilityLinks.slice(0, 3).map((link) => (
+                  <a
+                    key={link.name}
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      "flex-1 min-w-[120px] px-4 py-3 rounded-2xl text-[10px] font-black tracking-widest uppercase text-white transition-all active:scale-95 shadow-lg",
+                      link.color
+                    )}
+                  >
+                    {link.name}
+                  </a>
+                ))}
+              </div>
+              {/* Optional 4th link if needed, or just keep the 3 main ones */}
+              {utilityLinks[3] && (
+                 <a
+                    href={utilityLinks[3].href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-3 rounded-2xl text-[10px] font-black tracking-widest uppercase text-white bg-fsm-blue border border-white/20 transition-all active:scale-95"
+                  >
+                    {utilityLinks[3].name}
+                  </a>
+              )}
             </div>
 
             {navLinks.map((link) => (
