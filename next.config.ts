@@ -1,3 +1,4 @@
+// Trigger build - Academic Calendar
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
