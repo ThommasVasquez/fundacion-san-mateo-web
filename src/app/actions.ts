@@ -308,3 +308,44 @@ export async function deleteGalleryItem(id: string) {
     return { error: 'Failed to delete gallery item' };
   }
 }
+export async function updateCalendarEvent(id: string, data: { title: string; description: string; start_date: string; end_date: string; type: string }) {
+  try {
+    await sql`
+      UPDATE academic_calendar 
+      SET 
+        title = ${data.title}, 
+        description = ${data.description}, 
+        start_date = ${data.start_date}, 
+        end_date = ${data.end_date || null}, 
+        type = ${data.type}
+      WHERE id = ${id}
+    `;
+    return { success: true };
+  } catch (error) {
+    console.error('Update calendar error:', error);
+    return { error: 'Failed to update calendar event' };
+  }
+}
+
+export async function addCalendarEvent(data: { title: string; description: string; start_date: string; end_date: string; type: string }) {
+  try {
+    await sql`
+      INSERT INTO academic_calendar (title, description, start_date, end_date, type)
+      VALUES (${data.title}, ${data.description}, ${data.start_date}, ${data.end_date || null}, ${data.type})
+    `;
+    return { success: true };
+  } catch (error) {
+    console.error('Add calendar error:', error);
+    return { error: 'Failed to add calendar event' };
+  }
+}
+
+export async function deleteCalendarEvent(id: string) {
+  try {
+    await sql`DELETE FROM academic_calendar WHERE id = ${id}`;
+    return { success: true };
+  } catch (error) {
+    console.error('Delete calendar error:', error);
+    return { error: 'Failed to delete calendar event' };
+  }
+}

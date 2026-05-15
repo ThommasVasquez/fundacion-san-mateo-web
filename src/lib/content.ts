@@ -66,3 +66,11 @@ export async function getGallery() {
   const items = await sql`SELECT * FROM gallery_items ORDER BY order_index ASC, created_at DESC`;
   return items;
 }
+export async function getCalendarEvents() {
+  try {
+    return await sql`SELECT * FROM academic_calendar WHERE is_active = true ORDER BY start_date ASC`;
+  } catch (e) {
+    console.error("Error fetching calendar events:", e);
+    return [];
+  }
+}

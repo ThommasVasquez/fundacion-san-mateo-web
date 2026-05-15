@@ -22,7 +22,8 @@ import DirectoryManager from "./DirectoryManager";
 import ProgramManager from "./ProgramManager";
 import NewsManager from "./NewsManager";
 import GalleryManager from "./GalleryManager";
-import { Newspaper, Image as GalleryIcon } from "lucide-react";
+import CalendarManager from "./CalendarManager";
+import { Newspaper, Image as GalleryIcon, CalendarDays } from "lucide-react";
 
 interface GlobalCMSFormProps {
   initialContent: Record<string, string>;
@@ -31,6 +32,7 @@ interface GlobalCMSFormProps {
   initialPrograms?: any[];
   initialNews?: any[];
   initialGallery?: any[];
+  initialCalendarEvents?: any[];
 }
 
 // Estructura Jerárquica del CMS
@@ -855,6 +857,44 @@ export const cmsStructure: Record<string, any> = {
         default: "Cargar más fotos",
       },
     ],
+    "Calendario Académico": [
+      {
+        group: "Encabezado Hero",
+        key: "calendar_hero_subtitle",
+        label: "Etiqueta Superior",
+        type: "text",
+        default: "Cronograma Escolar",
+      },
+      {
+        group: "Encabezado Hero",
+        key: "calendar_hero_title1",
+        label: "Título Línea 1",
+        type: "text",
+        default: "CALENDARIO",
+      },
+      {
+        group: "Encabezado Hero",
+        key: "calendar_hero_title2",
+        label: "Título Línea 2 (Resaltado)",
+        type: "text",
+        default: "Académico",
+      },
+      {
+        group: "Encabezado Hero",
+        key: "calendar_hero_description",
+        label: "Descripción",
+        type: "text",
+        default:
+          "Planifique su semestre con nuestra programación oficial de clases, eventos, periodos de matrícula y fechas institucionales.",
+      },
+      {
+        group: "Encabezado Hero",
+        key: "calendar_hero_image",
+        label: "Imagen Hero",
+        type: "image",
+        default: "/img/banner8.jpg",
+      },
+    ],
   },
 };
 
@@ -865,6 +905,7 @@ export default function GlobalCMSForm({
   initialPrograms = [],
   initialNews = [],
   initialGallery = [],
+  initialCalendarEvents = [],
 }: GlobalCMSFormProps) {
   const [contentMap, setContentMap] =
     useState<Record<string, string>>(initialContent);
@@ -1251,6 +1292,21 @@ export default function GlobalCMSForm({
                     </p>
                   </div>
                   <GalleryManager galleryItems={initialGallery} />
+                </div>
+              )}
+
+              {currentSub === "Calendario Académico" && (
+                <div className="mt-12 pt-12 border-t border-gray-100">
+                  <div className="mb-8">
+                    <h4 className="text-lg font-black text-fsm-blue uppercase flex items-center gap-2">
+                      <CalendarDays className="text-fsm-red" size={20} /> Gestión
+                      de Calendario
+                    </h4>
+                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">
+                      Administra las fechas y eventos del cronograma escolar
+                    </p>
+                  </div>
+                  <CalendarManager events={initialCalendarEvents} />
                 </div>
               )}
             </div>

@@ -2,7 +2,7 @@ import React from "react";
 import GlobalCMSForm from "@/components/admin/GlobalCMSForm";
 import Link from "next/link";
 import { ChevronRight, Home } from "lucide-react";
-import { getAllContent, getTestimonials, getDirectoryItems, getPrograms, getNewsEvents, getGallery } from "@/lib/content";
+import { getAllContent, getTestimonials, getDirectoryItems, getPrograms, getNewsEvents, getGallery, getCalendarEvents } from "@/lib/content";
 
 export const metadata = {
   title: "Gestor Global de Contenido | FSM Admin",
@@ -16,6 +16,7 @@ export default async function AdminHomePage() {
   const programs = await getPrograms();
   const newsEvents = await getNewsEvents();
   const galleryItems = await getGallery();
+  const calendarEvents = await getCalendarEvents();
   
   // Serialize for client component
   const initialContentMap: Record<string, string> = {};
@@ -65,6 +66,15 @@ export default async function AdminHomePage() {
     order_index: item.order_index
   }));
 
+  const serializedCalendar = calendarEvents.map((item: any) => ({
+    id: item.id.toString(),
+    title: item.title,
+    description: item.description || '',
+    start_date: item.start_date ? new Date(item.start_date).toISOString() : '',
+    end_date: item.end_date ? new Date(item.end_date).toISOString() : '',
+    type: item.type || 'academic'
+  }));
+
   return (
     <div className="max-w-6xl mx-auto space-y-8">
       {/* Breadcrumbs */}
@@ -89,6 +99,7 @@ export default async function AdminHomePage() {
         initialPrograms={serializedPrograms}
         initialNews={serializedNews}
         initialGallery={serializedGallery}
+        initialCalendarEvents={serializedCalendar}
       />
     </div>
   );
