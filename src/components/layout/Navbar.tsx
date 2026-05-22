@@ -91,7 +91,7 @@ const Navbar = () => {
         "flex flex-wrap justify-center items-center gap-2 pointer-events-auto transition-all duration-500 relative z-[110]",
         scrolled ? "scale-90 opacity-90 -mb-1" : "opacity-100"
       )}>
-        {utilityLinks.slice(0, 3).map((link) => (
+        {utilityLinks.map((link) => (
           <a
             key={link.name}
             href={link.href}
@@ -105,18 +105,6 @@ const Navbar = () => {
             {link.name}
           </a>
         ))}
-        {/* Solicitudes (4th) visible only when not scrolled or on large screens */}
-        <a
-          href={utilityLinks[3].href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={cn(
-            "hidden md:inline-block px-5 py-1.5 rounded-full text-[9px] font-black tracking-[0.2em] uppercase text-white bg-fsm-blue border border-white/20 transition-all hover:scale-110 hover:shadow-xl active:scale-95 shadow-md",
-            scrolled && "xl:hidden"
-          )}
-        >
-          {utilityLinks[3].name}
-        </a>
       </div>
 
       <nav 
@@ -221,7 +209,7 @@ const Navbar = () => {
             {/* Utility Links in Mobile - Sticky at top of menu */}
             <div className="sticky top-0 bg-fsm-blue py-4 flex flex-col gap-3 mb-4 relative z-[220] -mt-4">
               <div className="flex flex-wrap justify-center gap-2">
-                {utilityLinks.slice(0, 3).map((link) => (
+                {utilityLinks.map((link) => (
                   <a
                     key={link.name}
                     href={link.href}
@@ -236,17 +224,6 @@ const Navbar = () => {
                   </a>
                 ))}
               </div>
-              {/* Optional 4th link if needed, or just keep the 3 main ones */}
-              {utilityLinks[3] && (
-                 <a
-                    href={utilityLinks[3].href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-4 py-3 rounded-2xl text-[10px] font-black tracking-widest uppercase text-white bg-fsm-blue border border-white/20 transition-all active:scale-95"
-                  >
-                    {utilityLinks[3].name}
-                  </a>
-              )}
             </div>
 
             {navLinks.map((link) => (
