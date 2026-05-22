@@ -15,6 +15,7 @@ import {
   MessageSquareQuote,
   Contact,
   GraduationCap,
+  HelpCircle,
 } from "lucide-react";
 import Image from "next/image";
 import TestimonialManager from "./TestimonialManager";
@@ -23,6 +24,7 @@ import ProgramManager from "./ProgramManager";
 import NewsManager from "./NewsManager";
 import GalleryManager from "./GalleryManager";
 import CalendarManager from "./CalendarManager";
+import FAQManager from "./FAQManager";
 import { Newspaper, Image as GalleryIcon, CalendarDays } from "lucide-react";
 
 interface GlobalCMSFormProps {
@@ -30,9 +32,11 @@ interface GlobalCMSFormProps {
   initialTestimonials?: any[];
   initialDirectoryItems?: any[];
   initialPrograms?: any[];
-  initialNews?: any[];
-  initialGallery?: any[];
-  initialCalendarEvents?: any[];
+  initialNews: any[];
+  initialGallery: any[];
+  initialCalendar: any[];
+  blogPosts?: any[];
+  initialFAQs?: any[];
 }
 
 // Estructura Jerárquica del CMS
@@ -895,7 +899,130 @@ export const cmsStructure: Record<string, any> = {
         default: "/img/banner8.jpg",
       },
     ],
+    "Preguntas Frecuentes": [
+      {
+        group: "Encabezado Hero",
+        key: "faq_hero_subtitle",
+        label: "Etiqueta Superior",
+        type: "text",
+        default: "Centro de Ayuda",
+      },
+      {
+        group: "Encabezado Hero",
+        key: "faq_hero_title1",
+        label: "Título Línea 1",
+        type: "text",
+        default: "PREGUNTAS",
+      },
+      {
+        group: "Encabezado Hero",
+        key: "faq_hero_title2",
+        label: "Título Línea 2 (Resaltado)",
+        type: "text",
+        default: "Frecuentes",
+      },
+      {
+        group: "Encabezado Hero",
+        key: "faq_hero_description",
+        label: "Descripción",
+        type: "text",
+        default: "Resuelva sus dudas sobre procesos de admisión, programas, pagos y normatividad institucional de manera rápida.",
+      },
+      {
+        group: "Encabezado Hero",
+        key: "faq_hero_image",
+        label: "Imagen Hero",
+        type: "image",
+        default: "/img/banner6.jpg",
+      },
+    ],
   },
+  Contacto: [
+    {
+      group: "Encabezado Hero",
+      key: "contact_hero_subtitle",
+      label: "Etiqueta Superior",
+      type: "text",
+      default: "Atención Directa",
+    },
+    {
+      group: "Encabezado Hero",
+      key: "contact_hero_title1",
+      label: "Título Línea 1",
+      type: "text",
+      default: "ESTAMOS",
+    },
+    {
+      group: "Encabezado Hero",
+      key: "contact_hero_title2",
+      label: "Título Línea 2 (Resaltado)",
+      type: "text",
+      default: "Contigo",
+    },
+    {
+      group: "Encabezado Hero",
+      key: "contact_hero_description",
+      label: "Descripción",
+      type: "text",
+      default: "Resuelva sus dudas de manera personalizada. Nuestro equipo está listo para asesorarle en su camino hacia la excelencia técnica.",
+    },
+    {
+      group: "Encabezado Hero",
+      key: "contact_hero_image",
+      label: "Imagen Hero",
+      type: "image",
+      default: "/img/banner16.jpg",
+    },
+    {
+      group: "Datos de Ubicación",
+      key: "contact_addr_academic",
+      label: "Dirección Sede Académica",
+      type: "text",
+      default: "Calle 19 # 7A - 29 Soacha",
+    },
+    {
+      group: "Datos de Ubicación",
+      key: "contact_addr_admin",
+      label: "Dirección Sede Administrativa",
+      type: "text",
+      default: "Calle 19 #8-21, Soacha Centro",
+    },
+    {
+      group: "Líneas y Correo",
+      key: "contact_phone_main",
+      label: "Teléfono Principal",
+      type: "text",
+      default: "(601) 732 1080",
+    },
+    {
+      group: "Líneas y Correo",
+      key: "contact_phone_sec",
+      label: "Teléfono Secundario",
+      type: "text",
+      default: "(601) 817 5456",
+    },
+    {
+      group: "Líneas y Correo",
+      key: "contact_email",
+      label: "Correo Electrónico Oficial",
+      type: "text",
+      default: "info@fundacionsanmateosoacha.edu.co",
+    },
+    {
+      group: "Mapa Interactivo",
+      key: "contact_map_url",
+      label: "URL Embed de Google Maps",
+      type: "text",
+      default: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3976.985633364958!2d-74.22019912411933!3d4.596637495378297!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e3f9fcbb9480cc3%3A0x6b2e353272dc645a!2sCl.%2019%20%238-21%2C%20Soacha%2C%20Cundinamarca!5e0!3m2!1ses!2sco!4v1714500000000!5m2!1ses!2sco",
+    },
+    {
+      group: "Formulario",
+      key: "contact_form_title",
+      label: "Título del Formulario",
+      type: "text",
+      default: "Consulta Digital",
+    },
+  ],
 };
 
 export default function GlobalCMSForm({
@@ -905,7 +1032,9 @@ export default function GlobalCMSForm({
   initialPrograms = [],
   initialNews = [],
   initialGallery = [],
-  initialCalendarEvents = [],
+  initialCalendar = [],
+  blogPosts = [],
+  initialFAQs = [],
 }: GlobalCMSFormProps) {
   const [contentMap, setContentMap] =
     useState<Record<string, string>>(initialContent);
@@ -1217,7 +1346,7 @@ export default function GlobalCMSForm({
               })}
 
               {/* Special Managers */}
-              {currentSub === "Testimonios" && (
+              {groupName === "Testimonios" && (
                 <div className="mt-12 pt-12 border-t border-gray-100">
                   <div className="mb-8">
                     <h4 className="text-lg font-black text-fsm-blue uppercase flex items-center gap-2">
@@ -1234,7 +1363,7 @@ export default function GlobalCMSForm({
                 </div>
               )}
 
-              {currentSub === "Directorio" && (
+              {groupName === "Horario" && currentSub === "Directorio" && (
                 <div className="mt-12 pt-12 border-t border-gray-100">
                   <div className="mb-8">
                     <h4 className="text-lg font-black text-fsm-blue uppercase flex items-center gap-2">
@@ -1249,7 +1378,7 @@ export default function GlobalCMSForm({
                 </div>
               )}
 
-              {activeCategory === "Oferta Académica" && (
+              {groupName === "Programas" && activeCategory === "Oferta Académica" && (
                 <div className="mt-12 pt-12 border-t border-gray-100">
                   <div className="mb-8">
                     <h4 className="text-lg font-black text-fsm-blue uppercase flex items-center gap-2">
@@ -1264,7 +1393,7 @@ export default function GlobalCMSForm({
                 </div>
               )}
 
-              {currentSub === "Noticias y Eventos" && (
+              {groupName === "Encabezado Hero" && currentSub === "Noticias y Eventos" && (
                 <div className="mt-12 pt-12 border-t border-gray-100">
                   <div className="mb-8">
                     <h4 className="text-lg font-black text-fsm-blue uppercase flex items-center gap-2">
@@ -1279,7 +1408,7 @@ export default function GlobalCMSForm({
                 </div>
               )}
 
-              {currentSub === "Galería" && (
+              {groupName === "Interface" && currentSub === "Galería" && (
                 <div className="mt-12 pt-12 border-t border-gray-100">
                   <div className="mb-8">
                     <h4 className="text-lg font-black text-fsm-blue uppercase flex items-center gap-2">
@@ -1295,7 +1424,7 @@ export default function GlobalCMSForm({
                 </div>
               )}
 
-              {currentSub === "Calendario Académico" && (
+              {groupName === "Encabezado Hero" && currentSub === "Calendario Académico" && (
                 <div className="mt-12 pt-12 border-t border-gray-100">
                   <div className="mb-8">
                     <h4 className="text-lg font-black text-fsm-blue uppercase flex items-center gap-2">
@@ -1306,7 +1435,22 @@ export default function GlobalCMSForm({
                       Administra las fechas y eventos del cronograma escolar
                     </p>
                   </div>
-                  <CalendarManager events={initialCalendarEvents} />
+                  <CalendarManager events={initialCalendar} blogPosts={blogPosts} />
+                </div>
+              )}
+
+              {groupName === "Encabezado Hero" && currentSub === "Preguntas Frecuentes" && (
+                <div className="mt-12 pt-12 border-t border-gray-100">
+                  <div className="mb-8">
+                    <h4 className="text-lg font-black text-fsm-blue uppercase flex items-center gap-2">
+                      <HelpCircle className="text-fsm-red" size={20} /> Gestión
+                      de Preguntas (FAQ)
+                    </h4>
+                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">
+                      Administra las dudas comunes y sus respuestas
+                    </p>
+                  </div>
+                  <FAQManager faqs={initialFAQs} />
                 </div>
               )}
             </div>

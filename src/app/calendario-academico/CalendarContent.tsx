@@ -17,6 +17,8 @@ interface CalendarEvent {
   start_date: string;
   end_date: string;
   type: string;
+  button_text?: string;
+  button_link?: string;
 }
 
 interface CalendarContentProps {
@@ -142,11 +144,18 @@ const CalendarContent = ({ events }: CalendarContentProps) => {
                             </div>
 
                             {/* Action */}
-                            <div className="shrink-0 hidden md:block">
-                                <div className="w-12 h-12 rounded-full border border-gray-200 flex items-center justify-center group-hover:border-fsm-red group-hover:bg-fsm-red group-hover:text-white transition-all duration-300">
-                                    <ArrowRight size={20} />
+                            {event.button_link && (
+                                <div className="shrink-0 hidden md:block">
+                                    <Link 
+                                        href={event.button_link}
+                                        target={event.button_link.startsWith('http') ? "_blank" : "_self"}
+                                        className="inline-flex items-center gap-3 bg-fsm-blue hover:bg-fsm-red text-white px-6 py-3 rounded-2xl font-black text-[10px] tracking-widest uppercase transition-all duration-300 shadow-lg"
+                                    >
+                                        {event.button_text || "Ver más"}
+                                        <ArrowRight size={16} />
+                                    </Link>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     ))
                 ) : (

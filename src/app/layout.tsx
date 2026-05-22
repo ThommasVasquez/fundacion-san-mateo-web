@@ -6,6 +6,7 @@ import { Toaster } from "react-hot-toast";
 const montserrat = Montserrat({
   variable: "--font-montserrat",
   subsets: ["latin"],
+  weight: ["400", "500", "700", "900"],
   display: "swap",
 });
 

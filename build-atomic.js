@@ -45,7 +45,8 @@ async function build() {
         target: 'esnext',
         external: ['node:*', 'cloudflare:*', 'async_hooks', 'fs', 'path', 'os', 'url', 'vm', 'util', 'http', 'https', 'buffer', 'crypto', 'stream', 'module', 'timers', 'zlib', 'querystring', 'timers/promises'],
         loader: { '.wasm': 'binary' },
-        banner: { js: bannerCode }
+        banner: { js: bannerCode },
+        minify: true,
     });
     console.log('--- SERVIDOR REFORZADO ---');
 }

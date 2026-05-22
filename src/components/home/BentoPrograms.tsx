@@ -86,7 +86,6 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
                   src={programs[0].image_url} 
                   alt={programs[0].title} 
                   fill 
-                  priority
                   className="object-cover transition-transform duration-1000 group-hover:scale-110 brightness-75 group-hover:brightness-50"
                 />
               <div className={`absolute inset-0 p-12 flex flex-col justify-end text-white z-10 ${getProgramStyles(programs[0].title, 0).bg}`}>

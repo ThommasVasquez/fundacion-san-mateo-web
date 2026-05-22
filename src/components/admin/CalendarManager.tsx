@@ -13,13 +13,16 @@ interface CalendarEvent {
   start_date: string;
   end_date: string;
   type: string;
+  button_text?: string;
+  button_link?: string;
 }
 
 interface CalendarManagerProps {
   events: CalendarEvent[];
+  blogPosts?: { id: string; title: string; slug: string }[];
 }
 
-const CalendarManager = ({ events: initialEvents }: CalendarManagerProps) => {
+const CalendarManager = ({ events: initialEvents, blogPosts = [] }: CalendarManagerProps) => {
   const [events, setEvents] = useState<CalendarEvent[]>(initialEvents);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<CalendarEvent>>({});
@@ -131,7 +134,9 @@ const CalendarManager = ({ events: initialEvents }: CalendarManagerProps) => {
                 description: "",
                 start_date: new Date().toISOString().split('T')[0],
                 end_date: "",
-                type: "academic"
+                type: "academic",
+                button_text: "",
+                button_link: ""
               });
             }}
             className="flex items-center gap-2 bg-fsm-blue text-white px-6 py-3 rounded-2xl font-black text-xs tracking-widest hover:bg-fsm-red transition-all shadow-lg"
@@ -208,6 +213,55 @@ const CalendarManager = ({ events: initialEvents }: CalendarManagerProps) => {
                 className="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:border-fsm-blue outline-none font-bold text-sm min-h-[100px]"
                 placeholder="Detalles adicionales sobre el evento..."
               />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-fsm-blue tracking-widest uppercase ml-4">Texto del Botón (Opcional)</label>
+              <div className="relative">
+                <Tag className="absolute left-4 top-1/2 -translate-y-1/2 text-fsm-blue/30" size={18} />
+                <input
+                  type="text"
+                  value={editForm.button_text || ""}
+                  onChange={(e) => setEditForm({ ...editForm, button_text: e.target.value })}
+                  className="w-full pl-12 pr-6 py-4 rounded-2xl border border-gray-200 focus:border-fsm-blue outline-none font-bold text-sm"
+                  placeholder="Ej: Inscribirse ahora"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-[10px] font-black text-fsm-blue tracking-widest uppercase ml-4">Enlace del Botón (Opcional)</label>
+              <div className="flex flex-col gap-4">
+                <div className="relative">
+                    <Info className="absolute left-4 top-1/2 -translate-y-1/2 text-fsm-blue/30" size={18} />
+                    <input
+                    type="text"
+                    value={editForm.button_link || ""}
+                    onChange={(e) => setEditForm({ ...editForm, button_link: e.target.value })}
+                    className="w-full pl-12 pr-6 py-4 rounded-2xl border border-gray-200 focus:border-fsm-blue outline-none font-bold text-sm"
+                    placeholder="Escriba URL o seleccione una noticia abajo..."
+                    />
+                </div>
+                
+                {blogPosts.length > 0 && (
+                    <div className="space-y-2">
+                        <label className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] ml-4">Vincular a una noticia reciente:</label>
+                        <select
+                            onChange={(e) => {
+                                if (e.target.value) {
+                                    setEditForm({ ...editForm, button_link: `/blog/${e.target.value}`, button_text: "Leer Noticia" });
+                                }
+                            }}
+                            className="w-full px-6 py-3 rounded-xl border border-dashed border-gray-300 bg-white outline-none font-bold text-[10px] text-fsm-blue"
+                        >
+                            <option value="">-- Seleccionar Noticia --</option>
+                            {blogPosts.map(post => (
+                                <option key={post.id} value={post.slug}>{post.title}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
+              </div>
             </div>
           </div>
 

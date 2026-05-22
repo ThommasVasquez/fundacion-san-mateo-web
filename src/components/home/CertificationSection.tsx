@@ -75,7 +75,6 @@ const CertificationSection = ({ content = {} }: { content?: Record<string, strin
                       src={cert.img} 
                       alt={cert.name} 
                       fill 
-                      priority
                       className="object-contain"
                     />
                   </div>

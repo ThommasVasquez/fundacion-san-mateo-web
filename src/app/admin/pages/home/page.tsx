@@ -2,7 +2,7 @@ import React from "react";
 import GlobalCMSForm from "@/components/admin/GlobalCMSForm";
 import Link from "next/link";
 import { ChevronRight, Home } from "lucide-react";
-import { getAllContent, getTestimonials, getDirectoryItems, getPrograms, getNewsEvents, getGallery, getCalendarEvents } from "@/lib/content";
+import { getAllContent, getTestimonials, getDirectoryItems, getPrograms, getNewsEvents, getGallery, getCalendarEvents, getBlogPosts, getFAQs } from "@/lib/content";
 
 export const metadata = {
   title: "Gestor Global de Contenido | FSM Admin",
@@ -17,6 +17,8 @@ export default async function AdminHomePage() {
   const newsEvents = await getNewsEvents();
   const galleryItems = await getGallery();
   const calendarEvents = await getCalendarEvents();
+  const blogPosts = await getBlogPosts();
+  const faqs = await getFAQs();
   
   // Serialize for client component
   const initialContentMap: Record<string, string> = {};
@@ -72,7 +74,22 @@ export default async function AdminHomePage() {
     description: item.description || '',
     start_date: item.start_date ? new Date(item.start_date).toISOString() : '',
     end_date: item.end_date ? new Date(item.end_date).toISOString() : '',
-    type: item.type || 'academic'
+    type: item.type || 'academic',
+    button_text: item.button_text || '',
+    button_link: item.button_link || ''
+  }));
+  
+  const serializedBlogPosts = blogPosts.map((post: any) => ({
+    id: post.id.toString(),
+    title: post.title,
+    slug: post.slug
+  }));
+  
+  const serializedFAQs = faqs.map((f: any) => ({
+    id: f.id.toString(),
+    question: f.question,
+    answer: f.answer,
+    order_index: f.order_index
   }));
 
   return (
@@ -99,7 +116,9 @@ export default async function AdminHomePage() {
         initialPrograms={serializedPrograms}
         initialNews={serializedNews}
         initialGallery={serializedGallery}
-        initialCalendarEvents={serializedCalendar}
+        initialCalendar={serializedCalendar}
+        blogPosts={serializedBlogPosts}
+        initialFAQs={serializedFAQs}
       />
     </div>
   );

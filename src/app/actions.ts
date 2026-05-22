@@ -308,7 +308,7 @@ export async function deleteGalleryItem(id: string) {
     return { error: 'Failed to delete gallery item' };
   }
 }
-export async function updateCalendarEvent(id: string, data: { title: string; description: string; start_date: string; end_date: string; type: string }) {
+export async function updateCalendarEvent(id: string, data: { title: string; description: string; start_date: string; end_date: string; type: string; button_text?: string; button_link?: string }) {
   try {
     await sql`
       UPDATE academic_calendar 
@@ -317,7 +317,9 @@ export async function updateCalendarEvent(id: string, data: { title: string; des
         description = ${data.description}, 
         start_date = ${data.start_date}, 
         end_date = ${data.end_date || null}, 
-        type = ${data.type}
+        type = ${data.type},
+        button_text = ${data.button_text || null},
+        button_link = ${data.button_link || null}
       WHERE id = ${id}
     `;
     return { success: true };
@@ -327,11 +329,11 @@ export async function updateCalendarEvent(id: string, data: { title: string; des
   }
 }
 
-export async function addCalendarEvent(data: { title: string; description: string; start_date: string; end_date: string; type: string }) {
+export async function addCalendarEvent(data: { title: string; description: string; start_date: string; end_date: string; type: string; button_text?: string; button_link?: string }) {
   try {
     await sql`
-      INSERT INTO academic_calendar (title, description, start_date, end_date, type)
-      VALUES (${data.title}, ${data.description}, ${data.start_date}, ${data.end_date || null}, ${data.type})
+      INSERT INTO academic_calendar (title, description, start_date, end_date, type, button_text, button_link)
+      VALUES (${data.title}, ${data.description}, ${data.start_date}, ${data.end_date || null}, ${data.type}, ${data.button_text || null}, ${data.button_link || null})
     `;
     return { success: true };
   } catch (error) {
@@ -347,5 +349,42 @@ export async function deleteCalendarEvent(id: string) {
   } catch (error) {
     console.error('Delete calendar error:', error);
     return { error: 'Failed to delete calendar event' };
+  }
+}
+
+export async function addFAQ(data: { question: string; answer: string; order_index: number }) {
+  try {
+    await sql`
+      INSERT INTO faqs (question, answer, order_index)
+      VALUES (${data.question}, ${data.answer}, ${data.order_index})
+    `;
+    return { success: true };
+  } catch (error) {
+    console.error('Add FAQ error:', error);
+    return { error: 'Failed to add FAQ' };
+  }
+}
+
+export async function updateFAQ(id: string, data: { question: string; answer: string; order_index: number }) {
+  try {
+    await sql`
+      UPDATE faqs 
+      SET question = ${data.question}, answer = ${data.answer}, order_index = ${data.order_index}
+      WHERE id = ${id}
+    `;
+    return { success: true };
+  } catch (error) {
+    console.error('Update FAQ error:', error);
+    return { error: 'Failed to update FAQ' };
+  }
+}
+
+export async function deleteFAQ(id: string) {
+  try {
+    await sql`DELETE FROM faqs WHERE id = ${id}`;
+    return { success: true };
+  } catch (error) {
+    console.error('Delete FAQ error:', error);
+    return { error: 'Failed to delete FAQ' };
   }
 }

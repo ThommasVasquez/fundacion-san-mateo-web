@@ -74,3 +74,21 @@ export async function getCalendarEvents() {
     return [];
   }
 }
+
+export async function getBlogPosts() {
+  try {
+    return await sql`SELECT id, title, slug FROM blog_posts WHERE published = true ORDER BY created_at DESC LIMIT 20`;
+  } catch (e) {
+    console.error("Error fetching blog posts:", e);
+    return [];
+  }
+}
+
+export async function getFAQs() {
+  try {
+    return await sql`SELECT id, question, answer, order_index FROM faqs WHERE is_active = true ORDER BY order_index ASC`;
+  } catch (e) {
+    console.error("Error fetching FAQs:", e);
+    return [];
+  }
+}
