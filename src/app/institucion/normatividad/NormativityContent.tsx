@@ -12,11 +12,21 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
-interface NormativityContentProps {
-  initialContent: Record<string, string>;
+interface NormativityDoc {
+  id: string;
+  title: string;
+  category_key: string;
+  file_name?: string | null;
+  external_link?: string | null;
+  order_index?: number;
 }
 
-export default function NormativityContent({ initialContent }: NormativityContentProps) {
+interface NormativityContentProps {
+  initialContent: Record<string, string>;
+  docs: NormativityDoc[];
+}
+
+export default function NormativityContent({ initialContent, docs }: NormativityContentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Helper to get content with defaults
@@ -40,56 +50,35 @@ export default function NormativityContent({ initialContent }: NormativityConten
     return () => ctx.revert();
   }, []);
 
-  const documents = [
-    {
-      category: getC('norm_cat1_title', 'Aprobación oficial Secretaría de Educación de Soacha'),
-      icon: <FileText className="text-fsm-blue" size={24} />,
-      links: [
-        { name: "Personería Jurídica - Resolución No. 14 del 23 de mayo de 2001", href: "/docs/PersoneriaJuridica.pdf" },
-      ],
-    },
-    {
-      category: getC('norm_cat2_title', 'Aprobación Programa Auxiliar de Enfermería'),
-      icon: <Shield className="text-fsm-red" size={24} />,
-      links: [
-        { name: "Resolución No. 1066 del 1 de junio de 2022", href: "/docs/Resolucion1066-2.pdf" },
-        { name: "Resolución No. 2074 del 21 de septiembre de 2010", href: "/docs/Resolucion2074.pdf" },
-        { name: "Resolución No. 513 del 5 de junio de 2009", href: "/docs/Resolucion513-2.pdf" },
-      ],
-    },
-    {
-      category: getC('norm_cat3_title', 'Aprobación Programa Primera Infancia'),
-      icon: <Scale className="text-fsm-blue" size={24} />,
-      links: [
-        { name: "Resolución No. 0883 del 29 de mayo de 2023", href: "/docs/Resolucion0883-2.pdf" },
-      ],
-    },
-    {
-      category: getC('norm_cat4_title', 'Documentos Institucionales'),
-      icon: <Gavel className="text-gray-700" size={24} />,
-      links: [
-        { name: "Manual de Convivencia", href: "/docs/ManualDeConvivencia.pdf" },
-        { name: "Política de Tratamiento de Datos Personales", href: "/tratamiento-datos" },
-        { name: "Proyecto Educativo Institucional (PEI)", href: "#" },
-        { name: "Reglamento Estudiantil", href: "#" },
-        { name: "Reglamento Docente", href: "#" },
-      ],
-    },
-    {
-      category: getC('norm_cat5_title', 'Aprobación Programa Servicios Farmacéuticos'),
-      icon: <FileSignature className="text-fsm-red" size={24} />,
-      links: [
-        { name: "Resolución pendiente de cargar", href: "#" },
-      ],
-    },
-    {
-      category: getC('norm_cat6_title', 'Aprobación Programa Asistencia Administrativa'),
-      icon: <BookOpen className="text-fsm-blue" size={24} />,
-      links: [
-        { name: "Resolución pendiente de cargar", href: "#" },
-      ],
-    },
+  const categoriesList = [
+    { key: 'norm_cat1', titleKey: 'norm_cat1_title', defaultTitle: 'Aprobación oficial Secretaría de Educación de Soacha', icon: <FileText className="text-fsm-blue" size={24} /> },
+    { key: 'norm_cat2', titleKey: 'norm_cat2_title', defaultTitle: 'Aprobación Programa Auxiliar de Enfermería', icon: <Shield className="text-fsm-red" size={24} /> },
+    { key: 'norm_cat3', titleKey: 'norm_cat3_title', defaultTitle: 'Aprobación Programa Primera Infancia', icon: <Scale className="text-fsm-blue" size={24} /> },
+    { key: 'norm_cat4', titleKey: 'norm_cat4_title', defaultTitle: 'Documentos Institucionales', icon: <Gavel className="text-gray-700" size={24} /> },
+    { key: 'norm_cat5', titleKey: 'norm_cat5_title', defaultTitle: 'Aprobación Programa Servicios Farmacéuticos', icon: <FileSignature className="text-fsm-red" size={24} /> },
+    { key: 'norm_cat6', titleKey: 'norm_cat6_title', defaultTitle: 'Aprobación Programa Asistencia Administrativa', icon: <BookOpen className="text-fsm-blue" size={24} /> },
   ];
+
+  const documents = categoriesList.map(cat => {
+    const catDocs = docs
+      .filter((d: any) => d.category_key === cat.key)
+      .sort((a: any, b: any) => (a.order_index || 0) - (b.order_index || 0));
+
+    const links = catDocs.length > 0 
+      ? catDocs.map((d: any) => ({
+          name: d.title,
+          href: d.external_link ? d.external_link : `/api/documents/${d.id}`,
+        }))
+      : [
+          { name: "Resolución pendiente de cargar", href: "#" }
+        ];
+
+    return {
+      category: getC(cat.titleKey, cat.defaultTitle),
+      icon: cat.icon,
+      links
+    };
+  });
 
   return (
     <main className="min-h-screen bg-white">

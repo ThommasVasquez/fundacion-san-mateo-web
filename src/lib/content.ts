@@ -92,3 +92,12 @@ export async function getFAQs() {
     return [];
   }
 }
+
+export async function getNormativityDocuments() {
+  try {
+    return await sql`SELECT id, title, category_key, file_name, external_link, order_index, created_at FROM normativity_documents ORDER BY category_key ASC, order_index ASC`;
+  } catch (e) {
+    console.error("Error fetching normativity documents:", e);
+    return [];
+  }
+}

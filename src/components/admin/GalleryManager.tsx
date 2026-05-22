@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Plus, Trash2, Edit2, Save, X, Image as ImageIcon, Layout, MoveUp, MoveDown } from 'lucide-react';
 import { addGalleryItem, updateGalleryItem, deleteGalleryItem } from '@/app/actions';
 import toast from 'react-hot-toast';
+import { compressImageToBase64 } from '@/lib/imageUpload';
 
 interface GalleryItem {
   id: string;
@@ -109,29 +110,39 @@ export default function GalleryManager({ galleryItems: initialItems }: GalleryMa
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                <ImageIcon size={12} /> URL Imagen Full
+                <ImageIcon size={12} /> Imagen de la Galería
               </label>
-              <input 
-                type="text" 
-                value={formData.image_url}
-                onChange={e => setFormData({...formData, image_url: e.target.value})}
-                placeholder="https://..."
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-fsm-red/20 transition-all font-medium"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                <ImageIcon size={12} /> URL Miniatura (Opcional)
-              </label>
-              <input 
-                type="text" 
-                value={formData.thumb_url}
-                onChange={e => setFormData({...formData, thumb_url: e.target.value})}
-                placeholder="Si se deja vacío, se usará la imagen full"
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-fsm-red/20 transition-all font-medium"
-              />
+              <div className="relative h-24 bg-white border border-gray-200 rounded-xl flex flex-col items-center justify-center overflow-hidden hover:border-fsm-red transition-all cursor-pointer group">
+                {formData.image_url ? (
+                  <img src={formData.image_url} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <ImageIcon size={24} className="text-gray-400 group-hover:text-fsm-red mb-1" />
+                    <span className="text-xs font-bold text-gray-500 group-hover:text-fsm-red">
+                      Subir Imagen
+                    </span>
+                  </div>
+                )}
+                <input 
+                  type="file" 
+                  accept="image/*"
+                  className="absolute inset-0 opacity-0 cursor-pointer"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      try {
+                        const base64 = await compressImageToBase64(file);
+                        // Store it in both image_url and thumb_url for backward compatibility
+                        setFormData({...formData, image_url: base64, thumb_url: base64});
+                      } catch (err) {
+                        toast.error("Error procesando imagen");
+                      }
+                    }
+                  }}
+                />
+              </div>
             </div>
             <div className="space-y-2 md:col-span-2">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">

@@ -388,3 +388,70 @@ export async function deleteFAQ(id: string) {
     return { error: 'Failed to delete FAQ' };
   }
 }
+
+export async function addNormativityDocument(data: {
+  title: string;
+  category_key: string;
+  file_name?: string;
+  file_base64?: string;
+  external_link?: string;
+}) {
+  try {
+    await sql`
+      INSERT INTO normativity_documents (title, category_key, file_name, file_base64, external_link, order_index)
+      VALUES (
+        ${data.title},
+        ${data.category_key},
+        ${data.file_name || null},
+        ${data.file_base64 || null},
+        ${data.external_link || null},
+        COALESCE((SELECT MAX(order_index) + 1 FROM normativity_documents WHERE category_key = ${data.category_key}), 0)
+      )
+    `;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Add normativity document error:', error);
+    return { error: error.message || 'Failed to add document' };
+  }
+}
+
+export async function updateNormativityDocument(
+  id: string,
+  data: {
+    title: string;
+    category_key: string;
+    file_name?: string;
+    file_base64?: string;
+    external_link?: string;
+    order_index?: number;
+  }
+) {
+  try {
+    await sql`
+      UPDATE normativity_documents
+      SET
+        title = ${data.title},
+        category_key = ${data.category_key},
+        file_name = ${data.file_name !== undefined ? data.file_name : null},
+        file_base64 = ${data.file_base64 !== undefined ? data.file_base64 : null},
+        external_link = ${data.external_link !== undefined ? data.external_link : null},
+        order_index = ${data.order_index !== undefined ? data.order_index : 0},
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${id}::uuid
+    `;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Update normativity document error:', error);
+    return { error: error.message || 'Failed to update document' };
+  }
+}
+
+export async function deleteNormativityDocument(id: string) {
+  try {
+    await sql`DELETE FROM normativity_documents WHERE id = ${id}::uuid`;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Delete normativity document error:', error);
+    return { error: error.message || 'Failed to delete document' };
+  }
+}

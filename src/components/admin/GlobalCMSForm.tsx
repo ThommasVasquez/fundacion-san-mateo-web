@@ -25,6 +25,7 @@ import NewsManager from "./NewsManager";
 import GalleryManager from "./GalleryManager";
 import CalendarManager from "./CalendarManager";
 import FAQManager from "./FAQManager";
+import NormativityManager from "./NormativityManager";
 import { Newspaper, Image as GalleryIcon, CalendarDays } from "lucide-react";
 
 interface GlobalCMSFormProps {
@@ -37,6 +38,7 @@ interface GlobalCMSFormProps {
   initialCalendar: any[];
   blogPosts?: any[];
   initialFAQs?: any[];
+  initialNormativityDocs?: any[];
 }
 
 // Estructura Jerárquica del CMS
@@ -1035,6 +1037,7 @@ export default function GlobalCMSForm({
   initialCalendar = [],
   blogPosts = [],
   initialFAQs = [],
+  initialNormativityDocs = [],
 }: GlobalCMSFormProps) {
   const [contentMap, setContentMap] =
     useState<Record<string, string>>(initialContent);
@@ -1451,6 +1454,30 @@ export default function GlobalCMSForm({
                     </p>
                   </div>
                   <FAQManager faqs={initialFAQs} />
+                </div>
+              )}
+
+              {groupName === "Categorías de Documentos" && currentSub === "Normatividad" && (
+                <div className="mt-12 pt-12 border-t border-gray-100">
+                  <div className="mb-8">
+                    <h4 className="text-lg font-black text-fsm-blue uppercase flex items-center gap-2">
+                      <FileText className="text-fsm-red" size={20} /> Gestión de Documentos Normativos
+                    </h4>
+                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">
+                      Administra los documentos PDF y enlaces de normatividad por categorías
+                    </p>
+                  </div>
+                  <NormativityManager
+                    initialDocs={initialNormativityDocs}
+                    categoryTitles={{
+                      norm_cat1: contentMap.norm_cat1_title || '',
+                      norm_cat2: contentMap.norm_cat2_title || '',
+                      norm_cat3: contentMap.norm_cat3_title || '',
+                      norm_cat4: contentMap.norm_cat4_title || '',
+                      norm_cat5: contentMap.norm_cat5_title || '',
+                      norm_cat6: contentMap.norm_cat6_title || '',
+                    }}
+                  />
                 </div>
               )}
             </div>

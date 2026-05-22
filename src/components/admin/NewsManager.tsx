@@ -5,6 +5,7 @@ import { Plus, Trash2, Edit2, Save, X, Image as ImageIcon, Calendar, Tag, Link a
 import { addNewsEvent, updateNewsEvent, deleteNewsEvent } from "@/app/actions";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { compressImageToBase64 } from "@/lib/imageUpload";
 
 interface NewsEvent {
   id: string;
@@ -171,15 +172,30 @@ const NewsManager = ({ news: initialNews }: NewsManagerProps) => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-fsm-blue tracking-widest uppercase ml-4">Imagen URL</label>
-              <div className="relative">
-                <ImageIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-fsm-blue/30" size={18} />
+              <label className="text-[10px] font-black text-fsm-blue tracking-widest uppercase ml-4">Imagen</label>
+              <div className="relative h-14 bg-white rounded-2xl border border-gray-200 flex items-center justify-center overflow-hidden hover:border-fsm-blue transition-all cursor-pointer group">
+                {editForm.image_url ? (
+                  <img src={editForm.image_url} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xs font-bold text-gray-500 group-hover:text-fsm-blue flex items-center gap-2">
+                    <ImageIcon size={16} /> Subir Imagen
+                  </span>
+                )}
                 <input
-                  type="text"
-                  value={editForm.image_url || ""}
-                  onChange={(e) => setEditForm({ ...editForm, image_url: e.target.value })}
-                  className="w-full pl-12 pr-6 py-4 rounded-2xl border border-gray-200 focus:border-fsm-blue outline-none font-bold text-sm"
-                  placeholder="/img/news/noticia.jpg"
+                  type="file"
+                  accept="image/*"
+                  className="absolute inset-0 opacity-0 cursor-pointer"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      try {
+                        const base64 = await compressImageToBase64(file);
+                        setEditForm({ ...editForm, image_url: base64 });
+                      } catch (err) {
+                        toast.error("Error procesando imagen");
+                      }
+                    }
+                  }}
                 />
               </div>
             </div>

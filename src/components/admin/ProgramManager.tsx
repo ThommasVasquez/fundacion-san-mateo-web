@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { updateProgram, addProgram, deleteProgram } from '@/app/actions';
 import { Plus, Trash2, Save, GraduationCap, Link as LinkIcon, Image as ImageIcon, FileText, Loader2, CheckCircle, Star } from 'lucide-react';
+import { compressImageToBase64 } from '@/lib/imageUpload';
 
 interface Program {
   id: string;
@@ -138,15 +139,30 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">URL de Imagen</label>
-              <div className="relative">
-                <ImageIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Imagen</label>
+              <div className="relative h-14 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-center overflow-hidden hover:border-fsm-red transition-all group">
+                {newProgram.image_url ? (
+                  <img src={newProgram.image_url} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xs font-bold text-gray-500 group-hover:text-fsm-red flex items-center gap-2">
+                    <ImageIcon size={16} /> Subir Imagen
+                  </span>
+                )}
                 <input 
-                  type="text" 
-                  placeholder="Ej: /img/enfermeria.jpg"
-                  className="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-fsm-red font-bold text-sm"
-                  value={newProgram.image_url}
-                  onChange={e => setNewProgram({...newProgram, image_url: e.target.value})}
+                  type="file" 
+                  accept="image/*"
+                  className="absolute inset-0 opacity-0 cursor-pointer"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      try {
+                        const base64 = await compressImageToBase64(file);
+                        setNewProgram({...newProgram, image_url: base64});
+                      } catch (err) {
+                        alert("Error procesando imagen");
+                      }
+                    }
+                  }}
                 />
               </div>
             </div>
@@ -237,12 +253,30 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-2">Imagen URL</label>
-                    <input 
-                      className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-100 font-bold text-sm text-gray-500 focus:ring-2 focus:ring-fsm-blue outline-none"
-                      value={p.image_url}
-                      onChange={e => handleUpdate(p.id, 'image_url', e.target.value)}
-                    />
+                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-2">Imagen</label>
+                    <div className="relative h-11 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center overflow-hidden hover:border-fsm-blue transition-all cursor-pointer">
+                      {p.image_url ? (
+                        <img src={p.image_url} alt="Preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-[10px] font-bold text-gray-500">Subir Imagen</span>
+                      )}
+                      <input 
+                        type="file"
+                        accept="image/*"
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            try {
+                              const base64 = await compressImageToBase64(file);
+                              handleUpdate(p.id, 'image_url', base64);
+                            } catch (err) {
+                              alert("Error procesando imagen");
+                            }
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-2">Enlace (href)</label>

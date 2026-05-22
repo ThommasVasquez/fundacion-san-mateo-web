@@ -2,7 +2,7 @@ import React from "react";
 import GlobalCMSForm from "@/components/admin/GlobalCMSForm";
 import Link from "next/link";
 import { ChevronRight, Home } from "lucide-react";
-import { getAllContent, getTestimonials, getDirectoryItems, getPrograms, getNewsEvents, getGallery, getCalendarEvents, getBlogPosts, getFAQs } from "@/lib/content";
+import { getAllContent, getTestimonials, getDirectoryItems, getPrograms, getNewsEvents, getGallery, getCalendarEvents, getBlogPosts, getFAQs, getNormativityDocuments } from "@/lib/content";
 
 export const metadata = {
   title: "Gestor Global de Contenido | FSM Admin",
@@ -19,6 +19,7 @@ export default async function AdminHomePage() {
   const calendarEvents = await getCalendarEvents();
   const blogPosts = await getBlogPosts();
   const faqs = await getFAQs();
+  const normativityDocs = await getNormativityDocuments();
   
   // Serialize for client component
   const initialContentMap: Record<string, string> = {};
@@ -92,6 +93,15 @@ export default async function AdminHomePage() {
     order_index: f.order_index
   }));
 
+  const serializedNormativityDocs = normativityDocs.map((item: any) => ({
+    id: item.id.toString(),
+    title: item.title,
+    category_key: item.category_key,
+    file_name: item.file_name || '',
+    external_link: item.external_link || '',
+    order_index: item.order_index || 0
+  }));
+
   return (
     <div className="max-w-6xl mx-auto space-y-8">
       {/* Breadcrumbs */}
@@ -119,6 +129,7 @@ export default async function AdminHomePage() {
         initialCalendar={serializedCalendar}
         blogPosts={serializedBlogPosts}
         initialFAQs={serializedFAQs}
+        initialNormativityDocs={serializedNormativityDocs}
       />
     </div>
   );
