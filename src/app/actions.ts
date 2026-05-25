@@ -352,11 +352,11 @@ export async function deleteCalendarEvent(id: string) {
   }
 }
 
-export async function addFAQ(data: { question: string; answer: string; order_index: number }) {
+export async function addFAQ(data: { question: string; answer: string; category: string; order_index: number }) {
   try {
     await sql`
-      INSERT INTO faqs (question, answer, order_index)
-      VALUES (${data.question}, ${data.answer}, ${data.order_index})
+      INSERT INTO faqs (question, answer, category, order_index, is_active)
+      VALUES (${data.question}, ${data.answer}, ${data.category || 'General'}, ${data.order_index}, true)
     `;
     return { success: true };
   } catch (error) {
@@ -365,12 +365,13 @@ export async function addFAQ(data: { question: string; answer: string; order_ind
   }
 }
 
-export async function updateFAQ(id: string, data: { question: string; answer: string; order_index: number }) {
+export async function updateFAQ(id: string | number, data: { question: string; answer: string; category: string; order_index: number }) {
   try {
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
     await sql`
       UPDATE faqs 
-      SET question = ${data.question}, answer = ${data.answer}, order_index = ${data.order_index}
-      WHERE id = ${id}
+      SET question = ${data.question}, answer = ${data.answer}, category = ${data.category || 'General'}, order_index = ${data.order_index}
+      WHERE id = ${numericId}
     `;
     return { success: true };
   } catch (error) {
@@ -379,9 +380,10 @@ export async function updateFAQ(id: string, data: { question: string; answer: st
   }
 }
 
-export async function deleteFAQ(id: string) {
+export async function deleteFAQ(id: string | number) {
   try {
-    await sql`DELETE FROM faqs WHERE id = ${id}`;
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+    await sql`DELETE FROM faqs WHERE id = ${numericId}`;
     return { success: true };
   } catch (error) {
     console.error('Delete FAQ error:', error);

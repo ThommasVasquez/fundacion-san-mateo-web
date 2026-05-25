@@ -90,7 +90,8 @@ export default async function AdminHomePage() {
     id: f.id.toString(),
     question: f.question,
     answer: f.answer,
-    order_index: f.order_index
+    category: f.category || "General",
+    order_index: f.order_index || 0
   }));
 
   const serializedNormativityDocs = normativityDocs.map((item: any) => ({

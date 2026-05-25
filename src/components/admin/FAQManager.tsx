@@ -12,6 +12,7 @@ interface FAQ {
   id: string;
   question: string;
   answer: string;
+  category: string;
   order_index: number;
 }
 
@@ -110,6 +111,7 @@ const FAQManager = ({ faqs: initialFaqs }: FAQManagerProps) => {
               setEditForm({
                 question: "",
                 answer: "",
+                category: "General",
                 order_index: faqs.length
               });
             }}
@@ -142,6 +144,20 @@ const FAQManager = ({ faqs: initialFaqs }: FAQManagerProps) => {
                 className="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:border-fsm-blue outline-none font-bold text-sm min-h-[150px]"
                 placeholder="Escriba la respuesta detallada aquí..."
               />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-fsm-blue tracking-widest uppercase ml-4">Categoría</label>
+              <select
+                value={editForm.category || "General"}
+                onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                className="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:border-fsm-blue outline-none font-bold text-sm bg-white"
+              >
+                <option value="General">General</option>
+                <option value="Institucional">Institucional</option>
+                <option value="Académico">Académico</option>
+                <option value="Legal y Financiero">Legal y Financiero</option>
+              </select>
             </div>
 
             <div className="space-y-2 max-w-[200px]">
@@ -180,13 +196,21 @@ const FAQManager = ({ faqs: initialFaqs }: FAQManagerProps) => {
             <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">No hay preguntas registradas</p>
           </div>
         ) : (
-          faqs.sort((a,b) => a.order_index - b.order_index).map((item) => (
+          faqs.sort((a,b) => {
+            const catA = a.category || "General";
+            const catB = b.category || "General";
+            if (catA !== catB) return catA.localeCompare(catB);
+            return a.order_index - b.order_index;
+          }).map((item) => (
             <div key={item.id} className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
               <div className="flex justify-between items-start gap-4">
                 <div className="flex-1 space-y-4">
-                  <div className="flex items-center gap-3">
-                    <span className="w-8 h-8 bg-fsm-blue/5 text-fsm-blue rounded-full flex items-center justify-center font-black text-xs">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="w-8 h-8 bg-fsm-blue/5 text-fsm-blue rounded-full flex items-center justify-center font-black text-xs shrink-0">
                       {item.order_index}
+                    </span>
+                    <span className="px-3 py-1 bg-fsm-red/10 text-fsm-red rounded-full font-black text-[9px] uppercase tracking-wider shrink-0">
+                      {item.category || 'General'}
                     </span>
                     <h4 className="text-lg font-black text-fsm-blue uppercase tracking-tight leading-snug">
                       {item.question}
@@ -196,17 +220,17 @@ const FAQManager = ({ faqs: initialFaqs }: FAQManagerProps) => {
                     {item.answer}
                   </p>
                 </div>
-                <div className="flex flex-col gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex flex-col gap-2 shrink-0 transition-opacity">
                   <button
                     onClick={() => handleEdit(item)}
-                    className="p-3 bg-fsm-blue/5 text-fsm-blue rounded-2xl hover:bg-fsm-blue hover:text-white transition-all"
+                    className="p-3 bg-fsm-blue/5 text-fsm-blue rounded-2xl hover:bg-fsm-blue hover:text-white transition-all active:scale-95 shadow-sm"
                     title="Editar"
                   >
                     <Edit2 size={16} />
                   </button>
                   <button
                     onClick={() => handleDelete(item.id)}
-                    className="p-3 bg-fsm-red/5 text-fsm-red rounded-2xl hover:bg-fsm-red hover:text-white transition-all"
+                    className="p-3 bg-fsm-red/5 text-fsm-red rounded-2xl hover:bg-fsm-red hover:text-white transition-all active:scale-95 shadow-sm"
                     title="Eliminar"
                   >
                     <Trash2 size={16} />

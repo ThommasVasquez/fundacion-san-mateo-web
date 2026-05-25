@@ -86,7 +86,7 @@ export async function getBlogPosts() {
 
 export async function getFAQs() {
   try {
-    return await sql`SELECT id, question, answer, order_index FROM faqs WHERE is_active = true ORDER BY order_index ASC`;
+    return await sql`SELECT id, question, answer, category, order_index FROM faqs WHERE is_active = true ORDER BY category ASC, order_index ASC`;
   } catch (e) {
     console.error("Error fetching FAQs:", e);
     return [];
