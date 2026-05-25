@@ -53,6 +53,15 @@ export async function getPrograms() {
     return [];
   }
 }
+export async function getProgramByHref(href: string) {
+  try {
+    const results = await sql`SELECT * FROM academic_programs WHERE href = ${href} LIMIT 1`;
+    return results[0] || null;
+  } catch (e) {
+    console.error(`Error fetching program by href ${href}:`, e);
+    return null;
+  }
+}
 export async function getNewsEvents() {
   try {
     return await sql`SELECT * FROM news_events ORDER BY created_at DESC`;

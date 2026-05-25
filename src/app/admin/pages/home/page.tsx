@@ -58,7 +58,8 @@ export default async function AdminHomePage() {
     image_url: p.image_url,
     href: p.href,
     category: p.category,
-    is_featured: p.is_featured
+    is_featured: p.is_featured,
+    details: p.details || {}
   }));
 
   const serializedGallery = galleryItems.map((item: any) => ({

@@ -182,8 +182,9 @@ export async function deleteDirectoryItem(id: string) {
   }
 }
 
-export async function updateProgram(id: string, data: { title: string; subtitle: string; description: string; image_url: string; href: string; category: string; is_featured: boolean }) {
+export async function updateProgram(id: string, data: { title: string; subtitle: string; description: string; image_url: string; href: string; category: string; is_featured: boolean; details?: any }) {
   try {
+    const detailsJson = data.details ? (typeof data.details === 'string' ? data.details : JSON.stringify(data.details)) : null;
     await sql`
       UPDATE academic_programs 
       SET 
@@ -193,7 +194,8 @@ export async function updateProgram(id: string, data: { title: string; subtitle:
         image_url = ${data.image_url}, 
         href = ${data.href}, 
         category = ${data.category},
-        is_featured = ${data.is_featured}
+        is_featured = ${data.is_featured},
+        details = ${detailsJson}::jsonb
       WHERE id = ${id}
     `;
     return { success: true };
@@ -203,11 +205,12 @@ export async function updateProgram(id: string, data: { title: string; subtitle:
   }
 }
 
-export async function addProgram(data: { title: string; subtitle: string; description: string; image_url: string; href: string; category: string; is_featured: boolean }) {
+export async function addProgram(data: { title: string; subtitle: string; description: string; image_url: string; href: string; category: string; is_featured: boolean; details?: any }) {
   try {
+    const detailsJson = data.details ? (typeof data.details === 'string' ? data.details : JSON.stringify(data.details)) : null;
     await sql`
-      INSERT INTO academic_programs (title, subtitle, description, image_url, href, category, is_featured)
-      VALUES (${data.title}, ${data.subtitle}, ${data.description}, ${data.image_url}, ${data.href}, ${data.category}, ${data.is_featured})
+      INSERT INTO academic_programs (title, subtitle, description, image_url, href, category, is_featured, details)
+      VALUES (${data.title}, ${data.subtitle}, ${data.description}, ${data.image_url}, ${data.href}, ${data.category}, ${data.is_featured}, ${detailsJson}::jsonb)
     `;
     return { success: true };
   } catch (error) {
