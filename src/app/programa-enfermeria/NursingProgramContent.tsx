@@ -39,6 +39,8 @@ interface ProgramData {
     perfil_p2?: string;
     sidebar_title?: string;
     salida_laboral?: string[];
+    brochure_base64?: string;
+    brochure_filename?: string;
   };
 }
 
@@ -207,7 +209,17 @@ export default function NursingProgramContent({ program }: NursingProgramProps) 
                      <div className="space-y-12">
                         <div className="flex justify-between items-end">
                            <h3 className="text-2xl font-black text-fsm-blue uppercase">Ciclo de Formación ({duration})</h3>
-                           <Link href="/contacto" className="text-[10px] font-black text-fsm-red tracking-widest uppercase hover:underline">Descargar Brochure</Link>
+                           {details.brochure_base64 ? (
+                             <a 
+                               href={details.brochure_base64} 
+                               download={details.brochure_filename || "brochure.pdf"} 
+                               className="text-[10px] font-black text-fsm-red tracking-widest uppercase hover:underline cursor-pointer"
+                             >
+                               Descargar Brochure
+                             </a>
+                           ) : (
+                             <Link href="/contacto" className="text-[10px] font-black text-fsm-red tracking-widest uppercase hover:underline">Descargar Brochure</Link>
+                           )}
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
                            {planEstudios.map((item, i) => (

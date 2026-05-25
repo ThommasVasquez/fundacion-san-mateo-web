@@ -497,6 +497,54 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                       </div>
                     </div>
 
+                    <div className="space-y-1 pt-4 border-t border-gray-100">
+                      <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Brochure PDF (Descargable)</label>
+                      <div className="relative h-[46px] bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-center overflow-hidden hover:border-fsm-blue transition-all cursor-pointer group">
+                        <span className="text-xs font-bold text-gray-500 group-hover:text-fsm-blue flex items-center gap-2">
+                          {details.brochure_filename ? (
+                            <>
+                              <span className="text-green-600 font-bold">✓ {details.brochure_filename}</span>
+                              <button 
+                                type="button"
+                                className="text-xs text-red-500 hover:text-red-700 ml-4 font-black uppercase tracking-widest"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleDetailsChange('brochure_base64', '');
+                                  handleDetailsChange('brochure_filename', '');
+                                }}
+                              >
+                                Eliminar
+                              </button>
+                            </>
+                          ) : (
+                            "Subir Brochure PDF (Max. 5MB)"
+                          )}
+                        </span>
+                        <input
+                          type="file"
+                          accept="application/pdf"
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                          disabled={!!details.brochure_filename}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            if (file.size > 5 * 1024 * 1024) {
+                              alert("El archivo supera el límite de 5MB.");
+                              return;
+                            }
+                            const reader = new FileReader();
+                            reader.readAsDataURL(file);
+                            reader.onload = (event) => {
+                              const base64 = event.target?.result as string;
+                              handleDetailsChange('brochure_base64', base64);
+                              handleDetailsChange('brochure_filename', file.name);
+                            };
+                          }}
+                        />
+                      </div>
+                    </div>
+
                     <div className="space-y-2 border-t border-gray-100 pt-4">
                       <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest block mb-2 text-gray-800">Resoluciones de Calidad (Máximo 2)</label>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
