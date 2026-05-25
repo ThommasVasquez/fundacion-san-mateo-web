@@ -35,6 +35,10 @@ interface ProgramData {
       description?: string;
       places?: string[];
     };
+    perfil_p1?: string;
+    perfil_p2?: string;
+    sidebar_title?: string;
+    salida_laboral?: string[];
   };
 }
 
@@ -69,6 +73,10 @@ export default function NursingProgramContent({ program }: NursingProgramProps) 
   const practicasPlaces = details.practicas?.places || [
     "Clínica San Francisco", "Hospital Mario Gaitán", "Hospital La Victoria", "CIOSAD", "IP JARBSALUD", "Fundación Geriátrica"
   ];
+  const perfilP1 = details.perfil_p1 || "El Programa Técnico Laboral por Competencias en Auxiliar de Enfermería de la Fundación San Mateo, brinda el enfoque basado en competencias laborales recomendado por la OMS y la Oficina Internacional del trabajo.";
+  const perfilP2 = details.perfil_p2 || "Formamos auxiliares con sólidos principios éticos, visión humanista y un alto sentido de responsabilidad social, capaces de desempeñarse con excelencia en todos los niveles del sistema nacional de salud.";
+  const sidebarTitle = details.sidebar_title || "Comienza tu carrera en salud";
+  const salidaLaboral = details.salida_laboral || [];
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -81,6 +89,22 @@ export default function NursingProgramContent({ program }: NursingProgramProps) 
     }, containerRef);
     return () => ctx.revert();
   }, [activeTab]);
+
+  const renderSidebarTitle = () => {
+    const words = sidebarTitle.split(" ");
+    if (words.length > 1) {
+      const mid = Math.ceil(words.length / 2);
+      const firstHalf = words.slice(0, mid).join(" ");
+      const secondHalf = words.slice(mid).join(" ");
+      return (
+        <>
+          {firstHalf} <br />
+          {secondHalf}
+        </>
+      );
+    }
+    return sidebarTitle;
+  };
 
   const tabs = [
     { id: "plan", name: "PLAN DE ESTUDIOS", icon: <Calendar size={18} /> },
@@ -151,13 +175,9 @@ export default function NursingProgramContent({ program }: NursingProgramProps) 
                 </p>
               </div>
               
-              <div className="space-y-8 text-lg text-gray-900 font-medium leading-[1.8]">
-                <p>
-                  El Programa <strong>Técnico Laboral por Competencias en Auxiliar de Enfermería</strong> de la Fundación San Mateo, brinda el enfoque basado en competencias laborales recomendado por la OMS y la Oficina Internacional del trabajo.
-                </p>
-                <p>
-                  Formamos auxiliares con sólidos principios éticos, visión humanista y un alto sentido de responsabilidad social, capaces de desempeñarse con excelencia en todos los niveles del sistema nacional de salud.
-                </p>
+              <div className="space-y-8 text-lg text-gray-900 font-medium leading-[1.8] whitespace-pre-line">
+                <p>{perfilP1}</p>
+                <p>{perfilP2}</p>
               </div>
             </section>
 
@@ -260,7 +280,9 @@ export default function NursingProgramContent({ program }: NursingProgramProps) 
           <div className="lg:col-span-4">
             <div className="sticky top-32 space-y-8">
               <div className="bg-fsm-blue rounded-[4rem] p-12 text-white shadow-premium relative overflow-hidden group">
-                <h3 className="text-2xl font-black mb-10 text-balance uppercase leading-tight">Comienza tu <br /> carrera en salud</h3>
+                <h3 className="text-2xl font-black mb-10 text-balance uppercase leading-tight">
+                  {renderSidebarTitle()}
+                </h3>
                 
                 <div className="space-y-8 mb-12">
                    <div className="flex items-center gap-4">
@@ -295,6 +317,20 @@ export default function NursingProgramContent({ program }: NursingProgramProps) 
                       Uniforme <br /> Gratis
                    </p>
                    <p className="text-[10px] font-black text-gray-700 tracking-[0.2em] uppercase">{uniformGift}</p>
+                </div>
+              )}
+
+              {salidaLaboral && salidaLaboral.length > 0 && (
+                <div className="p-10 bg-gray-50 rounded-[4rem] border border-gray-100">
+                   <h4 className="font-black text-fsm-blue mb-6 uppercase text-[10px] tracking-widest">Salida Laboral</h4>
+                   <ul className="space-y-4">
+                      {salidaLaboral.map((job) => (
+                        <li key={job} className="flex items-center gap-3">
+                           <div className="w-1.5 h-1.5 bg-fsm-red rounded-full" />
+                           <span className="text-xs font-bold text-gray-900 uppercase tracking-tighter">{job}</span>
+                        </li>
+                      ))}
+                   </ul>
                 </div>
               )}
             </div>

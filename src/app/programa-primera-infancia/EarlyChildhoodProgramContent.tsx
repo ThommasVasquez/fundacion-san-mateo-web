@@ -35,6 +35,10 @@ interface ProgramData {
       description?: string;
       places?: string[];
     };
+    perfil_p1?: string;
+    perfil_p2?: string;
+    sidebar_title?: string;
+    salida_laboral?: string[];
   };
 }
 
@@ -68,6 +72,12 @@ export default function EarlyChildhoodProgramContent({ program }: EarlyChildhood
     "Jean Fritz Piaget", "Mundo Activo", "Abraham Lincoln", "British School",
     "Gimnasio Alameda", "Colegio Niño Jesús", "Antonia Santos", "García Márquez",
     "Eko Garden", "Nueva Generación"
+  ];
+  const perfilP1 = details.perfil_p1 || "El Programa Técnico Laboral por Competencias en Atención Integral a la Primera Infancia de la Fundación San Mateo, promueve el desarrollo de competencias relacionadas con el cuidado y la atención integral (protección, nutrición, salud y educación) de los niños y las niñas de 0 a 6 años.";
+  const perfilP2 = details.perfil_p2 || "El egresado tendrá una concepción integral del manejo de las necesidades de los infantes al interior de un jardín infantil y contará con las herramientas pedagógicas necesarias para liderar procesos de enseñanza-aprendizaje desde la ternura y la técnica.";
+  const sidebarTitle = details.sidebar_title || "Impulsa el mañana hoy";
+  const salidaLaboral = details.salida_laboral || [
+    "Asistente Preescolar", "Madre Comunitaria", "Niñera Profesional", "Líder en Jardines"
   ];
 
   useEffect(() => {
@@ -104,6 +114,22 @@ export default function EarlyChildhoodProgramContent({ program }: EarlyChildhood
       );
     }
     return title;
+  };
+
+  const renderSidebarTitle = () => {
+    const words = sidebarTitle.split(" ");
+    if (words.length > 1) {
+      const mid = Math.ceil(words.length / 2);
+      const firstHalf = words.slice(0, mid).join(" ");
+      const secondHalf = words.slice(mid).join(" ");
+      return (
+        <>
+          {firstHalf} <br />
+          {secondHalf}
+        </>
+      );
+    }
+    return sidebarTitle;
   };
 
   return (
@@ -167,13 +193,9 @@ export default function EarlyChildhoodProgramContent({ program }: EarlyChildhood
                 </p>
               </div>
               
-              <div className="space-y-8 text-lg text-gray-900 font-medium leading-[1.8]">
-                <p>
-                  El Programa <strong>Técnico Laboral por Competencias en Atención Integral a la Primera Infancia</strong> de la Fundación San Mateo, promueve el desarrollo de competencias relacionadas con el cuidado y la atención integral (protección, nutrición, salud y educación) de los niños y las niñas de 0 a 6 años.
-                </p>
-                <p>
-                  El egresado tendrá una concepción integral del manejo de las necesidades de los infantes al interior de un jardín infantil y contará con las herramientas pedagógicas necesarias para liderar procesos de enseñanza-aprendizaje desde la ternura y la técnica.
-                </p>
+              <div className="space-y-8 text-lg text-gray-900 font-medium leading-[1.8] whitespace-pre-line">
+                <p>{perfilP1}</p>
+                <p>{perfilP2}</p>
               </div>
             </section>
 
@@ -278,7 +300,9 @@ export default function EarlyChildhoodProgramContent({ program }: EarlyChildhood
             <div className="sticky top-32 space-y-8">
               <div className="bg-fsm-blue rounded-[4rem] p-12 text-white shadow-premium relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-fsm-red/40 rounded-full translate-x-1/2 -translate-y-1/2"></div>
-                <h3 className="text-2xl font-black mb-10 text-balance uppercase leading-tight">Impulsa el <br /> mañana hoy</h3>
+                <h3 className="text-2xl font-black mb-10 text-balance uppercase leading-tight">
+                  {renderSidebarTitle()}
+                </h3>
                 
                 <div className="space-y-8 mb-12">
                    <div className="flex items-center gap-4">
@@ -316,19 +340,19 @@ export default function EarlyChildhoodProgramContent({ program }: EarlyChildhood
                 </div>
               )}
 
-              <div className="p-10 bg-gray-50 rounded-[4rem] border border-gray-100">
-                 <h4 className="font-black text-fsm-blue mb-6 uppercase text-[10px] tracking-widest">Salida Laboral</h4>
-                 <ul className="space-y-4">
-                    {[
-                      "Asistente Preescolar", "Madre Comunitaria", "Niñera Profesional", "Líder en Jardines"
-                    ].map((job) => (
-                      <li key={job} className="flex items-center gap-3">
-                         <div className="w-1.5 h-1.5 bg-fsm-red rounded-full" />
-                         <span className="text-xs font-bold text-gray-900 uppercase tracking-tighter">{job}</span>
-                      </li>
-                    ))}
-                 </ul>
-              </div>
+              {salidaLaboral && salidaLaboral.length > 0 && (
+                <div className="p-10 bg-gray-50 rounded-[4rem] border border-gray-100">
+                   <h4 className="font-black text-fsm-blue mb-6 uppercase text-[10px] tracking-widest">Salida Laboral</h4>
+                   <ul className="space-y-4">
+                      {salidaLaboral.map((job) => (
+                        <li key={job} className="flex items-center gap-3">
+                           <div className="w-1.5 h-1.5 bg-fsm-red rounded-full" />
+                           <span className="text-xs font-bold text-gray-900 uppercase tracking-tighter">{job}</span>
+                        </li>
+                      ))}
+                   </ul>
+                </div>
+              )}
             </div>
           </div>
         </div>

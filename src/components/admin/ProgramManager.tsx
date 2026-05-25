@@ -452,6 +452,51 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                       />
                     </div>
 
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Perfil Profesional - Párrafo 1</label>
+                        <textarea 
+                          className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 font-medium text-sm text-gray-700 min-h-[100px] focus:ring-2 focus:ring-fsm-blue outline-none"
+                          value={details.perfil_p1 || ''}
+                          placeholder="Primer párrafo del perfil profesional..."
+                          onChange={e => handleDetailsChange('perfil_p1', e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Perfil Profesional - Párrafo 2</label>
+                        <textarea 
+                          className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 font-medium text-sm text-gray-700 min-h-[100px] focus:ring-2 focus:ring-fsm-blue outline-none"
+                          value={details.perfil_p2 || ''}
+                          placeholder="Segundo párrafo del perfil profesional..."
+                          onChange={e => handleDetailsChange('perfil_p2', e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Título de Tarjeta Lateral (Sidebar)</label>
+                        <input 
+                          type="text"
+                          className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 font-bold text-sm focus:ring-2 focus:ring-fsm-blue outline-none text-gray-800"
+                          value={details.sidebar_title || ''}
+                          placeholder="Ej: Impulsa el mañana hoy"
+                          onChange={e => handleDetailsChange('sidebar_title', e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Salida Laboral (Una por línea)</label>
+                        <textarea 
+                          className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 font-medium text-sm text-gray-700 min-h-[100px] focus:ring-2 focus:ring-fsm-blue outline-none"
+                          value={getMultilineText(details.salida_laboral)}
+                          placeholder="Asistente Preescolar&#10;Madre Comunitaria"
+                          onChange={e => handleMultilineChange('salida_laboral', e.target.value)}
+                        />
+                      </div>
+                    </div>
+
                     <div className="space-y-2 border-t border-gray-100 pt-4">
                       <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest block mb-2 text-gray-800">Resoluciones de Calidad (Máximo 2)</label>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
