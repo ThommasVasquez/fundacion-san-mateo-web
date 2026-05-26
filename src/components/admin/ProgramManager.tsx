@@ -68,13 +68,29 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
   };
 
   const handleAdd = async () => {
-    if (!newProgram.title || !newProgram.image_url || !newProgram.href) {
-      alert("Título, Imagen y Enlace son obligatorios");
+    if (!newProgram.title || !newProgram.image_url) {
+      alert("Título e Imagen son obligatorios");
       return;
     }
 
     setIsAdding(true);
-    const res = await addProgram(newProgram);
+    
+    // Auto-generate href from title
+    const slug = newProgram.title
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9\s-]/g, "")
+      .trim()
+      .replace(/\s+/g, "-");
+    const prefix = newProgram.category === 'continua' ? 'curso-' : 'programa-';
+    const generatedHref = `/${prefix}${slug}`;
+
+    const res = await addProgram({
+      ...newProgram,
+      href: generatedHref
+    });
+    
     if (res.success) {
       window.location.reload();
     } else {
@@ -169,19 +185,7 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Enlace de Página</label>
-              <div className="relative">
-                <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                <input 
-                  type="text" 
-                  placeholder="Ej: /programa-enfermeria"
-                  className="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-fsm-red font-bold text-sm"
-                  value={newProgram.href}
-                  onChange={e => setNewProgram({...newProgram, href: e.target.value})}
-                />
-              </div>
-            </div>
+            {/* Href auto-generated from title, no input field required */}
             <div className="space-y-2">
               <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Categoría</label>
               <select 
@@ -412,6 +416,33 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                           value={details.uniform_gift || ''}
                           placeholder="Ej: Uniforme Gratis / Por tiempo limitado"
                           onChange={e => handleDetailsChange('uniform_gift', e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Imagen de Encabezado (Banner Superior)</label>
+                      <div className="relative h-14 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-center overflow-hidden hover:border-fsm-blue transition-all cursor-pointer">
+                        {details.banner_image ? (
+                          <img src={details.banner_image} alt="Preview Banner" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-xs font-bold text-gray-500">Subir Imagen para Encabezado de la página (Ej: 1920x600)</span>
+                        )}
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              try {
+                                const base64 = await compressImageToBase64(file);
+                                handleDetailsChange('banner_image', base64);
+                              } catch (err) {
+                                alert("Error procesando imagen");
+                              }
+                            }
+                          }}
                         />
                       </div>
                     </div>

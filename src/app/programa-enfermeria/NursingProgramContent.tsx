@@ -41,6 +41,7 @@ interface ProgramData {
     salida_laboral?: string[];
     brochure_base64?: string;
     brochure_filename?: string;
+    banner_image?: string;
   };
 }
 
@@ -108,6 +109,22 @@ export default function NursingProgramContent({ program }: NursingProgramProps) 
     return sidebarTitle;
   };
 
+  const renderTitle = () => {
+    const titleText = program.title || "AUXILIAR DE ENFERMERÍA";
+    const words = titleText.split(" ");
+    if (words.length > 1) {
+      const lastWord = words.pop();
+      const rest = words.join(" ");
+      return (
+        <>
+          {rest} <br />
+          <span className="text-fsm-red">{lastWord}</span>
+        </>
+      );
+    }
+    return titleText;
+  };
+
   const tabs = [
     { id: "plan", name: "PLAN DE ESTUDIOS", icon: <Calendar size={18} /> },
     { id: "admision", name: "ADMISIÓN", icon: <UserCheck size={18} /> },
@@ -128,8 +145,7 @@ export default function NursingProgramContent({ program }: NursingProgramProps) 
               <span className="text-[10px] font-black tracking-[0.5em] text-fsm-red uppercase">Programa destacado</span>
             </div>
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-fsm-blue leading-[0.9] mb-10 text-balance uppercase">
-              Auxiliar de <br />
-              <span className="text-fsm-red">Enfermería</span>
+              {renderTitle()}
             </h1>
             <p className="text-xl text-gray-700 font-medium leading-relaxed max-w-lg mb-12">
               {program.description || "Formación técnica líderes en salud, con enfoque humanista y los más altos estándares de calidad internacional."}
@@ -147,7 +163,7 @@ export default function NursingProgramContent({ program }: NursingProgramProps) 
           </div>
         </div>
         <div className="lg:w-[45%] relative min-h-[400px] lg:min-h-full bg-fsm-blue">
-          <Image src={program.image_url || "/img/banner6.jpg"} alt={program.title} fill className="object-cover" priority />
+          <Image src={details.banner_image || program.image_url || "/img/banner6.jpg"} alt={program.title} fill className="object-cover" priority />
           <div className="absolute top-1/2 left-0 w-full h-px bg-fsm-red/20 -translate-y-1/2 -rotate-12"></div>
         </div>
       </section>
