@@ -483,6 +483,17 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                       />
                     </div>
 
+                    <div className="space-y-1 pt-4 border-t border-gray-100">
+                      <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Título del Perfil Profesional (Personalizado)</label>
+                      <input 
+                        type="text"
+                        className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 font-bold text-sm focus:ring-2 focus:ring-fsm-blue outline-none text-gray-800"
+                        value={details.perfil_titulo || ''}
+                        placeholder="Opcional. Ej: COMPROMETIDOS CON LA MODALIDAD A DISTANCIA"
+                        onChange={e => handleDetailsChange('perfil_titulo', e.target.value)}
+                      />
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100">
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Perfil Profesional - Párrafo 1</label>

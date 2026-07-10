@@ -41,6 +41,7 @@ interface ProgramData {
     salida_laboral?: string[];
     brochure_base64?: string;
     brochure_filename?: string;
+    perfil_titulo?: string;
   };
 }
 
@@ -190,8 +191,14 @@ export default function EarlyChildhoodProgramContent({ program }: EarlyChildhood
                   Perfil Profesional
                 </h2>
                 <p className="text-3xl md:text-4xl font-black text-fsm-blue leading-tight uppercase font-display">
-                   DANDO LOS PRIMEROS PASOS <br />
-                   <span className="text-fsm-blue">{program.subtitle || "HACIA EL FUTURO"}</span>
+                  {details.perfil_titulo ? (
+                    details.perfil_titulo
+                  ) : (
+                    <>
+                      DANDO LOS PRIMEROS PASOS <br />
+                      <span className="text-fsm-blue">{program.subtitle || "HACIA EL FUTURO"}</span>
+                    </>
+                  )}
                 </p>
               </div>
               

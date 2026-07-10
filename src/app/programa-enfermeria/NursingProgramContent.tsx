@@ -42,6 +42,7 @@ interface ProgramData {
     brochure_base64?: string;
     brochure_filename?: string;
     banner_image?: string;
+    perfil_titulo?: string;
   };
 }
 
@@ -188,8 +189,14 @@ export default function NursingProgramContent({ program }: NursingProgramProps) 
                   Perfil Profesional
                 </h2>
                 <p className="text-3xl md:text-4xl font-black text-fsm-blue leading-tight uppercase font-display">
-                   COMPROMETIDOS CON LA <br />
-                   <span className="text-fsm-blue">{program.subtitle || "VOCACIÓN DE SERVIR"}</span>
+                  {details.perfil_titulo ? (
+                    details.perfil_titulo
+                  ) : (
+                    <>
+                      COMPROMETIDOS CON LA <br />
+                      <span className="text-fsm-blue">{program.subtitle || "VOCACIÓN DE SERVIR"}</span>
+                    </>
+                  )}
                 </p>
               </div>
               
