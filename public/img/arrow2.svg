@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 40.85 40.85">
+  <defs>
+    <style>
+      .cls-1, .cls-2 {
+        fill: none;
+      }
+
+      .cls-3 {
+        clip-path: url(#clippath);
+      }
+
+      .cls-4 {
+        fill: #fff;
+      }
+
+      .cls-5 {
+        clip-path: url(#clippath-1);
+      }
+
+      .cls-6 {
+        clip-path: url(#clippath-2);
+      }
+
+      .cls-2 {
+        stroke: #761c30;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 9px;
+      }
+
+      .cls-7 {
+        opacity: .41;
+      }
+    </style>
+    <clipPath id="clippath">
+      <rect class="cls-1" width="40.85" height="40.85"/>
+    </clipPath>
+    <clipPath id="clippath-1">
+      <rect class="cls-1" width="40.85" height="40.85"/>
+    </clipPath>
+    <clipPath id="clippath-2">
+      <rect class="cls-1" width="40.85" height="40.85"/>
+    </clipPath>
+  </defs>
+  <g id="Group_19" data-name="Group 19">
+    <g class="cls-3">
+      <g id="Group_12" data-name="Group 12">
+        <g id="Group_11" data-name="Group 11">
+          <g class="cls-5">
+            <g id="Group_10" data-name="Group 10">
+              <g id="Group_9" data-name="Group 9" class="cls-7">
+                <g id="Group_8" data-name="Group 8">
+                  <g class="cls-6">
+                    <g id="Group_7" data-name="Group 7">
+                      <path id="Path_2" data-name="Path 2" class="cls-4" d="m0,20.43C0,9.15,9.15,0,20.43,0s20.43,9.15,20.43,20.43-9.15,20.43-20.43,20.43C9.15,40.85,0,31.71,0,20.43h0"/>
+                    </g>
+                  </g>
+                </g>
+              </g>
+              <path id="Path_3" data-name="Path 3" class="cls-2" d="m24.22,31.55l-11.98-11.98,11.98-11.98"/>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

@@ -1,7 +1,5 @@
 /node_modules
 /.next/
 /out/
-/public/img/
-/public/docs/
 .open-next/
 .DS_Store
