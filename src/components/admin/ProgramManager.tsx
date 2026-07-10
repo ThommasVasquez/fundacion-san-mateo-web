@@ -532,7 +532,7 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                       <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Brochure PDF (Descargable)</label>
                       <div className="relative h-[46px] bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-center overflow-hidden hover:border-fsm-blue transition-all cursor-pointer group">
                         <span className="text-xs font-bold text-gray-500 group-hover:text-fsm-blue flex items-center gap-2">
-                          {details.brochure_filename ? (
+                              {details.brochure_filename ? (
                             <>
                               <span className="text-green-600 font-bold">✓ {details.brochure_filename}</span>
                               <button 
@@ -541,8 +541,12 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  handleDetailsChange('brochure_base64', '');
-                                  handleDetailsChange('brochure_filename', '');
+                                  const updatedDetails = {
+                                    ...details,
+                                    brochure_base64: '',
+                                    brochure_filename: ''
+                                  };
+                                  handleUpdate(program.id, 'details', updatedDetails);
                                 }}
                               >
                                 Eliminar
@@ -568,8 +572,12 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                             reader.readAsDataURL(file);
                             reader.onload = (event) => {
                               const base64 = event.target?.result as string;
-                              handleDetailsChange('brochure_base64', base64);
-                              handleDetailsChange('brochure_filename', file.name);
+                              const updatedDetails = {
+                                ...details,
+                                brochure_base64: base64,
+                                brochure_filename: file.name
+                              };
+                              handleUpdate(program.id, 'details', updatedDetails);
                             };
                           }}
                         />
