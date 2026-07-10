@@ -31,9 +31,10 @@ interface Program {
 
 interface AcademicOfferContentProps {
   initialPrograms: Program[];
+  content: Record<string, string>;
 }
 
-export default function AcademicOfferContent({ initialPrograms }: AcademicOfferContentProps) {
+export default function AcademicOfferContent({ initialPrograms, content }: AcademicOfferContentProps) {
   const [activeTab, setActiveTab] = useState("tecnicos");
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -79,7 +80,7 @@ export default function AcademicOfferContent({ initialPrograms }: AcademicOfferC
           </div>
         </div>
         <div className="lg:w-1/2 relative min-h-[300px] lg:min-h-full overflow-hidden">
-          <Image src="/img/banner31.jpg" alt="FSM Class" fill className="object-cover scale-110" priority />
+          <Image src={content['oferta_banner_image'] || "/img/banner31.jpg"} alt="FSM Class" fill className="object-cover scale-110" priority />
         </div>
       </section>
 

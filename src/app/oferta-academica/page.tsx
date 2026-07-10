@@ -1,5 +1,5 @@
 import React from "react";
-import { getPrograms } from "@/lib/content";
+import { getPrograms, getContentMap } from "@/lib/content";
 import AcademicOfferContent from "./AcademicOfferContent";
 
 export const metadata = {
@@ -9,6 +9,7 @@ export const metadata = {
 
 export default async function AcademicOfferPage() {
   const programs = await getPrograms();
+  const content = await getContentMap('/oferta-academica');
 
   const serializedPrograms = programs.map((p: any) => ({
     id: p.id.toString(),
@@ -21,5 +22,5 @@ export default async function AcademicOfferPage() {
     is_featured: p.is_featured
   }));
 
-  return <AcademicOfferContent initialPrograms={serializedPrograms} />;
+  return <AcademicOfferContent initialPrograms={serializedPrograms} content={content} />;
 }

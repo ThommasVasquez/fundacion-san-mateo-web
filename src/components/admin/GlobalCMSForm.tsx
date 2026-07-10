@@ -764,6 +764,13 @@ export const cmsStructure: Record<string, any> = {
   },
   "Oferta Académica": [
     {
+      group: "Encabezado Hero",
+      key: "oferta_banner_image",
+      label: "Imagen de Banner",
+      type: "image",
+      default: "/img/banner31.jpg",
+    },
+    {
       group: "Programas",
       key: "academic_title",
       label: "Título Principal",
