@@ -473,13 +473,13 @@ export async function getNavbarSettings() {
     }
     return {
       text: settings['navbar_inscripciones_text'] || 'Inscripciones',
-      link: settings['navbar_inscripciones_link'] || 'https://fundacionsanmateo.q10.com/Preinscripcion'
+      link: settings['navbar_inscripciones_link'] || 'https://fundacionsanmateosoacha.escalapages.com/centro-de-ventas'
     };
   } catch (error) {
     console.error('Error fetching navbar settings:', error);
     return {
       text: 'Inscripciones',
-      link: 'https://fundacionsanmateo.q10.com/Preinscripcion'
+      link: 'https://fundacionsanmateosoacha.escalapages.com/centro-de-ventas'
     };
   }
 }

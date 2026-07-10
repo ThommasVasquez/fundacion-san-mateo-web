@@ -21,7 +21,7 @@ const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [inscripcionesText, setInscripcionesText] = useState("Inscripciones");
-  const [inscripcionesLink, setInscripcionesLink] = useState("https://fundacionsanmateo.q10.com/Preinscripcion");
+  const [inscripcionesLink, setInscripcionesLink] = useState("https://fundacionsanmateosoacha.escalapages.com/centro-de-ventas");
 
   useEffect(() => {
     async function loadSettings() {

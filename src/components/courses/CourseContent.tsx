@@ -174,7 +174,7 @@ export default function CourseContent({ title, bannerImg, mainImg, directedTo, o
                       <span className="text-[9px] font-black tracking-widest uppercase">Certificado Incluido</span>
                    </div>
                    <a 
-                    href="https://fundacionsanmateo.q10.com/Preinscripcion" 
+                    href="https://fundacionsanmateosoacha.escalapages.com/centro-de-ventas" 
                     target="_blank"
                     className="w-full bg-white text-fsm-blue font-black py-5 rounded-2xl hover:bg-fsm-red hover:text-white transition-all flex items-center justify-center gap-3 group shadow-xl uppercase text-xs tracking-widest"
                   >

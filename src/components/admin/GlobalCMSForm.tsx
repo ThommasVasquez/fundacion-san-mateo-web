@@ -241,7 +241,7 @@ export const cmsStructure: Record<string, any> = {
       key: "home_promo_banner_link",
       label: "Link Banner Promo",
       type: "text",
-      default: "https://fundacionsanmateo.q10.com/Preinscripcion",
+      default: "https://fundacionsanmateosoacha.escalapages.com/centro-de-ventas",
     },
     {
       group: "Sección Certificaciones",
@@ -1038,7 +1038,7 @@ export const cmsStructure: Record<string, any> = {
       key: "navbar_inscripciones_link",
       label: "Enlace del Botón",
       type: "text",
-      default: "https://fundacionsanmateo.q10.com/Preinscripcion",
+      default: "https://fundacionsanmateosoacha.escalapages.com/centro-de-ventas",
     },
   ],
 };
