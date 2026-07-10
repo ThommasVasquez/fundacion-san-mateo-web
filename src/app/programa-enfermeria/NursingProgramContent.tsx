@@ -6,7 +6,7 @@ import Footer from "@/components/layout/Footer";
 import WhatsAppButton from "@/components/common/WhatsAppButton";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronRight, Calendar, Award, UserCheck, MapPin, ArrowRight, Clock, ShieldCheck } from "lucide-react";
+import { ChevronRight, Calendar, Award, UserCheck, MapPin, ArrowRight, Clock, ShieldCheck, Download } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import gsap from "gsap";
@@ -223,18 +223,25 @@ export default function NursingProgramContent({ program }: NursingProgramProps) 
                 <div className="relative z-10">
                    {activeTab === "plan" && (
                      <div className="space-y-12">
-                        <div className="flex justify-between items-end">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                            <h3 className="text-2xl font-black text-fsm-blue uppercase">Ciclo de Formación ({duration})</h3>
                            {details.brochure_base64 ? (
                              <a 
                                href={details.brochure_base64} 
                                download={details.brochure_filename || "brochure.pdf"} 
-                               className="text-[10px] font-black text-fsm-red tracking-widest uppercase hover:underline cursor-pointer"
+                               className="inline-flex items-center justify-center gap-2 bg-fsm-red text-white px-5 py-3 rounded-full font-black text-[10px] tracking-widest uppercase hover:bg-fsm-blue transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 cursor-pointer w-full sm:w-auto"
                              >
+                               <Download size={12} className="stroke-[3]" />
                                Descargar Brochure
                              </a>
                            ) : (
-                             <Link href="/contacto" className="text-[10px] font-black text-fsm-red tracking-widest uppercase hover:underline">Descargar Brochure</Link>
+                             <Link 
+                               href="/contacto" 
+                               className="inline-flex items-center justify-center gap-2 bg-fsm-red text-white px-5 py-3 rounded-full font-black text-[10px] tracking-widest uppercase hover:bg-fsm-blue transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 w-full sm:w-auto"
+                             >
+                               <Download size={12} className="stroke-[3]" />
+                               Descargar Brochure
+                             </Link>
                            )}
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">

@@ -6,6 +6,11 @@ import Image from "next/image";
 import { Menu, X, ChevronDown, Phone, Mail, Facebook as FacebookIcon, Instagram as InstagramIcon, ArrowRight } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { getNavbarSettings } from "@/app/actions";
+
+gsap.registerPlugin(ScrollTrigger);
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -15,6 +20,23 @@ const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [inscripcionesText, setInscripcionesText] = useState("Inscripciones");
+  const [inscripcionesLink, setInscripcionesLink] = useState("https://fundacionsanmateo.q10.com/Preinscripcion");
+
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const settings = await getNavbarSettings();
+        if (settings) {
+          if (settings.text) setInscripcionesText(settings.text);
+          if (settings.link) setInscripcionesLink(settings.link);
+        }
+      } catch (err) {
+        console.error("Error loading navbar settings:", err);
+      }
+    }
+    loadSettings();
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -78,7 +100,7 @@ const Navbar = () => {
   ];
 
   const utilityLinks = [
-    { name: "Inscripciones", href: "https://fundacionsanmateo.q10.com/Preinscripcion", color: "bg-fsm-red" },
+    { name: inscripcionesText, href: inscripcionesLink, color: "bg-fsm-red" },
     { name: "Pagos estudiantes", href: "https://portalpagos.davivienda.com/#/comercio/6023/FUNDACION%20SAN%20MATEO", color: "bg-fsm-red" },
     { name: "Campus virtual", href: "https://site2.q10.com/login?ReturnUrl=%2F&aplentId=21bfe857-977b-4057-b48c-55d9717d0dfe", color: "bg-fsm-red" },
     { name: "Solicitudes", href: "https://solicitudes.fundacionsanmateosoacha.edu.co/centro-de-solicitudes", color: "bg-fsm-red" },
@@ -91,9 +113,9 @@ const Navbar = () => {
         "flex flex-wrap justify-center items-center gap-2 pointer-events-auto transition-all duration-500 relative z-[110]",
         scrolled ? "scale-90 opacity-90 -mb-1" : "opacity-100"
       )}>
-        {utilityLinks.map((link) => (
+        {utilityLinks.map((link, index) => (
           <a
-            key={link.name}
+            key={index}
             href={link.href}
             target="_blank"
             rel="noopener noreferrer"

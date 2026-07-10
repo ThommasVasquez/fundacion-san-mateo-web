@@ -460,3 +460,27 @@ export async function deleteNormativityDocument(id: string) {
     return { error: error.message || 'Failed to delete document' };
   }
 }
+
+export async function getNavbarSettings() {
+  try {
+    const results = await sql`
+      SELECT content_key, value FROM site_content 
+      WHERE content_key IN ('navbar_inscripciones_text', 'navbar_inscripciones_link')
+    `;
+    const settings: Record<string, string> = {};
+    for (const row of results) {
+      settings[row.content_key] = row.value;
+    }
+    return {
+      text: settings['navbar_inscripciones_text'] || 'Inscripciones',
+      link: settings['navbar_inscripciones_link'] || 'https://fundacionsanmateo.q10.com/Preinscripcion'
+    };
+  } catch (error) {
+    console.error('Error fetching navbar settings:', error);
+    return {
+      text: 'Inscripciones',
+      link: 'https://fundacionsanmateo.q10.com/Preinscripcion'
+    };
+  }
+}
+

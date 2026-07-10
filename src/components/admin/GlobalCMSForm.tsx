@@ -1025,6 +1025,22 @@ export const cmsStructure: Record<string, any> = {
       default: "Consulta Digital",
     },
   ],
+  Navegación: [
+    {
+      group: "Botón de Inscripciones (Navbar)",
+      key: "navbar_inscripciones_text",
+      label: "Texto del Botón",
+      type: "text",
+      default: "Inscripciones",
+    },
+    {
+      group: "Botón de Inscripciones (Navbar)",
+      key: "navbar_inscripciones_link",
+      label: "Enlace del Botón",
+      type: "text",
+      default: "https://fundacionsanmateo.q10.com/Preinscripcion",
+    },
+  ],
 };
 
 export default function GlobalCMSForm({
