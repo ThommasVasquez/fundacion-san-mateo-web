@@ -537,7 +537,7 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                               <span className="text-green-600 font-bold">✓ {details.brochure_filename}</span>
                               <button 
                                 type="button"
-                                className="text-xs text-red-500 hover:text-red-700 ml-4 font-black uppercase tracking-widest"
+                                className="relative z-10 text-xs text-red-500 hover:text-red-700 ml-4 font-black uppercase tracking-widest"
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
