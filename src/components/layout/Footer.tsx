@@ -80,15 +80,8 @@ const Footer = () => {
               <div className="flex gap-3">
                 <MapPin className="text-fsm-red shrink-0" size={18} />
                 <p>
-                  <strong className="block">Sede Administrativa:</strong>
-                  carrera 7 # 18-99
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <MapPin className="text-fsm-red shrink-0" size={18} />
-                <p>
                   <strong className="block">Sede de Soacha:</strong>
-                  Calle 19 # 7A - 29 Soacha
+                  carrera 7 # 18-99
                 </p>
               </div>
               <div className="flex gap-3">
