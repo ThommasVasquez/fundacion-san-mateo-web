@@ -58,6 +58,16 @@ export default async function DynamicProgramPage({ params }: PageProps) {
         objective={objective}
         methodology={methodology}
         resources={resources}
+        subtitle={details.subtitle}
+        step1_title={details.step1_title}
+        step1_desc={details.step1_desc}
+        step2_title={details.step2_title}
+        step2_reqs={details.step2_reqs}
+        step3_title={details.step3_title}
+        step3_desc={details.step3_desc}
+        sidebar_text={details.sidebar_text}
+        brochure_filename={details.brochure_filename}
+        brochure_base64={details.brochure_base64}
       />
     );
   } else {

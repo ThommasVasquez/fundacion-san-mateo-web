@@ -751,6 +751,142 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                         onChange={e => handleMultilineChange('resources', e.target.value)}
                       />
                     </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Subtítulo / Introducción</label>
+                      <textarea 
+                        className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 font-medium text-sm text-gray-700 min-h-[80px] focus:ring-2 focus:ring-fsm-blue outline-none"
+                        value={details.subtitle || ''}
+                        placeholder="Ej: Actualización profesional certificada por la Fundación San Mateo..."
+                        onChange={e => handleDetailsChange('subtitle', e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-2 border-t border-gray-100 pt-4">
+                      <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest block mb-2 text-gray-800">Proceso de Vinculación</label>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Paso 1 */}
+                        <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-3">
+                          <p className="text-[9px] font-black text-fsm-blue uppercase">Paso 1: Inscripción</p>
+                          <input 
+                            type="text"
+                            className="w-full px-3 py-2 bg-white rounded-lg border border-gray-200 font-bold text-xs focus:ring-1 focus:ring-fsm-blue outline-none text-gray-800"
+                            placeholder="Título Paso 1"
+                            value={details.step1_title || 'Inscripción'}
+                            onChange={e => handleDetailsChange('step1_title', e.target.value)}
+                          />
+                          <textarea 
+                            className="w-full px-3 py-2 bg-white rounded-lg border border-gray-200 font-medium text-xs min-h-[80px] focus:ring-1 focus:ring-fsm-blue outline-none text-gray-800"
+                            placeholder="Descripción Paso 1"
+                            value={details.step1_desc || ''}
+                            onChange={e => handleDetailsChange('step1_desc', e.target.value)}
+                          />
+                        </div>
+                        {/* Paso 2 */}
+                        <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-3">
+                          <p className="text-[9px] font-black text-fsm-blue uppercase">Paso 2: Documentos (Uno por línea)</p>
+                          <input 
+                            type="text"
+                            className="w-full px-3 py-2 bg-white rounded-lg border border-gray-200 font-bold text-xs focus:ring-1 focus:ring-fsm-blue outline-none text-gray-800"
+                            placeholder="Título Paso 2"
+                            value={details.step2_title || 'Documentos'}
+                            onChange={e => handleDetailsChange('step2_title', e.target.value)}
+                          />
+                          <textarea 
+                            className="w-full px-3 py-2 bg-white rounded-lg border border-gray-200 font-medium text-xs min-h-[80px] focus:ring-1 focus:ring-fsm-blue outline-none text-gray-800"
+                            placeholder="Documentos requeridos"
+                            value={getMultilineText(details.step2_reqs || ["Cédula de Ciudadanía", "Soporte Académico", "Foto 3x4"])}
+                            onChange={e => {
+                              const reqs = e.target.value.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+                              handleDetailsChange('step2_reqs', reqs);
+                            }}
+                          />
+                        </div>
+                        {/* Paso 3 */}
+                        <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-3">
+                          <p className="text-[9px] font-black text-fsm-blue uppercase">Paso 3: Matrícula</p>
+                          <input 
+                            type="text"
+                            className="w-full px-3 py-2 bg-white rounded-lg border border-gray-200 font-bold text-xs focus:ring-1 focus:ring-fsm-blue outline-none text-gray-800"
+                            placeholder="Título Paso 3"
+                            value={details.step3_title || 'Matrícula'}
+                            onChange={e => handleDetailsChange('step3_title', e.target.value)}
+                          />
+                          <textarea 
+                            className="w-full px-3 py-2 bg-white rounded-lg border border-gray-200 font-medium text-xs min-h-[80px] focus:ring-1 focus:ring-fsm-blue outline-none text-gray-800"
+                            placeholder="Descripción Paso 3"
+                            value={details.step3_desc || ''}
+                            onChange={e => handleDetailsChange('step3_desc', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1 pt-4 border-t border-gray-100">
+                      <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Información de Infraestructura (Caja Lateral)</label>
+                      <textarea 
+                        className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 font-medium text-sm text-gray-700 min-h-[80px] focus:ring-2 focus:ring-fsm-blue outline-none"
+                        value={details.sidebar_text || ''}
+                        placeholder="Ej: Laboratorios equipados con tecnología biomédica de punta para simulación real."
+                        onChange={e => handleDetailsChange('sidebar_text', e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-1 pt-4 border-t border-gray-100">
+                      <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Brochure PDF (Descargable)</label>
+                      <div className="relative h-[46px] bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-center overflow-hidden hover:border-fsm-blue transition-all cursor-pointer group">
+                        <span className="text-xs font-bold text-gray-500 group-hover:text-fsm-blue flex items-center gap-2">
+                          {details.brochure_filename ? (
+                            <>
+                              <span className="text-green-600 font-bold">✓ {details.brochure_filename}</span>
+                              <button 
+                                type="button"
+                                className="relative z-10 text-xs text-red-500 hover:text-red-700 ml-4 font-black uppercase tracking-widest"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  const updatedDetails = {
+                                    ...details,
+                                    brochure_base64: '',
+                                    brochure_filename: ''
+                                  };
+                                  handleUpdate(program.id, 'details', updatedDetails);
+                                }}
+                              >
+                                Eliminar
+                              </button>
+                            </>
+                          ) : (
+                            "Subir Brochure PDF (Max. 5MB)"
+                          )}
+                        </span>
+                        <input
+                          type="file"
+                          accept="application/pdf"
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                          disabled={!!details.brochure_filename}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            if (file.size > 5 * 1024 * 1024) {
+                              alert("El archivo supera el límite de 5MB.");
+                              return;
+                            }
+                            const reader = new FileReader();
+                            reader.readAsDataURL(file);
+                            reader.onload = (event) => {
+                              const base64 = event.target?.result as string;
+                              const updatedDetails = {
+                                ...details,
+                                brochure_base64: base64,
+                                brochure_filename: file.name
+                              };
+                              handleUpdate(program.id, 'details', updatedDetails);
+                            };
+                          }}
+                        />
+                      </div>
+                    </div>
                   </>
                 )}
               </div>

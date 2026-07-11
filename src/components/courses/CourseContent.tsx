@@ -19,9 +19,37 @@ interface CourseProps {
   objective: string;
   methodology: string;
   resources: string[];
+  subtitle?: string;
+  step1_title?: string;
+  step1_desc?: string;
+  step2_title?: string;
+  step2_reqs?: string[];
+  step3_title?: string;
+  step3_desc?: string;
+  sidebar_text?: string;
+  brochure_filename?: string;
+  brochure_base64?: string;
 }
 
-export default function CourseContent({ title, bannerImg, mainImg, directedTo, objective, methodology, resources }: CourseProps) {
+export default function CourseContent({ 
+  title, 
+  bannerImg, 
+  mainImg, 
+  directedTo, 
+  objective, 
+  methodology, 
+  resources,
+  subtitle,
+  step1_title,
+  step1_desc,
+  step2_title,
+  step2_reqs,
+  step3_title,
+  step3_desc,
+  sidebar_text,
+  brochure_filename,
+  brochure_base64
+}: CourseProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [inscripcionesLink, setInscripcionesLink] = useState("https://fundacionsanmateosoacha.escalapages.com/centro-de-ventas");
 
@@ -68,7 +96,7 @@ export default function CourseContent({ title, bannerImg, mainImg, directedTo, o
               {title}
             </h1>
             <p className="text-lg text-gray-700 font-medium leading-relaxed max-w-lg mb-12">
-              Actualización profesional certificada por la Fundación San Mateo, con metodología teórico-práctica intensiva.
+              {subtitle || "Actualización profesional certificada por la Fundación San Mateo, con metodología teórico-práctica intensiva."}
             </p>
             <div className="flex flex-wrap gap-8 opacity-40">
                <div className="flex items-center gap-3">
@@ -158,22 +186,26 @@ export default function CourseContent({ title, bannerImg, mainImg, directedTo, o
               <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative z-10">
                 <div className="space-y-6 group">
                   <div className="w-14 h-14 bg-white text-fsm-red font-black flex items-center justify-center rounded-2xl shadow-sm text-xl group-hover:bg-fsm-red group-hover:text-white transition-all duration-500">01</div>
-                  <h4 className="font-black text-fsm-blue uppercase text-[10px] tracking-widest">Inscripción</h4>
-                  <p className="text-xs text-gray-900 font-medium leading-relaxed uppercase tracking-tighter">Preinscripción digital para reserva de cupo en la plataforma Q10.</p>
+                  <h4 className="font-black text-fsm-blue uppercase text-[10px] tracking-widest">{step1_title || "Inscripción"}</h4>
+                  <p className="text-xs text-gray-900 font-medium leading-relaxed uppercase tracking-tighter">
+                    {step1_desc || "Preinscripción digital para reserva de cupo en la plataforma Q10."}
+                  </p>
                 </div>
                 <div className="space-y-6 group">
                   <div className="w-14 h-14 bg-white text-fsm-red font-black flex items-center justify-center rounded-2xl shadow-sm text-xl group-hover:bg-fsm-red group-hover:text-white transition-all duration-500">02</div>
-                  <h4 className="font-black text-fsm-blue uppercase text-[10px] tracking-widest">Documentos</h4>
+                  <h4 className="font-black text-fsm-blue uppercase text-[10px] tracking-widest">{step2_title || "Documentos"}</h4>
                   <ul className="text-[10px] text-gray-900 font-black uppercase tracking-tighter space-y-2 opacity-60">
-                    <li>• Cédula de Ciudadanía</li>
-                    <li>• Soporte Académico</li>
-                    <li>• Foto 3x4</li>
+                    {(step2_reqs || ["Cédula de Ciudadanía", "Soporte Académico", "Foto 3x4"]).map((req, index) => (
+                      <li key={index}>• {req}</li>
+                    ))}
                   </ul>
                 </div>
                 <div className="space-y-6 group">
                   <div className="w-14 h-14 bg-white text-fsm-red font-black flex items-center justify-center rounded-2xl shadow-sm text-xl group-hover:bg-fsm-red group-hover:text-white transition-all duration-500">03</div>
-                  <h4 className="font-black text-fsm-blue uppercase text-[10px] tracking-widest">Matrícula</h4>
-                  <p className="text-xs text-gray-900 font-medium leading-relaxed uppercase tracking-tighter">Formalización presencial y pago en nuestra sede administrativa.</p>
+                  <h4 className="font-black text-fsm-blue uppercase text-[10px] tracking-widest">{step3_title || "Matrícula"}</h4>
+                  <p className="text-xs text-gray-900 font-medium leading-relaxed uppercase tracking-tighter">
+                    {step3_desc || "Formalización presencial y pago en nuestra sede administrativa."}
+                  </p>
                 </div>
               </div>
             </div>
@@ -200,10 +232,21 @@ export default function CourseContent({ title, bannerImg, mainImg, directedTo, o
                 </div>
               </div>
 
-               <div className="p-12 bg-gray-50 rounded-[4rem] text-center border border-gray-100 shadow-sm">
+               <div className="p-12 bg-gray-50 rounded-[4rem] text-center border border-gray-100 shadow-sm flex flex-col items-center">
                  <div className="w-12 h-1 bg-fsm-red mx-auto mb-8 rounded-full"></div>
                  <p className="font-black text-[10px] tracking-[0.3em] mb-6 text-fsm-blue uppercase">Infraestructura</p>
-                 <p className="font-bold text-gray-700 text-sm leading-relaxed">Laboratorios equipados con tecnología biomédica de punta para simulación real.</p>
+                 <p className="font-bold text-gray-700 text-sm leading-relaxed">
+                   {sidebar_text || "Laboratorios equipados con tecnología biomédica de punta para simulación real."}
+                 </p>
+                 {brochure_base64 && (
+                   <a 
+                     href={brochure_base64} 
+                     download={brochure_filename || "brochure.pdf"}
+                     className="mt-8 w-full bg-fsm-blue hover:bg-fsm-red text-white font-black py-4 px-6 rounded-2xl transition-all flex items-center justify-center gap-2 text-xs tracking-widest uppercase shadow-md shadow-fsm-blue/20 hover:scale-[1.02] active:scale-[0.98]"
+                   >
+                     Descargar Brochure
+                   </a>
+                 )}
                </div>
             </div>
           </div>
