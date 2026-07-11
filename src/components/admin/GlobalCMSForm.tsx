@@ -1048,6 +1048,78 @@ export const cmsStructure: Record<string, any> = {
       default: "https://fundacionsanmateosoacha.escalapages.com/centro-de-ventas",
     },
   ],
+  "Pie de Página": [
+    {
+      group: "Direcciones",
+      key: "footer_sede_academica",
+      label: "Dirección Sede Académica",
+      type: "text",
+      default: "calle 19 # 7A-29",
+    },
+    {
+      group: "Direcciones",
+      key: "footer_sede_soacha",
+      label: "Dirección Sede de Soacha",
+      type: "text",
+      default: "carrera 7 # 18-99",
+    },
+    {
+      group: "Contacto",
+      key: "footer_phones",
+      label: "Teléfonos de Contacto",
+      type: "text",
+      default: "(601) 732 1080 – (601) 900 2302",
+    },
+    {
+      group: "Redes Sociales",
+      key: "footer_facebook_url",
+      label: "Enlace de Facebook",
+      type: "text",
+      default: "https://www.facebook.com/profile.php?id=100064034556004",
+    },
+    {
+      group: "Redes Sociales",
+      key: "footer_instagram_url",
+      label: "Enlace de Instagram",
+      type: "text",
+      default: "https://www.instagram.com/fundacionsanmateosoacha",
+    },
+    {
+      group: "Enlaces Adicionales",
+      key: "footer_link_ofertas_laborales",
+      label: "Enlace Ofertas Laborales",
+      type: "text",
+      default: "https://fundacionsanmateo.q10.com/OfertaLaboral/Crear",
+    },
+    {
+      group: "Enlaces Adicionales",
+      key: "footer_link_solicitudes",
+      label: "Enlace Centro de Solicitudes",
+      type: "text",
+      default: "https://solicitudes.fundacionsanmateosoacha.edu.co/centro-de-solicitudes",
+    },
+    {
+      group: "Legado",
+      key: "footer_copyright_prefix",
+      label: "Texto de Copyright (Prefijo)",
+      type: "text",
+      default: "Fundación San Mateo - Soacha",
+    },
+    {
+      group: "Legado",
+      key: "footer_vigilado_text",
+      label: "Texto de Vigilancia (Vigilado por...)",
+      type: "text",
+      default: "Vigilado por Secretaría de Educación de Soacha",
+    },
+    {
+      group: "Legado",
+      key: "footer_legal_notice",
+      label: "Aviso Legal (Bottom)",
+      type: "text",
+      default: "Los programas no conducen a la obtención de título profesional. Institución para el Trabajo y Desarrollo Humano.",
+    },
+  ],
 };
 
 export default function GlobalCMSForm({

@@ -484,3 +484,20 @@ export async function getNavbarSettings() {
   }
 }
 
+export async function getFooterSettings() {
+  try {
+    const results = await sql`
+      SELECT content_key, value FROM site_content 
+      WHERE content_key LIKE 'footer_%'
+    `;
+    const settings: Record<string, string> = {};
+    for (const row of results) {
+      settings[row.content_key] = row.value;
+    }
+    return settings;
+  } catch (error) {
+    console.error('Error fetching footer settings:', error);
+    return {};
+  }
+}
+
