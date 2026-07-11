@@ -29,6 +29,10 @@ interface CourseProps {
   sidebar_text?: string;
   brochure_filename?: string;
   brochure_base64?: string;
+  duration?: string;
+  certificate?: string;
+  registration_link?: string;
+  planEstudios?: string[];
 }
 
 export default function CourseContent({ 
@@ -48,7 +52,11 @@ export default function CourseContent({
   step3_desc,
   sidebar_text,
   brochure_filename,
-  brochure_base64
+  brochure_base64,
+  duration,
+  certificate,
+  registration_link,
+  planEstudios
 }: CourseProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [inscripcionesLink, setInscripcionesLink] = useState("https://fundacionsanmateosoacha.escalapages.com/centro-de-ventas");
@@ -101,11 +109,15 @@ export default function CourseContent({
             <div className="flex flex-wrap gap-8 opacity-40">
                <div className="flex items-center gap-3">
                  <Clock size={18} className="text-fsm-blue" />
-                 <span className="text-[9px] font-black tracking-widest uppercase text-fsm-blue">Curso Corto</span>
+                 <span className="text-[9px] font-black tracking-widest uppercase text-fsm-blue">
+                   {duration || "Curso Corto"}
+                 </span>
                </div>
                <div className="flex items-center gap-3">
                   <Award size={18} className="text-fsm-blue" />
-                  <span className="text-[9px] font-black tracking-widest uppercase text-fsm-blue">Certificable</span>
+                  <span className="text-[9px] font-black tracking-widest uppercase text-fsm-blue">
+                    {certificate || "Certificable"}
+                  </span>
                </div>
             </div>
           </div>
@@ -178,6 +190,24 @@ export default function CourseContent({
                </div>
             </div>
 
+            {/* Plan de Estudios / Módulos de Formación Section */}
+            {planEstudios && planEstudios.length > 0 && (
+              <div className="reveal-item bg-gray-50/50 p-12 md:p-16 rounded-[4rem] border border-gray-100 shadow-sm relative overflow-hidden">
+                <h2 className="text-3xl font-black text-fsm-blue mb-12 uppercase relative z-10">Módulos de <br /> <span className="text-fsm-red">Formación</span></h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 relative z-10">
+                  {planEstudios.map((item, i) => (
+                    <div key={i} className="flex items-center gap-4 py-4 border-b border-gray-100 group">
+                      <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-[10px] font-black text-fsm-red shadow-sm group-hover:bg-fsm-red group-hover:text-white transition-all">
+                        {String(i + 1).padStart(2, '0')}
+                      </div>
+                      <span className="text-sm font-bold text-gray-800 uppercase tracking-tighter">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Admission Process Section - Premium Redesign */}
             <div className="reveal-item bg-gray-50/50 p-12 md:p-16 rounded-[4rem] border border-gray-100 shadow-sm overflow-hidden relative">
               {/* Blur removed */}
@@ -220,10 +250,12 @@ export default function CourseContent({
                 <div className="absolute inset-0 flex flex-col justify-end p-12">
                    <div className="flex items-center gap-3 mb-6 text-white/60">
                       <ShieldCheck size={20} className="text-fsm-red" />
-                      <span className="text-[9px] font-black tracking-widest uppercase">Certificado Incluido</span>
+                      <span className="text-[9px] font-black tracking-widest uppercase">
+                        {certificate || "Certificado Incluido"}
+                      </span>
                    </div>
                    <a 
-                    href={inscripcionesLink} 
+                    href={registration_link || inscripcionesLink} 
                     target="_blank"
                     className="w-full bg-white text-fsm-blue font-black py-5 rounded-2xl hover:bg-fsm-red hover:text-white transition-all flex items-center justify-center gap-3 group shadow-xl uppercase text-xs tracking-widest"
                   >

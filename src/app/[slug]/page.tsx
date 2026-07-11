@@ -68,6 +68,10 @@ export default async function DynamicProgramPage({ params }: PageProps) {
         sidebar_text={details.sidebar_text}
         brochure_filename={details.brochure_filename}
         brochure_base64={details.brochure_base64}
+        duration={details.duration}
+        certificate={details.certificate}
+        registration_link={details.registration_link}
+        planEstudios={details.plan_estudios}
       />
     );
   } else {

@@ -833,6 +833,27 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                     </div>
 
                     <div className="space-y-1 pt-4 border-t border-gray-100">
+                      <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Plan de Estudios (Módulos de Formación, Uno por línea)</label>
+                      <textarea 
+                        className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 font-medium text-sm text-gray-700 min-h-[120px] focus:ring-2 focus:ring-fsm-blue outline-none"
+                        value={getMultilineText(details.plan_estudios)}
+                        placeholder="Ej: Módulo 1: Fundamentos teóricos&#10;Módulo 2: Procedimientos prácticos&#10;Módulo 3: Casos de estudio"
+                        onChange={e => handleMultilineChange('plan_estudios', e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-1 pt-4 border-t border-gray-100">
+                      <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Enlace de Inscripción Personalizado (Opcional)</label>
+                      <input 
+                        type="text"
+                        className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 font-bold text-sm focus:ring-2 focus:ring-fsm-blue outline-none text-gray-800"
+                        value={details.registration_link || ''}
+                        placeholder="Ej: https://wa.me/573184349631 o link de pasarela de pago"
+                        onChange={e => handleDetailsChange('registration_link', e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-1 pt-4 border-t border-gray-100">
                       <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Brochure PDF (Descargable)</label>
                       <div className="relative h-[46px] bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-center overflow-hidden hover:border-fsm-blue transition-all cursor-pointer group">
                         <span className="text-xs font-bold text-gray-500 group-hover:text-fsm-blue flex items-center gap-2">
