@@ -69,10 +69,10 @@ const Footer = () => {
   };
 
   const certifications = [
-    { src: "/img/logo-ISO9001.jpg", alt: "ISO 9001" },
-    { src: "/img/logo-NTC5555.jpg", alt: "NTC 5555" },
-    { src: "/img/logo-NTC5581.jpg", alt: "NTC 5581" },
-    { src: "/img/logo-NTC5663.jpg", alt: "NTC 5663" },
+    { src: settings['footer_cert_img_1'] || "/img/logo-ISO9001.jpg", alt: settings['footer_cert_alt_1'] || "ISO 9001" },
+    { src: settings['footer_cert_img_2'] || "/img/logo-NTC5555.jpg", alt: settings['footer_cert_alt_2'] || "NTC 5555" },
+    { src: settings['footer_cert_img_3'] || "/img/logo-NTC5581.jpg", alt: settings['footer_cert_alt_3'] || "NTC 5581" },
+    { src: settings['footer_cert_img_4'] || "/img/logo-NTC5663.jpg", alt: settings['footer_cert_alt_4'] || "NTC 5663" },
   ];
 
   return (
