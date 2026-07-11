@@ -1057,17 +1057,10 @@ export const cmsStructure: Record<string, any> = {
   "Pie de Página": [
     {
       group: "Direcciones",
-      key: "footer_sede_academica",
-      label: "Dirección Sede Académica",
+      key: "footer_addresses_title",
+      label: "Título Informativo",
       type: "text",
-      default: "calle 19 # 7A-29",
-    },
-    {
-      group: "Direcciones",
-      key: "footer_sede_soacha",
-      label: "Dirección Sede de Soacha",
-      type: "text",
-      default: "carrera 7 # 18-99",
+      default: "Sedes y Direcciones FSM",
     },
     {
       group: "Contacto",
@@ -1078,17 +1071,10 @@ export const cmsStructure: Record<string, any> = {
     },
     {
       group: "Redes Sociales",
-      key: "footer_facebook_url",
-      label: "Enlace de Facebook",
+      key: "footer_socials_title",
+      label: "Título Informativo",
       type: "text",
-      default: "https://www.facebook.com/profile.php?id=100064034556004",
-    },
-    {
-      group: "Redes Sociales",
-      key: "footer_instagram_url",
-      label: "Enlace de Instagram",
-      type: "text",
-      default: "https://www.instagram.com/fundacionsanmateosoacha",
+      default: "Redes Sociales Oficiales",
     },
     {
       group: "Enlaces Adicionales",
