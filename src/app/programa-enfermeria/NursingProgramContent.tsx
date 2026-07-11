@@ -10,6 +10,7 @@ import { ChevronRight, Calendar, Award, UserCheck, MapPin, ArrowRight, Clock, Sh
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import gsap from "gsap";
+import { getNavbarSettings } from "@/app/actions";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -81,6 +82,22 @@ export default function NursingProgramContent({ program }: NursingProgramProps) 
   const perfilP2 = details.perfil_p2 || "Formamos auxiliares con sólidos principios éticos, visión humanista y un alto sentido de responsabilidad social, capaces de desempeñarse con excelencia en todos los niveles del sistema nacional de salud.";
   const sidebarTitle = details.sidebar_title || "Comienza tu carrera en salud";
   const salidaLaboral = details.salida_laboral || [];
+
+  const [inscripcionesLink, setInscripcionesLink] = useState("https://fundacionsanmateosoacha.escalapages.com/centro-de-ventas");
+
+  useEffect(() => {
+    async function loadLink() {
+      try {
+        const settings = await getNavbarSettings();
+        if (settings.link) {
+          setInscripcionesLink(settings.link);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    loadLink();
+  }, []);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -344,7 +361,7 @@ export default function NursingProgramContent({ program }: NursingProgramProps) 
                 </div>
 
                 <Link 
-                  href="https://fundacionsanmateosoacha.escalapages.com/centro-de-ventas"
+                  href={inscripcionesLink}
                   target="_blank"
                   className="w-full bg-white text-fsm-blue py-5 rounded-2xl font-black text-xs tracking-widest uppercase hover:bg-fsm-red hover:text-white transition-all flex items-center justify-center gap-3 group shadow-xl"
                 >

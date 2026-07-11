@@ -171,7 +171,7 @@ export default function AcademicOfferContent({ initialPrograms, content }: Acade
                         Detalles <ArrowRight size={14} className="text-fsm-red" />
                       </div>
                       <a 
-                        href="https://fundacionsanmateosoacha.escalapages.com/centro-de-ventas"
+                        href={content['navbar_inscripciones_link'] || "https://fundacionsanmateosoacha.escalapages.com/centro-de-ventas"}
                         target="_blank"
                         className="p-3 bg-gray-50 rounded-xl hover:bg-fsm-red hover:text-white transition-all text-fsm-blue relative z-20"
                       >
@@ -196,7 +196,7 @@ export default function AcademicOfferContent({ initialPrograms, content }: Acade
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
               <a 
-                href="https://fundacionsanmateosoacha.escalapages.com/centro-de-ventas"
+                href={content['navbar_inscripciones_link'] || "https://fundacionsanmateosoacha.escalapages.com/centro-de-ventas"}
                 target="_blank"
                 className="bg-fsm-red text-white px-12 py-5 rounded-full font-black text-xs tracking-[0.2em] uppercase hover:bg-white hover:text-fsm-blue transition-all duration-500 shadow-xl"
               >

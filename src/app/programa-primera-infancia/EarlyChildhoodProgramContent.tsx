@@ -10,6 +10,7 @@ import { ChevronRight, Calendar, Award, UserCheck, MapPin, Baby, ShieldCheck, Cl
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import gsap from "gsap";
+import { getNavbarSettings } from "@/app/actions";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -82,6 +83,22 @@ export default function EarlyChildhoodProgramContent({ program }: EarlyChildhood
   const salidaLaboral = details.salida_laboral || [
     "Asistente Preescolar", "Madre Comunitaria", "Niñera Profesional", "Líder en Jardines"
   ];
+
+  const [inscripcionesLink, setInscripcionesLink] = useState("https://fundacionsanmateosoacha.escalapages.com/centro-de-ventas");
+
+  useEffect(() => {
+    async function loadLink() {
+      try {
+        const settings = await getNavbarSettings();
+        if (settings.link) {
+          setInscripcionesLink(settings.link);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    loadLink();
+  }, []);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -348,7 +365,7 @@ export default function EarlyChildhoodProgramContent({ program }: EarlyChildhood
                 </div>
 
                 <Link 
-                  href="https://fundacionsanmateosoacha.escalapages.com/centro-de-ventas"
+                  href={inscripcionesLink}
                   target="_blank"
                   className="w-full bg-white text-fsm-blue py-5 rounded-2xl font-black text-xs tracking-widest uppercase hover:bg-fsm-red hover:text-white transition-all flex items-center justify-center gap-3 group shadow-xl"
                 >

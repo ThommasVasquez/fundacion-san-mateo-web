@@ -8,6 +8,8 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import WhatsAppButton from "@/components/common/WhatsAppButton";
 import gsap from "gsap";
+import { getNavbarSettings } from "@/app/actions";
+import { useState } from "react";
 
 interface CourseProps {
   title: string;
@@ -21,6 +23,21 @@ interface CourseProps {
 
 export default function CourseContent({ title, bannerImg, mainImg, directedTo, objective, methodology, resources }: CourseProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [inscripcionesLink, setInscripcionesLink] = useState("https://fundacionsanmateosoacha.escalapages.com/centro-de-ventas");
+
+  useEffect(() => {
+    async function loadLink() {
+      try {
+        const settings = await getNavbarSettings();
+        if (settings.link) {
+          setInscripcionesLink(settings.link);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    loadLink();
+  }, []);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -174,7 +191,7 @@ export default function CourseContent({ title, bannerImg, mainImg, directedTo, o
                       <span className="text-[9px] font-black tracking-widest uppercase">Certificado Incluido</span>
                    </div>
                    <a 
-                    href="https://fundacionsanmateosoacha.escalapages.com/centro-de-ventas" 
+                    href={inscripcionesLink} 
                     target="_blank"
                     className="w-full bg-white text-fsm-blue font-black py-5 rounded-2xl hover:bg-fsm-red hover:text-white transition-all flex items-center justify-center gap-3 group shadow-xl uppercase text-xs tracking-widest"
                   >

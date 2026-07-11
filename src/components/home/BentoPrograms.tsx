@@ -193,7 +193,7 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
             <div className="relative group">
               <div className="absolute inset-4 animate-glow-pulse rounded-full -z-10"></div>
               <Link 
-                href={content['home_promo_banner_link'] || "https://fundacionsanmateosoacha.escalapages.com/centro-de-ventas"}
+                href={content['navbar_inscripciones_link'] || content['home_promo_banner_link'] || "https://fundacionsanmateosoacha.escalapages.com/centro-de-ventas"}
                 target="_blank"
                 className="relative z-10 bg-fsm-red text-white px-12 py-6 rounded-3xl font-black text-sm md:text-base tracking-widest hover:scale-105 active:scale-95 transition-all shadow-premium whitespace-nowrap block"
               >
