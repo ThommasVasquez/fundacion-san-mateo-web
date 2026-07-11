@@ -50,14 +50,45 @@ export default function NormativityContent({ initialContent, docs }: Normativity
     return () => ctx.revert();
   }, []);
 
-  const categoriesList = [
-    { key: 'norm_cat1', titleKey: 'norm_cat1_title', defaultTitle: 'Aprobación oficial Secretaría de Educación de Soacha', icon: <FileText className="text-fsm-blue" size={24} /> },
-    { key: 'norm_cat2', titleKey: 'norm_cat2_title', defaultTitle: 'Aprobación Programa Auxiliar de Enfermería', icon: <Shield className="text-fsm-red" size={24} /> },
-    { key: 'norm_cat3', titleKey: 'norm_cat3_title', defaultTitle: 'Aprobación Programa Primera Infancia', icon: <Scale className="text-fsm-blue" size={24} /> },
-    { key: 'norm_cat4', titleKey: 'norm_cat4_title', defaultTitle: 'Documentos Institucionales', icon: <Gavel className="text-gray-700" size={24} /> },
-    { key: 'norm_cat5', titleKey: 'norm_cat5_title', defaultTitle: 'Aprobación Programa Servicios Farmacéuticos', icon: <FileSignature className="text-fsm-red" size={24} /> },
-    { key: 'norm_cat6', titleKey: 'norm_cat6_title', defaultTitle: 'Aprobación Programa Asistencia Administrativa', icon: <BookOpen className="text-fsm-blue" size={24} /> },
-  ];
+  const getIcon = (iconName?: string) => {
+    switch (iconName) {
+      case 'shield': return <Shield className="text-fsm-red" size={24} />;
+      case 'scale': return <Scale className="text-fsm-blue" size={24} />;
+      case 'gavel': return <Gavel className="text-gray-700" size={24} />;
+      case 'signature': return <FileSignature className="text-fsm-red" size={24} />;
+      case 'book': return <BookOpen className="text-fsm-blue" size={24} />;
+      case 'file':
+      default:
+        return <FileText className="text-fsm-blue" size={24} />;
+    }
+  };
+
+  let categoriesList: { key: string; label: string; icon: React.ReactNode }[] = [];
+  try {
+    if (initialContent.normativity_categories) {
+      const parsed = JSON.parse(initialContent.normativity_categories);
+      if (Array.isArray(parsed)) {
+        categoriesList = parsed.map((c: any) => ({
+          key: c.key,
+          label: c.label,
+          icon: getIcon(c.icon)
+        }));
+      }
+    }
+  } catch (e) {
+    console.error("Error parsing normativity_categories", e);
+  }
+
+  if (categoriesList.length === 0) {
+    categoriesList = [
+      { key: 'norm_cat1', label: getC('norm_cat1_title', 'Aprobación oficial Secretaría de Educación de Soacha'), icon: getIcon('file') },
+      { key: 'norm_cat2', label: getC('norm_cat2_title', 'Aprobación Programa Auxiliar de Enfermería'), icon: getIcon('shield') },
+      { key: 'norm_cat3', label: getC('norm_cat3_title', 'Aprobación Programa Primera Infancia'), icon: getIcon('scale') },
+      { key: 'norm_cat4', label: getC('norm_cat4_title', 'Documentos Institucionales'), icon: getIcon('gavel') },
+      { key: 'norm_cat5', label: getC('norm_cat5_title', 'Aprobación Programa Servicios Farmacéuticos'), icon: getIcon('signature') },
+      { key: 'norm_cat6', label: getC('norm_cat6_title', 'Aprobación Programa Asistencia Administrativa'), icon: getIcon('book') },
+    ];
+  }
 
   const documents = categoriesList.map(cat => {
     const catDocs = docs
@@ -74,7 +105,7 @@ export default function NormativityContent({ initialContent, docs }: Normativity
         ];
 
     return {
-      category: getC(cat.titleKey, cat.defaultTitle),
+      category: cat.label,
       icon: cat.icon,
       links
     };

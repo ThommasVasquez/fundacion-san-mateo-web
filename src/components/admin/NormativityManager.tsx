@@ -17,15 +17,49 @@ interface NormativityDoc {
 
 interface NormativityManagerProps {
   initialDocs: NormativityDoc[];
-  categoryTitles: Record<string, string>;
+  initialCategoriesJson: string;
 }
 
-export default function NormativityManager({ initialDocs, categoryTitles }: NormativityManagerProps) {
+interface CategoryItem {
+  key: string;
+  label: string;
+  icon: string;
+}
+
+export default function NormativityManager({ initialDocs, initialCategoriesJson }: NormativityManagerProps) {
   const [docs, setDocs] = useState<NormativityDoc[]>(initialDocs);
-  const [activeTab, setActiveTab] = useState<string>('norm_cat1');
+  
+  // Parse categories from JSON or fall back to defaults
+  const [categories, setCategories] = useState<CategoryItem[]>(() => {
+    try {
+      if (initialCategoriesJson) {
+        const parsed = JSON.parse(initialCategoriesJson);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((c: any) => ({
+            key: c.key,
+            label: c.label,
+            icon: c.icon || 'file'
+          }));
+        }
+      }
+    } catch (e) {
+      console.error("Error parsing initial categories json", e);
+    }
+    return [
+      { key: 'norm_cat1', label: 'Aprobación oficial Soacha', icon: 'file' },
+      { key: 'norm_cat2', label: 'Programa Enfermería', icon: 'shield' },
+      { key: 'norm_cat3', label: 'Programa Primera Infancia', icon: 'scale' },
+      { key: 'norm_cat4', label: 'Documentos Institucionales', icon: 'gavel' },
+      { key: 'norm_cat5', label: 'Programa Servicios Farmacéuticos', icon: 'signature' },
+      { key: 'norm_cat6', label: 'Programa Asistencia Administrativa', icon: 'book' },
+    ];
+  });
+
+  const [activeTab, setActiveTab] = useState<string>(() => categories[0]?.key || 'norm_cat1');
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [success, setSuccess] = useState<Record<string, boolean>>({});
   const [isAdding, setIsAdding] = useState(false);
+  const [savingCategories, setSavingCategories] = useState(false);
   
   const [newDoc, setNewDoc] = useState<{
     title: string;
@@ -40,15 +74,6 @@ export default function NormativityManager({ initialDocs, categoryTitles }: Norm
     file_base64: '',
     external_link: ''
   });
-
-  const categories = [
-    { key: 'norm_cat1', label: categoryTitles.norm_cat1 || 'Aprobación oficial Soacha' },
-    { key: 'norm_cat2', label: categoryTitles.norm_cat2 || 'Programa Enfermería' },
-    { key: 'norm_cat3', label: categoryTitles.norm_cat3 || 'Programa Primera Infancia' },
-    { key: 'norm_cat4', label: categoryTitles.norm_cat4 || 'Documentos Institucionales' },
-    { key: 'norm_cat5', label: categoryTitles.norm_cat5 || 'Programa Servicios Farmacéuticos' },
-    { key: 'norm_cat6', label: categoryTitles.norm_cat6 || 'Programa Asistencia Administrativa' },
-  ];
 
   const currentDocs = docs
     .filter(d => d.category_key === activeTab)
@@ -241,270 +266,448 @@ export default function NormativityManager({ initialDocs, categoryTitles }: Norm
             {cat.label}
           </button>
         ))}
-      </div>
-
-      {/* Header and Add Button */}
-      <div className="flex justify-between items-center bg-white p-6 rounded-[2rem] shadow-premium border border-gray-50">
-        <div>
-          <h3 className="text-lg font-black text-fsm-blue uppercase tracking-tight">
-            Documentos en: <span className="text-fsm-red">{categories.find(c => c.key === activeTab)?.label}</span>
-          </h3>
-          <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">
-            {currentDocs.length} documentos encontrados en esta categoría
-          </p>
-        </div>
+        
         <button
           onClick={() => {
-            setIsAdding(!isAdding);
-            setNewDoc({ title: '', type: 'upload', file_name: '', file_base64: '', external_link: '' });
+            setActiveTab('manage_categories');
+            setIsAdding(false);
           }}
-          className="bg-fsm-red text-white px-5 py-3 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2 font-black text-[10px] tracking-widest uppercase"
+          className={`px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-wider transition-all duration-300 border border-dashed border-fsm-red/40 ${
+            activeTab === 'manage_categories'
+              ? 'bg-fsm-red text-white shadow-lg'
+              : 'text-fsm-red hover:bg-fsm-red/5'
+          }`}
         >
-          {isAdding ? "Cancelar" : <><Plus size={14} /> Agregar Documento</>}
+          ⚙️ Administrar Secciones
         </button>
       </div>
 
-      {/* Add Document Panel */}
-      {isAdding && (
-        <div className="bg-white p-8 rounded-[2.5rem] shadow-premium border-2 border-fsm-red/15 animate-in fade-in slide-in-from-top-4 duration-500 space-y-6">
-          <h4 className="text-fsm-red font-black uppercase text-xs tracking-widest flex items-center gap-2">
-            <Plus size={16} /> Crear Nuevo Documento
-          </h4>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2 md:col-span-2">
-              <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">
-                Título del Documento (Cómo se mostrará al público)
-              </label>
-              <div className="relative">
-                <FileText className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                <input
-                  type="text"
-                  placeholder="Ej: Manual de Convivencia Institucional"
-                  className="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-fsm-red font-bold text-sm"
-                  value={newDoc.title}
-                  onChange={e => setNewDoc({ ...newDoc, title: e.target.value })}
-                />
-              </div>
+      {activeTab === 'manage_categories' ? (
+        /* Categories Management View */
+        <div className="bg-white p-8 rounded-[2.5rem] shadow-premium border border-gray-100 space-y-8">
+          <div className="flex justify-between items-center border-b border-gray-100 pb-6">
+            <div>
+              <h3 className="text-lg font-black text-fsm-blue uppercase tracking-tight">Administrar Secciones</h3>
+              <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">
+                Cree, edite, ordene o elimine las categorías de la normatividad
+              </p>
             </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">
-                Tipo de Fuente
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setNewDoc({ ...newDoc, type: 'upload' })}
-                  className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all ${
-                    newDoc.type === 'upload'
-                      ? 'bg-fsm-blue text-white border-fsm-blue shadow-md'
-                      : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-fsm-red/20'
-                  }`}
-                >
-                  Subir PDF Local
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setNewDoc({ ...newDoc, type: 'link' })}
-                  className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all ${
-                    newDoc.type === 'link'
-                      ? 'bg-fsm-blue text-white border-fsm-blue shadow-md'
-                      : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-fsm-red/20'
-                  }`}
-                >
-                  Enlace Externo / URL
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              {newDoc.type === 'upload' ? (
-                <>
-                  <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">
-                    Seleccionar Archivo PDF (Max. 5MB)
-                  </label>
-                  <div className="relative h-[46px] bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-center overflow-hidden hover:border-fsm-red transition-all cursor-pointer group">
-                    <span className="text-xs font-bold text-gray-500 group-hover:text-fsm-red flex items-center gap-2">
-                      {newDoc.file_name ? <><FileCheck className="text-green-500" size={16} /> {newDoc.file_name}</> : <><Upload size={16} /> Subir PDF</>}
-                    </span>
-                    <input
-                      type="file"
-                      accept="application/pdf"
-                      className="absolute inset-0 opacity-0 cursor-pointer"
-                      onChange={(e) => handleFileChange(e)}
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">
-                    Enlace de Destino (URL)
-                  </label>
-                  <div className="relative">
-                    <Link2 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                    <input
-                      type="text"
-                      placeholder="Ej: /tratamiento-datos o https://ejemplo.com"
-                      className="w-full pl-12 pr-4 py-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-fsm-red font-bold text-sm"
-                      value={newDoc.external_link}
-                      onChange={e => setNewDoc({ ...newDoc, external_link: e.target.value })}
-                    />
-                  </div>
-                </>
-              )}
-            </div>
+            <button
+              onClick={() => {
+                const newKey = `norm_cat_${Date.now()}`;
+                setCategories(prev => [...prev, { key: newKey, label: 'Nueva Sección', icon: 'file' }]);
+              }}
+              className="bg-fsm-red text-white px-5 py-3 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2 font-black text-[10px] tracking-widest uppercase"
+            >
+              <Plus size={14} /> Nueva Sección
+            </button>
           </div>
 
-          <div className="flex gap-4">
+          <div className="space-y-4">
+            {categories.map((cat, idx) => (
+              <div key={cat.key} className="flex flex-col md:flex-row items-center gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-150">
+                {/* Order indicators */}
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => {
+                      if (idx === 0) return;
+                      const list = [...categories];
+                      const temp = list[idx];
+                      list[idx] = list[idx-1];
+                      list[idx-1] = temp;
+                      setCategories(list);
+                    }}
+                    disabled={idx === 0}
+                    className="p-2 bg-white rounded-lg border border-gray-100 text-gray-400 hover:text-fsm-blue disabled:opacity-30"
+                  >
+                    <ArrowUp size={14} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (idx === categories.length - 1) return;
+                      const list = [...categories];
+                      const temp = list[idx];
+                      list[idx] = list[idx+1];
+                      list[idx+1] = temp;
+                      setCategories(list);
+                    }}
+                    disabled={idx === categories.length - 1}
+                    className="p-2 bg-white rounded-lg border border-gray-100 text-gray-400 hover:text-fsm-blue disabled:opacity-30"
+                  >
+                    <ArrowDown size={14} />
+                  </button>
+                </div>
+
+                {/* Label Input */}
+                <div className="flex-grow w-full space-y-1">
+                  <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Nombre de Sección</label>
+                  <input
+                    type="text"
+                    value={cat.label}
+                    onChange={e => {
+                      setCategories(prev => prev.map((c, i) => i === idx ? { ...c, label: e.target.value } : c));
+                    }}
+                    className="w-full px-4 py-2.5 bg-white rounded-xl border border-gray-200 font-bold text-sm text-gray-800"
+                  />
+                </div>
+
+                {/* Icon Dropdown */}
+                <div className="w-full md:w-[180px] space-y-1">
+                  <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Icono</label>
+                  <select
+                    value={cat.icon || 'file'}
+                    onChange={e => {
+                      setCategories(prev => prev.map((c, i) => i === idx ? { ...c, icon: e.target.value } : c));
+                    }}
+                    className="w-full px-4 py-2.5 bg-white rounded-xl border border-gray-200 font-bold text-sm text-gray-850"
+                  >
+                    <option value="file">📄 Archivo / Documento</option>
+                    <option value="shield">🛡️ Escudo / Programa</option>
+                    <option value="scale">⚖️ Balanza / Normas</option>
+                    <option value="gavel">🔨 Mazo / Legalidad</option>
+                    <option value="signature">✍️ Firma / Resoluciones</option>
+                    <option value="book">📖 Libro / Manuales</option>
+                  </select>
+                </div>
+
+                {/* Delete Button */}
+                <button
+                  onClick={() => {
+                    const hasDocs = docs.some(d => d.category_key === cat.key);
+                    if (hasDocs) {
+                      if (!confirm(`¡Atención! Hay documentos asociados a la sección "${cat.label}". Si elimina la sección, los documentos no se mostrarán al público hasta que los mueva a otra sección activa. ¿Desea eliminar la sección de todas formas?`)) {
+                        return;
+                      }
+                    } else {
+                      if (!confirm(`¿Está seguro que desea eliminar la sección "${cat.label}"?`)) {
+                        return;
+                      }
+                    }
+                    setCategories(prev => prev.filter((_, i) => i !== idx));
+                  }}
+                  className="p-3 bg-white hover:bg-red-50 text-red-500 rounded-xl border border-red-100 hover:border-red-250 mt-5 md:mt-0"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex justify-end pt-6 border-t border-gray-100">
             <button
-              onClick={handleAdd}
-              disabled={loading.adding}
-              className="flex-1 bg-fsm-blue text-white py-4 rounded-xl font-black text-xs tracking-widest uppercase hover:bg-fsm-red transition-colors shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
+              onClick={async () => {
+                if (categories.some(c => !c.label.trim())) {
+                  toast.error("Todas las secciones deben tener un nombre");
+                  return;
+                }
+                setSavingCategories(true);
+                const { updateContent } = await import('@/app/actions');
+                const res = await updateContent('normativity_categories', JSON.stringify(categories), '/institucion/normatividad');
+                setSavingCategories(false);
+                if (res.error) {
+                  toast.error(res.error);
+                } else {
+                  toast.success("Secciones guardadas correctamente");
+                  window.location.reload();
+                }
+              }}
+              disabled={savingCategories}
+              className="bg-fsm-blue hover:bg-fsm-red text-white px-8 py-4 rounded-xl transition-all shadow-lg flex items-center gap-2 font-black text-xs tracking-widest uppercase disabled:opacity-50"
             >
-              {loading.adding ? <Loader2 className="animate-spin" size={16} /> : 'Guardar Documento'}
+              {savingCategories ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Save size={16} />
+              )}
+              Guardar Configuración de Secciones
             </button>
           </div>
         </div>
-      )}
-
-      {/* Documents List */}
-      <div className="space-y-4">
-        {currentDocs.length === 0 ? (
-          <div className="bg-white p-12 rounded-[2.5rem] border border-dashed border-gray-200 text-center">
-            <AlertCircle className="mx-auto text-gray-300 mb-3" size={32} />
-            <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">No hay documentos en esta categoría</p>
-            <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mt-1">Haz clic en "Agregar Documento" para crear uno</p>
+      ) : (
+        /* Documents View */
+        <>
+          {/* Header and Add Button */}
+          <div className="flex justify-between items-center bg-white p-6 rounded-[2rem] shadow-premium border border-gray-50">
+            <div>
+              <h3 className="text-lg font-black text-fsm-blue uppercase tracking-tight">
+                Documentos en: <span className="text-fsm-red">{categories.find(c => c.key === activeTab)?.label}</span>
+              </h3>
+              <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">
+                {currentDocs.length} documentos encontrados en esta categoría
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setIsAdding(!isAdding);
+                setNewDoc({ title: '', type: 'upload', file_name: '', file_base64: '', external_link: '' });
+              }}
+              className="bg-fsm-red text-white px-5 py-3 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2 font-black text-[10px] tracking-widest uppercase"
+            >
+              {isAdding ? "Cancelar" : <><Plus size={14} /> Agregar Documento</>}
+            </button>
           </div>
-        ) : (
-          currentDocs.map((doc, idx) => {
-            const hasLocalUpload = !!doc.file_base64;
-            const isSavedFile = !!doc.file_name && !hasLocalUpload;
-            const isLink = !doc.file_name && !!doc.external_link;
 
-            return (
-              <div
-                key={doc.id}
-                className="bg-white p-6 rounded-[2.5rem] shadow-premium border border-gray-50 hover:border-fsm-blue/15 transition-all group"
-              >
-                <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center">
-                  {/* File/Link Indicator Icon */}
-                  <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 text-fsm-blue group-hover:bg-fsm-blue group-hover:text-white transition-all">
-                    {isLink ? <Link2 size={20} className="text-fsm-red" /> : <FileText size={20} className="text-fsm-blue" />}
+          {/* Add Document Panel */}
+          {isAdding && (
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-premium border-2 border-fsm-red/15 animate-in fade-in slide-in-from-top-4 duration-500 space-y-6">
+              <h4 className="text-fsm-red font-black uppercase text-xs tracking-widest flex items-center gap-2">
+                <Plus size={16} /> Crear Nuevo Documento
+              </h4>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">
+                    Título del Documento (Cómo se mostrará al público)
+                  </label>
+                  <div className="relative">
+                    <FileText className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                    <input
+                      type="text"
+                      placeholder="Ej: Manual de Convivencia Institucional"
+                      className="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-fsm-red font-bold text-sm"
+                      value={newDoc.title}
+                      onChange={e => setNewDoc({ ...newDoc, title: e.target.value })}
+                    />
                   </div>
+                </div>
 
-                  {/* Inputs Section */}
-                  <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Título del Documento</label>
-                      <input
-                        className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-100 font-bold text-sm text-fsm-blue focus:ring-2 focus:ring-fsm-blue outline-none"
-                        value={doc.title}
-                        onChange={e => handleUpdateLocal(doc.id, 'title', e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                        {isLink ? 'Enlace URL' : 'Archivo PDF'}
-                      </label>
-                      
-                      {isLink ? (
-                        <div className="relative">
-                          <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-                          <input
-                            className="w-full pl-10 pr-4 py-3 bg-gray-50 rounded-xl border border-gray-100 font-bold text-sm text-gray-500 focus:ring-2 focus:ring-fsm-blue outline-none"
-                            value={doc.external_link || ''}
-                            onChange={e => handleUpdateLocal(doc.id, 'external_link', e.target.value)}
-                          />
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 relative h-[44px] bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center overflow-hidden hover:border-fsm-blue transition-all cursor-pointer">
-                            <span className="text-xs font-bold text-gray-500 truncate px-4 flex items-center gap-2">
-                              {hasLocalUpload ? (
-                                <><FileCheck className="text-green-500 animate-pulse" size={14} /> {doc.file_name} (Pendiente)</>
-                              ) : isSavedFile ? (
-                                <><FileCheck className="text-fsm-blue" size={14} /> {doc.file_name}</>
-                              ) : (
-                                <><Upload size={14} /> Subir PDF</>
-                              )}
-                            </span>
-                            <input
-                              type="file"
-                              accept="application/pdf"
-                              className="absolute inset-0 opacity-0 cursor-pointer"
-                              onChange={(e) => handleFileChange(e, doc.id)}
-                            />
-                          </div>
-
-                          <button
-                            title="Cambiar a Enlace URL"
-                            onClick={() => {
-                              handleUpdateLocal(doc.id, 'file_name', undefined);
-                              handleUpdateLocal(doc.id, 'file_base64', undefined);
-                              handleUpdateLocal(doc.id, 'external_link', '#');
-                            }}
-                            className="h-[44px] px-3 bg-gray-50 rounded-xl border border-gray-100 text-gray-400 hover:text-fsm-red transition-all"
-                          >
-                            <Link2 size={16} />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Action and Reordering Buttons */}
-                  <div className="flex items-center gap-2 w-full lg:w-auto justify-end border-t lg:border-t-0 border-gray-50 pt-4 lg:pt-0">
-                    <div className="flex gap-1 mr-2">
-                      <button
-                        onClick={() => moveOrder(idx, 'up')}
-                        disabled={idx === 0}
-                        className="p-2 bg-gray-50 rounded-lg border border-gray-100 text-gray-500 hover:text-fsm-blue hover:bg-gray-100 transition-all disabled:opacity-30"
-                        title="Subir orden"
-                      >
-                        <ArrowUp size={14} />
-                      </button>
-                      <button
-                        onClick={() => moveOrder(idx, 'down')}
-                        disabled={idx === currentDocs.length - 1}
-                        className="p-2 bg-gray-50 rounded-lg border border-gray-100 text-gray-500 hover:text-fsm-blue hover:bg-gray-100 transition-all disabled:opacity-30"
-                        title="Bajar orden"
-                      >
-                        <ArrowDown size={14} />
-                      </button>
-                    </div>
-
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">
+                    Tipo de Fuente
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
                     <button
-                      onClick={() => saveUpdate(doc.id)}
-                      disabled={loading[doc.id]}
-                      className="p-3 bg-green-50 text-green-600 rounded-xl border border-green-100 hover:bg-green-100 transition-all active:scale-95 shadow-sm"
-                      title="Guardar Cambios"
+                      type="button"
+                      onClick={() => setNewDoc({ ...newDoc, type: 'upload' })}
+                      className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all ${
+                        newDoc.type === 'upload'
+                          ? 'bg-fsm-blue text-white border-fsm-blue shadow-md'
+                          : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-white'
+                      }`}
                     >
-                      {loading[doc.id] ? (
-                        <Loader2 className="animate-spin" size={16} />
-                      ) : success[doc.id] ? (
-                        <CheckCircle size={16} />
-                      ) : (
-                        <Save size={16} />
-                      )}
+                      Subir archivo PDF
                     </button>
-
                     <button
-                      onClick={() => handleDelete(doc.id)}
-                      disabled={loading[doc.id]}
-                      className="p-3 bg-red-50 text-red-600 rounded-xl border border-red-100 hover:bg-red-100 transition-all active:scale-95 shadow-sm"
-                      title="Eliminar Documento"
+                      type="button"
+                      onClick={() => setNewDoc({ ...newDoc, type: 'link' })}
+                      className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all ${
+                        newDoc.type === 'link'
+                          ? 'bg-fsm-blue text-white border-fsm-blue shadow-md'
+                          : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-white'
+                      }`}
                     >
-                      <Trash2 size={16} />
+                      Enlace Web URL
                     </button>
                   </div>
                 </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">
+                    {newDoc.type === 'upload' ? 'Archivo PDF (Max 5MB)' : 'Enlace Web URL'}
+                  </label>
+
+                  {newDoc.type === 'upload' ? (
+                    <div className="relative h-14 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-center overflow-hidden hover:border-fsm-blue transition-all cursor-pointer">
+                      <span className="text-xs font-bold text-gray-500 px-4 truncate">
+                        {newDoc.file_name ? `✓ ${newDoc.file_name}` : "Seleccionar Archivo PDF"}
+                      </span>
+                      <input
+                        type="file"
+                        accept="application/pdf"
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        onChange={(e) => handleFileChange(e)}
+                      />
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <Link2 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                      <input
+                        type="text"
+                        placeholder="Ej: https://ejemplo.com/documento.pdf"
+                        className="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-fsm-red font-bold text-sm"
+                        value={newDoc.external_link}
+                        onChange={e => setNewDoc({ ...newDoc, external_link: e.target.value })}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
-            );
-          })
-        )}
-      </div>
+
+              <div className="flex justify-end pt-6 border-t border-gray-150">
+                <button
+                  onClick={handleAdd}
+                  disabled={loading['adding']}
+                  className="bg-fsm-red text-white px-8 py-4 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2 font-black text-xs tracking-widest uppercase disabled:opacity-50"
+                >
+                  {loading['adding'] ? (
+                    <>
+                      <Loader2 className="animate-spin" size={16} />
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={16} />
+                      Crear e Insertar Documento
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Documents List */}
+          <div className="space-y-4">
+            {currentDocs.length === 0 ? (
+              <div className="bg-white p-16 rounded-[2.5rem] border border-gray-100 text-center shadow-premium">
+                <AlertCircle className="mx-auto text-gray-300 mb-3" size={32} />
+                <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">No hay documentos en esta categoría</p>
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mt-1">Haz clic en "Agregar Documento" para crear uno</p>
+              </div>
+            ) : (
+              currentDocs.map((doc, idx) => {
+                const hasLocalUpload = !!doc.file_base64;
+                const isSavedFile = !!doc.file_name && !hasLocalUpload;
+                const isLink = !doc.file_name && !!doc.external_link;
+
+                return (
+                  <div
+                    key={doc.id}
+                    className="bg-white p-6 rounded-[2.5rem] shadow-premium border border-gray-50 hover:border-fsm-blue/15 transition-all group"
+                  >
+                    <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center">
+                      {/* File/Link Indicator Icon */}
+                      <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 text-fsm-blue group-hover:bg-fsm-blue group-hover:text-white transition-all">
+                        {isLink ? <Link2 size={20} className="text-fsm-red" /> : <FileText size={20} className="text-fsm-blue" />}
+                      </div>
+
+                      {/* Inputs Section */}
+                      <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Título del Documento</label>
+                          <input
+                            className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-100 font-bold text-sm text-fsm-blue focus:ring-2 focus:ring-fsm-blue outline-none"
+                            value={doc.title}
+                            onChange={e => handleUpdateLocal(doc.id, 'title', e.target.value)}
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                            {isLink ? 'Enlace URL' : 'Archivo PDF'}
+                          </label>
+                          
+                          {isLink ? (
+                            <div className="relative">
+                              <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                              <input
+                                className="w-full pl-10 pr-4 py-3 bg-gray-50 rounded-xl border border-gray-100 font-bold text-sm text-gray-500 focus:ring-2 focus:ring-fsm-blue outline-none"
+                                value={doc.external_link || ''}
+                                onChange={e => handleUpdateLocal(doc.id, 'external_link', e.target.value)}
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1 relative h-[44px] bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center overflow-hidden hover:border-fsm-blue transition-all cursor-pointer">
+                                <span className="text-xs font-bold text-gray-500 truncate px-4 flex items-center gap-2">
+                                  {hasLocalUpload ? (
+                                    <><FileCheck className="text-green-500 animate-pulse" size={14} /> {doc.file_name} (Pendiente)</>
+                                  ) : isSavedFile ? (
+                                    <><FileCheck className="text-fsm-blue" size={14} /> {doc.file_name}</>
+                                  ) : (
+                                    <><Upload size={14} /> Subir PDF</>
+                                  )}
+                                </span>
+                                <input
+                                  type="file"
+                                  accept="application/pdf"
+                                  className="absolute inset-0 opacity-0 cursor-pointer"
+                                  onChange={(e) => handleFileChange(e, doc.id)}
+                                />
+                              </div>
+
+                              <button
+                                title="Cambiar a Enlace URL"
+                                onClick={() => {
+                                  handleUpdateLocal(doc.id, 'file_name', undefined);
+                                  handleUpdateLocal(doc.id, 'file_base64', undefined);
+                                  handleUpdateLocal(doc.id, 'external_link', '#');
+                                }}
+                                className="h-[44px] px-3 bg-gray-50 rounded-xl border border-gray-100 text-gray-400 hover:text-fsm-red transition-all"
+                              >
+                                <Link2 size={16} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Category Selector inside Document details to allow moving them easily */}
+                        <div className="space-y-1 col-span-1 md:col-span-2">
+                          <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Mover a Sección</label>
+                          <select
+                            value={doc.category_key}
+                            onChange={e => handleUpdateLocal(doc.id, 'category_key', e.target.value)}
+                            className="w-full px-4 py-2.5 bg-gray-50 rounded-xl border border-gray-100 font-bold text-sm text-fsm-blue focus:ring-2 focus:ring-fsm-blue outline-none"
+                          >
+                            {categories.map(cat => (
+                              <option key={cat.key} value={cat.key}>{cat.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Action and Reordering Buttons */}
+                      <div className="flex items-center gap-2 w-full lg:w-auto justify-end border-t lg:border-t-0 border-gray-50 pt-4 lg:pt-0">
+                        <div className="flex gap-1 mr-2">
+                          <button
+                            onClick={() => moveOrder(idx, 'up')}
+                            disabled={idx === 0}
+                            className="p-2 bg-gray-50 rounded-lg border border-gray-100 text-gray-500 hover:text-fsm-blue hover:bg-gray-100 transition-all disabled:opacity-30"
+                            title="Subir orden"
+                          >
+                            <ArrowUp size={14} />
+                          </button>
+                          <button
+                            onClick={() => moveOrder(idx, 'down')}
+                            disabled={idx === currentDocs.length - 1}
+                            className="p-2 bg-gray-50 rounded-lg border border-gray-100 text-gray-500 hover:text-fsm-blue hover:bg-gray-100 transition-all disabled:opacity-30"
+                            title="Bajar orden"
+                          >
+                            <ArrowDown size={14} />
+                          </button>
+                        </div>
+
+                        <button
+                          onClick={() => saveUpdate(doc.id)}
+                          disabled={loading[doc.id]}
+                          className="p-3 bg-green-50 text-green-600 rounded-xl border border-green-100 hover:bg-green-100 transition-all active:scale-95 shadow-sm"
+                          title="Guardar Cambios"
+                        >
+                          {loading[doc.id] ? (
+                            <Loader2 className="animate-spin" size={16} />
+                          ) : success[doc.id] ? (
+                            <CheckCircle size={16} />
+                          ) : (
+                            <Save size={16} />
+                          )}
+                        </button>
+
+                        <button
+                          onClick={() => handleDelete(doc.id)}
+                          disabled={loading[doc.id]}
+                          className="p-3 bg-red-50 text-red-600 rounded-xl border border-red-100 hover:bg-red-100 transition-all active:scale-95 shadow-sm"
+                          title="Eliminar Documento"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

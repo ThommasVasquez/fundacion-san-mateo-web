@@ -1566,14 +1566,7 @@ export default function GlobalCMSForm({
                   </div>
                   <NormativityManager
                     initialDocs={initialNormativityDocs}
-                    categoryTitles={{
-                      norm_cat1: contentMap.norm_cat1_title || '',
-                      norm_cat2: contentMap.norm_cat2_title || '',
-                      norm_cat3: contentMap.norm_cat3_title || '',
-                      norm_cat4: contentMap.norm_cat4_title || '',
-                      norm_cat5: contentMap.norm_cat5_title || '',
-                      norm_cat6: contentMap.norm_cat6_title || '',
-                    }}
+                    initialCategoriesJson={contentMap.normativity_categories || ''}
                   />
                 </div>
               )}
