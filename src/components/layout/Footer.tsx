@@ -3,18 +3,50 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Facebook as FacebookIcon, Instagram as InstagramIcon, Mail, MapPin, Phone, Calendar } from "lucide-react";
-import { getFooterSettings } from "@/app/actions";
+import { 
+  Facebook as FacebookIcon, 
+  Instagram as InstagramIcon, 
+  Mail, 
+  MapPin, 
+  Phone, 
+  Calendar,
+  Twitter,
+  Youtube,
+  Linkedin,
+  Github,
+  Globe
+} from "lucide-react";
+import { getFooterSettings, getFooterAddresses, getFooterSocials } from "@/app/actions";
+
+const getSocialIcon = (iconName: string) => {
+  switch (iconName?.toLowerCase()) {
+    case "facebook": return <FacebookIcon size={24} />;
+    case "instagram": return <InstagramIcon size={24} />;
+    case "twitter": return <Twitter size={24} />;
+    case "youtube": return <Youtube size={24} />;
+    case "linkedin": return <Linkedin size={24} />;
+    case "github": return <Github size={24} />;
+    default: return <Globe size={24} />;
+  }
+};
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
   const [settings, setSettings] = useState<Record<string, string>>({});
+  const [addresses, setAddresses] = useState<any[]>([]);
+  const [socials, setSocials] = useState<any[]>([]);
 
   useEffect(() => {
     async function loadFooter() {
       try {
-        const data = await getFooterSettings();
-        setSettings(data);
+        const [footerSettings, footerAddr, footerSoc] = await Promise.all([
+          getFooterSettings(),
+          getFooterAddresses(),
+          getFooterSocials()
+        ]);
+        setSettings(footerSettings);
+        setAddresses(footerAddr);
+        setSocials(footerSoc);
       } catch (err) {
         console.error("Error loading footer settings:", err);
       }
@@ -86,31 +118,55 @@ const Footer = () => {
           <div>
             <h4 className="text-xl font-bold mb-6 border-b-2 border-fsm-red w-fit pb-1">Contacto</h4>
             <div className="flex flex-col gap-4 text-sm">
-              <div className="flex gap-3">
-                <MapPin className="text-fsm-red shrink-0" size={18} />
-                <p>
-                  <strong className="block">Sede Académica:</strong>
-                  {settings['footer_sede_academica'] || "calle 19 # 7A-29"}
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <MapPin className="text-fsm-red shrink-0" size={18} />
-                <p>
-                  <strong className="block">Sede de Soacha:</strong>
-                  {settings['footer_sede_soacha'] || "carrera 7 # 18-99"}
-                </p>
-              </div>
+              {addresses.length > 0 ? (
+                addresses.map((item) => (
+                  <div key={item.id} className="flex gap-3">
+                    <MapPin className="text-fsm-red shrink-0" size={18} />
+                    <p>
+                      <strong className="block">{item.name}:</strong>
+                      {item.address}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <>
+                  <div className="flex gap-3">
+                    <MapPin className="text-fsm-red shrink-0" size={18} />
+                    <p>
+                      <strong className="block">Sede Académica:</strong>
+                      {settings['footer_sede_academica'] || "calle 19 # 7A-29"}
+                    </p>
+                  </div>
+                  <div className="flex gap-3">
+                    <MapPin className="text-fsm-red shrink-0" size={18} />
+                    <p>
+                      <strong className="block">Sede de Soacha:</strong>
+                      {settings['footer_sede_soacha'] || "carrera 7 # 18-99"}
+                    </p>
+                  </div>
+                </>
+              )}
               <div className="flex gap-3">
                 <Phone className="text-fsm-red shrink-0" size={18} />
                 <p>{settings['footer_phones'] || "(601) 732 1080 – (601) 900 2302"}</p>
               </div>
               <div className="flex gap-6 mt-2">
-                <a href={settings['footer_facebook_url'] || "https://www.facebook.com/profile.php?id=100064034556004"} target="_blank" className="hover:text-fsm-red transition-colors">
-                  <FacebookIcon size={24} />
-                </a>
-                <a href={settings['footer_instagram_url'] || "https://www.instagram.com/fundacionsanmateosoacha"} target="_blank" className="hover:text-fsm-red transition-colors">
-                  <InstagramIcon size={24} />
-                </a>
+                {socials.length > 0 ? (
+                  socials.map((item) => (
+                    <a key={item.id} href={item.url} target="_blank" rel="noopener noreferrer" className="hover:text-fsm-red transition-colors" title={item.name}>
+                      {getSocialIcon(item.icon)}
+                    </a>
+                  ))
+                ) : (
+                  <>
+                    <a href={settings['footer_facebook_url'] || "https://www.facebook.com/profile.php?id=100064034556004"} target="_blank" className="hover:text-fsm-red transition-colors">
+                      <FacebookIcon size={24} />
+                    </a>
+                    <a href={settings['footer_instagram_url'] || "https://www.instagram.com/fundacionsanmateosoacha"} target="_blank" className="hover:text-fsm-red transition-colors">
+                      <InstagramIcon size={24} />
+                    </a>
+                  </>
+                )}
               </div>
             </div>
           </div>

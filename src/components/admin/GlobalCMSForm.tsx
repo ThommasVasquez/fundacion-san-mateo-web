@@ -26,6 +26,8 @@ import GalleryManager from "./GalleryManager";
 import CalendarManager from "./CalendarManager";
 import FAQManager from "./FAQManager";
 import NormativityManager from "./NormativityManager";
+import FooterAddressManager from "./FooterAddressManager";
+import FooterSocialsManager from "./FooterSocialsManager";
 import { Newspaper, Image as GalleryIcon, CalendarDays } from "lucide-react";
 
 interface GlobalCMSFormProps {
@@ -39,6 +41,8 @@ interface GlobalCMSFormProps {
   blogPosts?: any[];
   initialFAQs?: any[];
   initialNormativityDocs?: any[];
+  initialAddresses?: any[];
+  initialSocials?: any[];
 }
 
 // Estructura Jerárquica del CMS
@@ -1133,6 +1137,8 @@ export default function GlobalCMSForm({
   blogPosts = [],
   initialFAQs = [],
   initialNormativityDocs = [],
+  initialAddresses = [],
+  initialSocials = [],
 }: GlobalCMSFormProps) {
   const [contentMap, setContentMap] =
     useState<Record<string, string>>(initialContent);
@@ -1573,6 +1579,18 @@ export default function GlobalCMSForm({
                       norm_cat6: contentMap.norm_cat6_title || '',
                     }}
                   />
+                </div>
+              )}
+
+              {groupName === "Direcciones" && activeCategory === "Pie de Página" && (
+                <div className="mt-12 pt-12 border-t border-gray-100">
+                  <FooterAddressManager initialItems={initialAddresses} />
+                </div>
+              )}
+
+              {groupName === "Redes Sociales" && activeCategory === "Pie de Página" && (
+                <div className="mt-12 pt-12 border-t border-gray-100">
+                  <FooterSocialsManager initialItems={initialSocials} />
                 </div>
               )}
             </div>

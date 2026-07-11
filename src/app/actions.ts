@@ -501,3 +501,97 @@ export async function getFooterSettings() {
   }
 }
 
+export async function getFooterAddresses() {
+  try {
+    return await sql`SELECT id, name, address, order_index FROM footer_addresses ORDER BY order_index ASC`;
+  } catch (error) {
+    console.error('Error fetching footer addresses:', error);
+    return [];
+  }
+}
+
+export async function addFooterAddress(name: string, address: string, orderIndex = 0) {
+  try {
+    const res = await sql`
+      INSERT INTO footer_addresses (name, address, order_index)
+      VALUES (${name}, ${address}, ${orderIndex})
+      RETURNING id, name, address, order_index
+    `;
+    return { success: true, item: res[0] };
+  } catch (error: any) {
+    console.error('Error adding footer address:', error);
+    return { error: error.message || 'Failed to add address' };
+  }
+}
+
+export async function deleteFooterAddress(id: string) {
+  try {
+    await sql`DELETE FROM footer_addresses WHERE id = ${id}::uuid`;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error deleting footer address:', error);
+    return { error: error.message || 'Failed to delete address' };
+  }
+}
+
+export async function getFooterSocials() {
+  try {
+    return await sql`SELECT id, name, url, icon FROM footer_socials`;
+  } catch (error) {
+    console.error('Error fetching footer socials:', error);
+    return [];
+  }
+}
+
+export async function addFooterSocial(name: string, url: string, icon: string) {
+  try {
+    const res = await sql`
+      INSERT INTO footer_socials (name, url, icon)
+      VALUES (${name}, ${url}, ${icon})
+      RETURNING id, name, url, icon
+    `;
+    return { success: true, item: res[0] };
+  } catch (error: any) {
+    console.error('Error adding footer social:', error);
+    return { error: error.message || 'Failed to add social' };
+  }
+}
+
+export async function deleteFooterSocial(id: string) {
+  try {
+    await sql`DELETE FROM footer_socials WHERE id = ${id}::uuid`;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error deleting footer social:', error);
+    return { error: error.message || 'Failed to delete social' };
+  }
+}
+
+export async function updateFooterAddress(id: string, name: string, address: string, orderIndex = 0) {
+  try {
+    await sql`
+      UPDATE footer_addresses 
+      SET name = ${name}, address = ${address}, order_index = ${orderIndex}
+      WHERE id = ${id}::uuid
+    `;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error updating footer address:', error);
+    return { error: error.message || 'Failed to update address' };
+  }
+}
+
+export async function updateFooterSocial(id: string, name: string, url: string, icon: string) {
+  try {
+    await sql`
+      UPDATE footer_socials 
+      SET name = ${name}, url = ${url}, icon = ${icon}
+      WHERE id = ${id}::uuid
+    `;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error updating footer social:', error);
+    return { error: error.message || 'Failed to update social' };
+  }
+}
+
