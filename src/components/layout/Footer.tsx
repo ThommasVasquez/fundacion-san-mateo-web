@@ -193,7 +193,7 @@ const Footer = () => {
 
           {/* Column 4 */}
           <div className="lg:text-right">
-            <h4 className="text-xl font-bold mb-6 lg:ml-auto border-b-2 border-fsm-red w-fit pb-1">Legado</h4>
+            <h4 className="text-xl font-bold mb-6 lg:ml-auto border-b-2 border-fsm-red w-fit pb-1">Legalidad</h4>
             <p className="text-sm mb-6 leading-relaxed">
               &copy; {settings['footer_copyright_prefix'] || "Fundación San Mateo - Soacha"}, {currentYear}<br />
               {settings['footer_vigilado_text'] || "Vigilado por Secretaría de Educación de Soacha"}
