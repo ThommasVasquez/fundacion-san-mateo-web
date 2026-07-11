@@ -10,6 +10,8 @@ import WhatsAppButton from "@/components/common/WhatsAppButton";
 
 import { getContentMap, getTestimonials, getPrograms } from "@/lib/content";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const content = await getContentMap('/');
   const testimonials = await getTestimonials();

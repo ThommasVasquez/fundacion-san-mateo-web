@@ -13,6 +13,8 @@ export const metadata = {
   description: "Planifique su semestre con nuestra programación oficial de clases, eventos, periodos de matrícula y fechas institucionales.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function AcademicCalendarPage() {
   const content = await getContentMap("/calendario-academico");
   const rawEvents = await getCalendarEvents();

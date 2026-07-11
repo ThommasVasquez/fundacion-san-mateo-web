@@ -12,6 +12,8 @@ export const metadata = {
   description: "Un recorrido visual por las prácticas, eventos y momentos que definen nuestra excelencia educativa.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function GalleryPage() {
   const content = await getContentMap("/galeria");
   const rawGallery = await getGallery();

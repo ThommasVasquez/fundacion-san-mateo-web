@@ -7,6 +7,8 @@ export const metadata = {
   description: "Descubre nuestros programas técnicos y cursos de educación continua.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function AcademicOfferPage() {
   const programs = await getPrograms();
   const content = await getContentMap('/oferta-academica');

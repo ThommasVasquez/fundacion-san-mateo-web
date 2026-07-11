@@ -7,6 +7,8 @@ export const metadata = {
   description: "Consulte nuestra base documental, resoluciones de aprobación y manuales institucionales que garantizan nuestra excelencia académica.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function NormativityPage() {
   const content = await getContentMap("/institucion/normatividad");
   const docs = await getNormativityDocuments();

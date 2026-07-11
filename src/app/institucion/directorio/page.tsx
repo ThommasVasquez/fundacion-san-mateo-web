@@ -7,6 +7,8 @@ export const metadata = {
   description: "Puntos de contacto y ubicación de nuestra institución.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function DirectoryPage() {
   const content = await getContentMap("/institucion/directorio");
   const directoryItems = await getDirectoryItems();

@@ -12,6 +12,8 @@ export const metadata = {
   description: "Manténgase al día con los logros, celebraciones y anuncios más importantes de nuestra comunidad académica.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function NewsPage() {
   const content = await getContentMap("/noticias-y-eventos");
   const rawNews = await getNewsEvents();
