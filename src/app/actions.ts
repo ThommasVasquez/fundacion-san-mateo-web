@@ -595,3 +595,50 @@ export async function updateFooterSocial(id: string, name: string, url: string, 
   }
 }
 
+export async function getFooterCertifications() {
+  try {
+    return await sql`SELECT id, name, image_url, order_index FROM footer_certifications ORDER BY order_index ASC`;
+  } catch (error) {
+    console.error('Error fetching footer certifications:', error);
+    return [];
+  }
+}
+
+export async function addFooterCertification(name: string, imageUrl: string, orderIndex = 0) {
+  try {
+    const res = await sql`
+      INSERT INTO footer_certifications (name, image_url, order_index)
+      VALUES (${name}, ${imageUrl}, ${orderIndex})
+      RETURNING id, name, image_url, order_index
+    `;
+    return { success: true, item: res[0] };
+  } catch (error: any) {
+    console.error('Error adding footer certification:', error);
+    return { error: error.message || 'Failed to add certification' };
+  }
+}
+
+export async function updateFooterCertification(id: string, name: string, imageUrl: string, orderIndex = 0) {
+  try {
+    await sql`
+      UPDATE footer_certifications 
+      SET name = ${name}, image_url = ${imageUrl}, order_index = ${orderIndex}
+      WHERE id = ${id}::uuid
+    `;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error updating footer certification:', error);
+    return { error: error.message || 'Failed to update certification' };
+  }
+}
+
+export async function deleteFooterCertification(id: string) {
+  try {
+    await sql`DELETE FROM footer_certifications WHERE id = ${id}::uuid`;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error deleting footer certification:', error);
+    return { error: error.message || 'Failed to delete certification' };
+  }
+}
+

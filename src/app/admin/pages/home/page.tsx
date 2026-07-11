@@ -3,7 +3,7 @@ import GlobalCMSForm from "@/components/admin/GlobalCMSForm";
 import Link from "next/link";
 import { ChevronRight, Home } from "lucide-react";
 import { getAllContent, getTestimonials, getDirectoryItems, getPrograms, getNewsEvents, getGallery, getCalendarEvents, getBlogPosts, getFAQs, getNormativityDocuments } from "@/lib/content";
-import { getFooterAddresses, getFooterSocials } from "@/app/actions";
+import { getFooterAddresses, getFooterSocials, getFooterCertifications } from "@/app/actions";
 
 export const metadata = {
   title: "Gestor Global de Contenido | FSM Admin",
@@ -23,6 +23,7 @@ export default async function AdminHomePage() {
   const normativityDocs = await getNormativityDocuments();
   const footerAddresses = await getFooterAddresses();
   const footerSocials = await getFooterSocials();
+  const footerCerts = await getFooterCertifications();
   
   // Serialize for client component
   const initialContentMap: Record<string, string> = {};
@@ -121,6 +122,13 @@ export default async function AdminHomePage() {
     icon: item.icon
   }));
 
+  const serializedCerts = footerCerts.map((item: any) => ({
+    id: item.id.toString(),
+    name: item.name,
+    image_url: item.image_url,
+    order_index: item.order_index
+  }));
+
   return (
     <div className="max-w-6xl mx-auto space-y-8">
       {/* Breadcrumbs */}
@@ -151,6 +159,7 @@ export default async function AdminHomePage() {
         initialNormativityDocs={serializedNormativityDocs}
         initialAddresses={serializedAddresses}
         initialSocials={serializedSocials}
+        initialCerts={serializedCerts}
       />
     </div>
   );

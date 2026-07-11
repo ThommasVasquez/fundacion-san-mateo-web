@@ -28,6 +28,7 @@ import FAQManager from "./FAQManager";
 import NormativityManager from "./NormativityManager";
 import FooterAddressManager from "./FooterAddressManager";
 import FooterSocialsManager from "./FooterSocialsManager";
+import FooterCertificationsManager from "./FooterCertificationsManager";
 import { Newspaper, Image as GalleryIcon, CalendarDays } from "lucide-react";
 
 interface GlobalCMSFormProps {
@@ -43,6 +44,7 @@ interface GlobalCMSFormProps {
   initialNormativityDocs?: any[];
   initialAddresses?: any[];
   initialSocials?: any[];
+  initialCerts?: any[];
 }
 
 // Estructura Jerárquica del CMS
@@ -1125,59 +1127,10 @@ export const cmsStructure: Record<string, any> = {
     },
     {
       group: "Certificaciones",
-      key: "footer_cert_img_1",
-      label: "Certificación 1 (Imagen)",
-      type: "image",
-      default: "/img/logo-ISO9001.jpg",
-    },
-    {
-      group: "Certificaciones",
-      key: "footer_cert_alt_1",
-      label: "Certificación 1 (Nombre)",
+      key: "footer_certifications_title",
+      label: "Título Informativo",
       type: "text",
-      default: "ISO 9001",
-    },
-    {
-      group: "Certificaciones",
-      key: "footer_cert_img_2",
-      label: "Certificación 2 (Imagen)",
-      type: "image",
-      default: "/img/logo-NTC5555.jpg",
-    },
-    {
-      group: "Certificaciones",
-      key: "footer_cert_alt_2",
-      label: "Certificación 2 (Nombre)",
-      type: "text",
-      default: "NTC 5555",
-    },
-    {
-      group: "Certificaciones",
-      key: "footer_cert_img_3",
-      label: "Certificación 3 (Imagen)",
-      type: "image",
-      default: "/img/logo-NTC5581.jpg",
-    },
-    {
-      group: "Certificaciones",
-      key: "footer_cert_alt_3",
-      label: "Certificación 3 (Nombre)",
-      type: "text",
-      default: "NTC 5581",
-    },
-    {
-      group: "Certificaciones",
-      key: "footer_cert_img_4",
-      label: "Certificación 4 (Imagen)",
-      type: "image",
-      default: "/img/logo-NTC5663.jpg",
-    },
-    {
-      group: "Certificaciones",
-      key: "footer_cert_alt_4",
-      label: "Certificación 4 (Nombre)",
-      type: "text",
-      default: "NTC 5663",
+      default: "Certificaciones Oficiales",
     },
   ],
 };
@@ -1195,6 +1148,7 @@ export default function GlobalCMSForm({
   initialNormativityDocs = [],
   initialAddresses = [],
   initialSocials = [],
+  initialCerts = [],
 }: GlobalCMSFormProps) {
   const [contentMap, setContentMap] =
     useState<Record<string, string>>(initialContent);
@@ -1647,6 +1601,12 @@ export default function GlobalCMSForm({
               {groupName === "Redes Sociales" && activeCategory === "Pie de Página" && (
                 <div className="mt-12 pt-12 border-t border-gray-100">
                   <FooterSocialsManager initialItems={initialSocials} />
+                </div>
+              )}
+
+              {groupName === "Certificaciones" && activeCategory === "Pie de Página" && (
+                <div className="mt-12 pt-12 border-t border-gray-100">
+                  <FooterCertificationsManager initialItems={initialCerts} />
                 </div>
               )}
             </div>

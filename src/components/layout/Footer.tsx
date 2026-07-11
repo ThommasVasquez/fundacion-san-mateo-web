@@ -16,7 +16,7 @@ import {
   Github,
   Globe
 } from "lucide-react";
-import { getFooterSettings, getFooterAddresses, getFooterSocials } from "@/app/actions";
+import { getFooterSettings, getFooterAddresses, getFooterSocials, getFooterCertifications } from "@/app/actions";
 
 const getSocialIcon = (iconName: string) => {
   switch (iconName?.toLowerCase()) {
@@ -35,18 +35,21 @@ const Footer = () => {
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [addresses, setAddresses] = useState<any[]>([]);
   const [socials, setSocials] = useState<any[]>([]);
+  const [certs, setCerts] = useState<any[]>([]);
 
   useEffect(() => {
     async function loadFooter() {
       try {
-        const [footerSettings, footerAddr, footerSoc] = await Promise.all([
+        const [footerSettings, footerAddr, footerSoc, footerCerts] = await Promise.all([
           getFooterSettings(),
           getFooterAddresses(),
-          getFooterSocials()
+          getFooterSocials(),
+          getFooterCertifications()
         ]);
         setSettings(footerSettings);
         setAddresses(footerAddr);
         setSocials(footerSoc);
+        setCerts(footerCerts);
       } catch (err) {
         console.error("Error loading footer settings:", err);
       }
@@ -179,11 +182,19 @@ const Footer = () => {
               {settings['footer_vigilado_text'] || "Vigilado por Secretaría de Educación de Soacha"}
             </p>
             <div className="grid grid-cols-4 gap-2 lg:justify-items-end">
-              {certifications.map((cert) => (
-                <div key={cert.alt} className="relative w-full h-12 bg-white rounded p-1">
-                  <Image src={cert.src} alt={cert.alt} fill className="object-contain" />
-                </div>
-              ))}
+              {certs.length > 0 ? (
+                certs.map((cert) => (
+                  <div key={cert.id} className="relative w-full h-12 bg-white rounded p-1">
+                    <Image src={cert.image_url} alt={cert.name} fill className="object-contain" />
+                  </div>
+                ))
+              ) : (
+                certifications.map((cert) => (
+                  <div key={cert.alt} className="relative w-full h-12 bg-white rounded p-1">
+                    <Image src={cert.src} alt={cert.alt} fill className="object-contain" />
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
