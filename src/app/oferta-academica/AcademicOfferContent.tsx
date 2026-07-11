@@ -110,7 +110,7 @@ export default function AcademicOfferContent({ initialPrograms, content }: Acade
               onClick={() => setActiveTab("continua")}
               className={cn(
                 "flex items-center gap-2 px-8 py-3.5 rounded-full text-[10px] font-black tracking-[0.2em] uppercase transition-all duration-500",
-                activeTab === "continua" ? "bg-red-600 text-white shadow-lg" : "text-gray-700 hover:text-fsm-blue"
+                activeTab === "continua" ? "bg-fsm-red text-white shadow-lg" : "text-gray-700 hover:text-fsm-red"
               )}
             >
               <BookOpen size={20} />
