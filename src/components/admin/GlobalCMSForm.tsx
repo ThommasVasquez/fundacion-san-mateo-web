@@ -615,46 +615,11 @@ export const cmsStructure: Record<string, any> = {
         default: "/img/banner12.jpg",
       },
       {
-        group: "Categorías de Documentos",
-        key: "norm_cat1_title",
-        label: "Título Cat 1",
+        group: "Documentos Normativos",
+        key: "normativity_categories_info",
+        label: "Guía de Gestión",
         type: "text",
-        default: "Aprobación oficial Secretaría de Educación de Soacha",
-      },
-      {
-        group: "Categorías de Documentos",
-        key: "norm_cat2_title",
-        label: "Título Cat 2",
-        type: "text",
-        default: "Aprobación Programa Auxiliar de Enfermería",
-      },
-      {
-        group: "Categorías de Documentos",
-        key: "norm_cat3_title",
-        label: "Título Cat 3",
-        type: "text",
-        default: "Aprobación Programa Primera Infancia",
-      },
-      {
-        group: "Categorías de Documentos",
-        key: "norm_cat4_title",
-        label: "Título Cat 4",
-        type: "text",
-        default: "Documentos Institucionales",
-      },
-      {
-        group: "Categorías de Documentos",
-        key: "norm_cat5_title",
-        label: "Título Cat 5",
-        type: "text",
-        default: "Aprobación Programa Servicios Farmacéuticos",
-      },
-      {
-        group: "Categorías de Documentos",
-        key: "norm_cat6_title",
-        label: "Título Cat 6",
-        type: "text",
-        default: "Aprobación Programa Asistencia Administrativa",
+        default: "Use el gestor dinámico de abajo para crear y ordenar secciones, y subir archivos PDF o enlaces.",
       },
       {
         group: "Banner Final",
@@ -1554,7 +1519,7 @@ export default function GlobalCMSForm({
                 </div>
               )}
 
-              {groupName === "Categorías de Documentos" && currentSub === "Normatividad" && (
+              {groupName === "Documentos Normativos" && currentSub === "Normatividad" && (
                 <div className="mt-12 pt-12 border-t border-gray-100">
                   <div className="mb-8">
                     <h4 className="text-lg font-black text-fsm-blue uppercase flex items-center gap-2">
