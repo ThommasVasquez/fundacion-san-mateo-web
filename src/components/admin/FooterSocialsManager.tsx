@@ -18,6 +18,7 @@ interface FooterSocialsManagerProps {
 const AVAILABLE_ICONS = [
   { name: "Facebook", value: "facebook" },
   { name: "Instagram", value: "instagram" },
+  { name: "TikTok", value: "tiktok" },
   { name: "Twitter / X", value: "twitter" },
   { name: "YouTube", value: "youtube" },
   { name: "LinkedIn", value: "linkedin" },

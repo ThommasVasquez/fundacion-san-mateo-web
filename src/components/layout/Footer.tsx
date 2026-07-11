@@ -16,6 +16,22 @@ import {
   Github,
   Globe
 } from "lucide-react";
+
+const TiktokIcon = ({ size = 24 }: { size?: number }) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+  >
+    <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
+  </svg>
+);
 import { getFooterSettings, getFooterAddresses, getFooterSocials, getFooterCertifications } from "@/app/actions";
 
 const getSocialIcon = (iconName: string) => {
@@ -26,6 +42,7 @@ const getSocialIcon = (iconName: string) => {
     case "youtube": return <Youtube size={24} />;
     case "linkedin": return <Linkedin size={24} />;
     case "github": return <Github size={24} />;
+    case "tiktok": return <TiktokIcon size={24} />;
     default: return <Globe size={24} />;
   }
 };
