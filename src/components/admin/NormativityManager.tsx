@@ -60,6 +60,19 @@ export default function NormativityManager({ initialDocs, initialCategoriesJson 
   const [success, setSuccess] = useState<Record<string, boolean>>({});
   const [isAdding, setIsAdding] = useState(false);
   const [savingCategories, setSavingCategories] = useState(false);
+
+  const saveCategoriesToDb = async (updatedCategories: CategoryItem[]) => {
+    try {
+      const { updateContent } = await import('@/app/actions');
+      const res = await updateContent('normativity_categories', JSON.stringify(updatedCategories), '/institucion/normatividad');
+      if (res.error) {
+        toast.error(res.error);
+      }
+    } catch (e) {
+      console.error("Error saving categories:", e);
+      toast.error("Error al guardar secciones en la base de datos");
+    }
+  };
   
   const [newDoc, setNewDoc] = useState<{
     title: string;
@@ -295,7 +308,10 @@ export default function NormativityManager({ initialDocs, initialCategoriesJson 
             <button
               onClick={() => {
                 const newKey = `norm_cat_${Date.now()}`;
-                setCategories(prev => [...prev, { key: newKey, label: 'Nueva Sección', icon: 'file' }]);
+                const list = [...categories, { key: newKey, label: 'Nueva Sección', icon: 'file' }];
+                setCategories(list);
+                saveCategoriesToDb(list);
+                toast.success("Nueva sección agregada");
               }}
               className="bg-fsm-red text-white px-5 py-3 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2 font-black text-[10px] tracking-widest uppercase"
             >
@@ -316,6 +332,7 @@ export default function NormativityManager({ initialDocs, initialCategoriesJson 
                       list[idx] = list[idx-1];
                       list[idx-1] = temp;
                       setCategories(list);
+                      saveCategoriesToDb(list);
                     }}
                     disabled={idx === 0}
                     className="p-2 bg-white rounded-lg border border-gray-100 text-gray-400 hover:text-fsm-blue disabled:opacity-30"
@@ -330,6 +347,7 @@ export default function NormativityManager({ initialDocs, initialCategoriesJson 
                       list[idx] = list[idx+1];
                       list[idx+1] = temp;
                       setCategories(list);
+                      saveCategoriesToDb(list);
                     }}
                     disabled={idx === categories.length - 1}
                     className="p-2 bg-white rounded-lg border border-gray-100 text-gray-400 hover:text-fsm-blue disabled:opacity-30"
@@ -347,6 +365,17 @@ export default function NormativityManager({ initialDocs, initialCategoriesJson 
                     onChange={e => {
                       setCategories(prev => prev.map((c, i) => i === idx ? { ...c, label: e.target.value } : c));
                     }}
+                    onBlur={e => {
+                      const val = e.target.value.trim();
+                      if (!val) {
+                        toast.error("El nombre de la sección no puede estar vacío");
+                        return;
+                      }
+                      const list = categories.map((c, i) => i === idx ? { ...c, label: val } : c);
+                      setCategories(list);
+                      saveCategoriesToDb(list);
+                    }}
+                    placeholder="Ej: Aprobación oficial Soacha"
                     className="w-full px-4 py-2.5 bg-white rounded-xl border border-gray-200 font-bold text-sm text-gray-800"
                   />
                 </div>
@@ -357,7 +386,9 @@ export default function NormativityManager({ initialDocs, initialCategoriesJson 
                   <select
                     value={cat.icon || 'file'}
                     onChange={e => {
-                      setCategories(prev => prev.map((c, i) => i === idx ? { ...c, icon: e.target.value } : c));
+                      const list = categories.map((c, i) => i === idx ? { ...c, icon: e.target.value } : c);
+                      setCategories(list);
+                      saveCategoriesToDb(list);
                     }}
                     className="w-full px-4 py-2.5 bg-white rounded-xl border border-gray-200 font-bold text-sm text-gray-850"
                   >
@@ -375,15 +406,16 @@ export default function NormativityManager({ initialDocs, initialCategoriesJson 
                   onClick={() => {
                     const hasDocs = docs.some(d => d.category_key === cat.key);
                     if (hasDocs) {
-                      if (!confirm(`¡Atención! Hay documentos asociados a la sección "${cat.label}". Si elimina la sección, los documentos no se mostrarán al público hasta que los mueva a otra sección activa. ¿Desea eliminar la sección de todas formas?`)) {
-                        return;
-                      }
-                    } else {
-                      if (!confirm(`¿Está seguro que desea eliminar la sección "${cat.label}"?`)) {
-                        return;
-                      }
+                      alert(`No se puede eliminar la sección "${cat.label}" porque contiene documentos. Por favor, mueva o elimine los documentos de esta sección en la pestaña respectiva antes de intentar eliminarla.`);
+                      return;
                     }
-                    setCategories(prev => prev.filter((_, i) => i !== idx));
+                    if (!confirm(`¿Está seguro que desea eliminar la sección "${cat.label}"?`)) {
+                      return;
+                    }
+                    const list = categories.filter((_, i) => i !== idx);
+                    setCategories(list);
+                    saveCategoriesToDb(list);
+                    toast.success("Sección eliminada");
                   }}
                   className="p-3 bg-white hover:bg-red-50 text-red-500 rounded-xl border border-red-100 hover:border-red-250 mt-5 md:mt-0"
                 >
@@ -393,34 +425,11 @@ export default function NormativityManager({ initialDocs, initialCategoriesJson 
             ))}
           </div>
 
-          <div className="flex justify-end pt-6 border-t border-gray-100">
-            <button
-              onClick={async () => {
-                if (categories.some(c => !c.label.trim())) {
-                  toast.error("Todas las secciones deben tener un nombre");
-                  return;
-                }
-                setSavingCategories(true);
-                const { updateContent } = await import('@/app/actions');
-                const res = await updateContent('normativity_categories', JSON.stringify(categories), '/institucion/normatividad');
-                setSavingCategories(false);
-                if (res.error) {
-                  toast.error(res.error);
-                } else {
-                  toast.success("Secciones guardadas correctamente");
-                  window.location.reload();
-                }
-              }}
-              disabled={savingCategories}
-              className="bg-fsm-blue hover:bg-fsm-red text-white px-8 py-4 rounded-xl transition-all shadow-lg flex items-center gap-2 font-black text-xs tracking-widest uppercase disabled:opacity-50"
-            >
-              {savingCategories ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Save size={16} />
-              )}
-              Guardar Configuración de Secciones
-            </button>
+          <div className="flex justify-between items-center pt-6 border-t border-gray-100">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+              Cambios guardados automáticamente en la base de datos
+            </p>
           </div>
         </div>
       ) : (
