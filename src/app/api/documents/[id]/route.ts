@@ -5,10 +5,25 @@ export const runtime = 'edge';
 
 export async function GET(
   request: Request,
-  context: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await context.params;
+    let id = '';
+    
+    // Safely extract from params (supporting both Promise and plain object forms)
+    if (context && context.params) {
+      const resolvedParams = await context.params;
+      id = resolvedParams.id;
+    }
+    
+    // Fallback: Parse ID from the URL pathname if not found in context (e.g. under certain Edge wrappers)
+    if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      const url = new URL(request.url);
+      const lastSegment = url.pathname.split('/').pop();
+      if (lastSegment && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(lastSegment)) {
+        id = lastSegment;
+      }
+    }
     
     if (!id) {
       return new Response('ID de documento requerido', { status: 400 });

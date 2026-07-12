@@ -16,7 +16,7 @@ export default async function DirectoryPage() {
   return (
     <DirectoryContent 
       initialContent={content} 
-      directoryItems={directoryItems.map(item => ({
+      directoryItems={directoryItems.map((item: any) => ({
         id: item.id.toString(),
         title: item.title,
         phone: item.phone
