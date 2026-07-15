@@ -7,6 +7,7 @@ import CertificationSection from "@/components/home/CertificationSection";
 import WhyUs from "@/components/home/WhyUs";
 import Testimonials from "@/components/home/Testimonials";
 import WhatsAppButton from "@/components/common/WhatsAppButton";
+import FloatingLandingModal from "@/components/common/FloatingLandingModal";
 
 import { getContentMap, getTestimonials, getPrograms } from "@/lib/content";
 
@@ -53,6 +54,11 @@ export default async function Home() {
       <Footer />
       
       <WhatsAppButton />
+
+      <FloatingLandingModal 
+        showModal={content['home_landing_modal_show'] !== 'false'}
+        link={content['home_landing_modal_link'] || 'https://fundacionsanmateosoacha.escalapages.com/empoderamiento-formulario-con-1-campo'}
+      />
     </main>
   );
 }

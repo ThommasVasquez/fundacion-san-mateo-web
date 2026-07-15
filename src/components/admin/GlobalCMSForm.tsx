@@ -301,6 +301,20 @@ export const cmsStructure: Record<string, any> = {
       type: "text",
       default: "VOCES DE NUESTROS EGRESADOS",
     },
+    {
+      group: "Modal Flotante Landing (Escala)",
+      key: "home_landing_modal_show",
+      label: "Mostrar Modal Flotante",
+      type: "toggle",
+      default: "true",
+    },
+    {
+      group: "Modal Flotante Landing (Escala)",
+      key: "home_landing_modal_link",
+      label: "Enlace de la Landing Page",
+      type: "text",
+      default: "https://fundacionsanmateosoacha.escalapages.com/empoderamiento-formulario-con-1-campo",
+    },
   ],
   Institución: {
     "Acerca de la FSM": [
