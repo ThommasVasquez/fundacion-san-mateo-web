@@ -114,6 +114,11 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
     const newIndex = direction === 'up' ? index - 1 : index + 1;
     if (newIndex < 0 || newIndex >= programs.length) return;
 
+    // Prevent crossing the featured/non-featured group boundary
+    if (programs[index].is_featured !== programs[newIndex].is_featured) {
+      return;
+    }
+
     const newPrograms = [...programs];
     const temp = newPrograms[index];
     newPrograms[index] = newPrograms[newIndex];
@@ -360,7 +365,7 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                 <div className="flex xl:flex-col gap-2 mt-2 border-t border-gray-100 pt-2 w-full justify-center items-center">
                   <button 
                     onClick={() => moveProgram(index, 'up')}
-                    disabled={index === 0}
+                    disabled={index === 0 || p.is_featured !== programs[index - 1].is_featured}
                     className="p-2 rounded-xl bg-gray-50 text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
                     title="Subir posición"
                   >
@@ -368,7 +373,7 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                   </button>
                   <button 
                     onClick={() => moveProgram(index, 'down')}
-                    disabled={index === programs.length - 1}
+                    disabled={index === programs.length - 1 || p.is_featured !== programs[index + 1].is_featured}
                     className="p-2 rounded-xl bg-gray-50 text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
                     title="Bajar posición"
                   >

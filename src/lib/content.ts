@@ -47,7 +47,7 @@ export async function getDirectoryItems() {
 }
 export async function getPrograms() {
   try {
-    return await sql`SELECT * FROM academic_programs ORDER BY order_index ASC`;
+    return await sql`SELECT * FROM academic_programs ORDER BY is_featured DESC, order_index ASC`;
   } catch (e) {
     console.error("Error fetching programs:", e);
     return [];
