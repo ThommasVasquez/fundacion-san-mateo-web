@@ -229,6 +229,18 @@ export async function deleteProgram(id: string) {
   }
 }
 
+export async function updateProgramsOrder(orderedIds: string[]) {
+  try {
+    for (let i = 0; i < orderedIds.length; i++) {
+      await sql`UPDATE academic_programs SET order_index = ${i} WHERE id = ${orderedIds[i]}`;
+    }
+    return { success: true };
+  } catch (error) {
+    console.error('Update programs order error:', error);
+    return { error: 'Failed to update order' };
+  }
+}
+
 export async function updateNewsEvent(id: string, data: { title: string; description: string; image_url: string; date_text: string; category: string; link: string }) {
   try {
     await sql`

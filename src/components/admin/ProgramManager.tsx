@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
-import { updateProgram, addProgram, deleteProgram } from '@/app/actions';
-import { Plus, Trash2, Save, GraduationCap, Link as LinkIcon, Image as ImageIcon, FileText, Loader2, CheckCircle, Star } from 'lucide-react';
+import { updateProgram, addProgram, deleteProgram, updateProgramsOrder } from '@/app/actions';
+import { Plus, Trash2, Save, GraduationCap, Link as LinkIcon, Image as ImageIcon, FileText, Loader2, CheckCircle, Star, ArrowUp, ArrowDown } from 'lucide-react';
 import { compressImageToBase64 } from '@/lib/imageUpload';
 
 interface Program {
@@ -107,6 +107,25 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
       setPrograms(prev => prev.filter(p => p.id !== id));
     } else {
       alert("Error al eliminar");
+    }
+  };
+
+  const moveProgram = async (index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= programs.length) return;
+
+    const newPrograms = [...programs];
+    const temp = newPrograms[index];
+    newPrograms[index] = newPrograms[newIndex];
+    newPrograms[newIndex] = temp;
+
+    setPrograms(newPrograms);
+
+    const ids = newPrograms.map(p => p.id);
+    const res = await updateProgramsOrder(ids);
+    if (!res.success) {
+      alert("Error al guardar el orden");
+      window.location.reload();
     }
   };
 
@@ -227,7 +246,7 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
       )}
 
       <div className="grid grid-cols-1 gap-6">
-        {programs.map((p) => (
+        {programs.map((p, index) => (
           <div key={p.id} className="bg-white p-8 rounded-[3rem] shadow-premium border border-gray-100 hover:border-fsm-blue/20 transition-all group">
             <div className="flex flex-col xl:flex-row gap-8">
               <div className="flex-1 space-y-6">
@@ -337,6 +356,25 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                 >
                   <Trash2 size={20} />
                 </button>
+                
+                <div className="flex xl:flex-col gap-2 mt-2 border-t border-gray-100 pt-2 w-full justify-center items-center">
+                  <button 
+                    onClick={() => moveProgram(index, 'up')}
+                    disabled={index === 0}
+                    className="p-2 rounded-xl bg-gray-50 text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
+                    title="Subir posición"
+                  >
+                    <ArrowUp size={16} />
+                  </button>
+                  <button 
+                    onClick={() => moveProgram(index, 'down')}
+                    disabled={index === programs.length - 1}
+                    className="p-2 rounded-xl bg-gray-50 text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
+                    title="Bajar posición"
+                  >
+                    <ArrowDown size={16} />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -384,6 +422,34 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
               </div>
 
               <div className="flex-1 p-8 overflow-y-auto space-y-6">
+                <div className="p-6 bg-fsm-blue/5 rounded-3xl border border-fsm-blue/10 space-y-4">
+                  <p className="text-[10px] font-black text-fsm-blue uppercase tracking-widest">Configuración de Tarjeta (Inicio / Oferta)</p>
+                  <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="checkbox" 
+                        id="show_label"
+                        className="w-5 h-5 rounded border-gray-300 text-fsm-blue focus:ring-fsm-blue"
+                        checked={details.show_label !== false}
+                        onChange={e => handleDetailsChange('show_label', e.target.checked)}
+                      />
+                      <label htmlFor="show_label" className="text-xs font-bold text-gray-700 uppercase tracking-tight cursor-pointer">Mostrar etiqueta superior</label>
+                    </div>
+                    {details.show_label !== false && (
+                      <div className="flex-1 w-full space-y-1">
+                        <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Texto de la Etiqueta</label>
+                        <input 
+                          type="text"
+                          className="w-full px-4 py-2 bg-white rounded-xl border border-gray-200 font-bold text-xs focus:ring-2 focus:ring-fsm-blue outline-none text-gray-800"
+                          value={details.label_text !== undefined ? details.label_text : 'Técnico Laboral por Competencias'}
+                          placeholder="Ej: Técnico Laboral por Competencias"
+                          onChange={e => handleDetailsChange('label_text', e.target.value)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {isTecnico ? (
                   /* Technical Program Editor Fields */
                   <>

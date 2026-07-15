@@ -25,7 +25,8 @@ export default async function Home() {
       title: p.title,
       subtitle: p.subtitle || '',
       image_url: p.image_url,
-      href: p.href
+      href: p.href,
+      details: p.details || {}
     }));
 
   return (

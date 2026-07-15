@@ -15,6 +15,10 @@ interface Program {
   subtitle?: string;
   image_url: string;
   href: string;
+  details?: {
+    show_label?: boolean;
+    label_text?: string;
+  };
 }
 
 interface BentoProgramsProps {
@@ -92,7 +96,11 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
                 <div className="mb-6 w-16 h-16 bg-white/30 rounded-3xl flex items-center justify-center border border-white/30 transform group-hover:rotate-12 transition-transform duration-500">
                   {getProgramStyles(programs[0].title, 0).icon}
                 </div>
-                <p className="text-xs font-black tracking-widest mb-4 uppercase opacity-70">Técnico Laboral por Competencias</p>
+                {programs[0].details?.show_label !== false && (
+                  <p className="text-xs font-black tracking-widest mb-4 uppercase opacity-70">
+                    {programs[0].details?.label_text || "Técnico Laboral por Competencias"}
+                  </p>
+                )}
                 <h4 className="text-3xl md:text-4xl font-black mb-6 leading-tight uppercase">
                   {programs[0].title}
                 </h4>
@@ -121,7 +129,11 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
                   <div className="mb-6 w-16 h-16 bg-white/30 rounded-3xl flex items-center justify-center border border-white/30 transform group-hover:-rotate-12 transition-transform duration-500">
                     {getProgramStyles(programs[1].title, 1).icon}
                   </div>
-                  <p className="text-xs font-black tracking-widest mb-4 uppercase opacity-70">Técnico Laboral por Competencias</p>
+                  {programs[1].details?.show_label !== false && (
+                    <p className="text-xs font-black tracking-widest mb-4 uppercase opacity-70">
+                      {programs[1].details?.label_text || "Técnico Laboral por Competencias"}
+                    </p>
+                  )}
                   <h4 className="text-3xl md:text-4xl font-black mb-6 leading-tight uppercase">
                     {programs[1].title}
                   </h4>
@@ -148,6 +160,11 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
                   <div className="mb-4 w-12 h-12 bg-white/30 rounded-2xl flex items-center justify-center border border-white/30 transform group-hover:rotate-12 transition-transform duration-500">
                     {getProgramStyles(programs[2].title, 2).icon}
                   </div>
+                  {programs[2].details?.show_label === true && (
+                    <p className="text-[9px] font-black tracking-widest mb-2 uppercase opacity-70">
+                      {programs[2].details?.label_text || "Técnico Laboral por Competencias"}
+                    </p>
+                  )}
                   <h4 className="text-xl md:text-2xl font-black mb-2 uppercase leading-none">
                     {programs[2].title}
                   </h4>
@@ -174,6 +191,11 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
                   <div className="mb-4 w-12 h-12 bg-white/30 rounded-2xl flex items-center justify-center border border-white/30 transform group-hover:-rotate-12 transition-transform duration-500">
                     {getProgramStyles(programs[3].title, 3).icon}
                   </div>
+                  {programs[3].details?.show_label === true && (
+                    <p className="text-[9px] font-black tracking-widest mb-2 uppercase opacity-70">
+                      {programs[3].details?.label_text || "Técnico Laboral por Competencias"}
+                    </p>
+                  )}
                   <h4 className="text-xl md:text-2xl font-black mb-2 uppercase leading-none">
                     {programs[3].title}
                   </h4>
