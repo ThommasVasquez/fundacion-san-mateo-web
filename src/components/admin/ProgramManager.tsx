@@ -762,6 +762,16 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                       />
                     </div>
 
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">¿Por qué estudiar este curso?</label>
+                      <textarea 
+                        className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 font-medium text-sm text-gray-700 min-h-[80px] focus:ring-2 focus:ring-fsm-blue outline-none"
+                        value={details.why_study || ''}
+                        placeholder="Ej: Este curso te brindará las herramientas esenciales..."
+                        onChange={e => handleDetailsChange('why_study', e.target.value)}
+                      />
+                    </div>
+
                     <div className="space-y-2 border-t border-gray-100 pt-4">
                       <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest block mb-2 text-gray-800">Proceso de Vinculación</label>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

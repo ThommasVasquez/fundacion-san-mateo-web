@@ -33,6 +33,7 @@ interface CourseProps {
   certificate?: string;
   registration_link?: string;
   planEstudios?: string[];
+  whyStudy?: string;
 }
 
 export default function CourseContent({ 
@@ -56,7 +57,8 @@ export default function CourseContent({
   duration,
   certificate,
   registration_link,
-  planEstudios
+  planEstudios,
+  whyStudy
 }: CourseProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [inscripcionesLink, setInscripcionesLink] = useState("https://fundacionsanmateosoacha.escalapages.com/centro-de-ventas");
@@ -187,6 +189,16 @@ export default function CourseContent({
                       ))}
                     </ul>
                   </div>
+
+                  {whyStudy && (
+                    <div>
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className="p-3 bg-fsm-red/10 text-fsm-red rounded-xl"><Award size={24} /></div>
+                        <h3 className="font-black text-fsm-blue uppercase tracking-[0.2em] text-[10px]">¿Por qué estudiar este curso?</h3>
+                      </div>
+                      <p className="text-gray-900 font-bold leading-relaxed text-justify">{whyStudy}</p>
+                    </div>
+                  )}
                </div>
             </div>
 

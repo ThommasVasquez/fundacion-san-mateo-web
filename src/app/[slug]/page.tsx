@@ -48,6 +48,7 @@ export default async function DynamicProgramPage({ params }: PageProps) {
     const objective = details.objective || "Alcanzar fortalezas y habilidades teórico-prácticas para responder de manera adecuada.";
     const methodology = details.methodology || "Semi-presencial";
     const resources = details.resources || [];
+    const whyStudy = details.why_study || "Este programa te brindará las herramientas y conocimientos prácticos necesarios para destacar en tu desempeño profesional y responder con excelencia ante los retos del sector salud.";
 
     return (
       <CourseContent 
@@ -59,6 +60,7 @@ export default async function DynamicProgramPage({ params }: PageProps) {
         methodology={methodology}
         resources={resources}
         subtitle={details.subtitle}
+        whyStudy={whyStudy}
         step1_title={details.step1_title}
         step1_desc={details.step1_desc}
         step2_title={details.step2_title}
