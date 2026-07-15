@@ -150,7 +150,7 @@ export default function CourseContent({
                       <div className="p-3 bg-fsm-red/10 text-fsm-red rounded-xl"><Users size={24} /></div>
                       <h3 className="font-black text-fsm-blue uppercase tracking-[0.2em] text-[10px]">Dirigido a</h3>
                     </div>
-                    <p className="text-gray-900 font-bold leading-relaxed">{directedTo}</p>
+                    <p className="text-gray-900 font-bold leading-relaxed text-justify">{directedTo}</p>
                   </div>
 
                   <div>
@@ -158,7 +158,7 @@ export default function CourseContent({
                       <div className="p-3 bg-fsm-red/10 text-fsm-red rounded-xl"><Target size={24} /></div>
                       <h3 className="font-black text-fsm-blue uppercase tracking-[0.2em] text-[10px]">Objetivo General</h3>
                     </div>
-                    <p className="text-gray-900 leading-relaxed font-medium italic border-l-4 border-fsm-red/20 pl-6">{objective}</p>
+                    <p className="text-gray-900 leading-relaxed font-medium italic border-l-4 border-fsm-red/20 pl-6 text-justify">{objective}</p>
                   </div>
                </div>
 
