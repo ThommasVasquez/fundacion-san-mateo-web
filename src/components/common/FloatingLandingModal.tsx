@@ -13,17 +13,12 @@ export default function FloatingLandingModal({ showModal, link }: FloatingLandin
   const [isMinimized, setIsMinimized] = useState(false);
 
   useEffect(() => {
-    // Check if user has already explicitly closed it in this session
-    const hasClosed = sessionStorage.getItem("fsm_landing_modal_closed");
     if (showModal && link) {
+      const hasClosed = sessionStorage.getItem("fsm_landing_modal_closed");
       if (hasClosed === "true") {
         setIsMinimized(true);
       } else {
-        // Auto open after a small delay for premium entrance feel
-        const timer = setTimeout(() => {
-          setIsOpen(true);
-        }, 1500);
-        return () => clearTimeout(timer);
+        setIsOpen(true);
       }
     }
   }, [showModal, link]);
