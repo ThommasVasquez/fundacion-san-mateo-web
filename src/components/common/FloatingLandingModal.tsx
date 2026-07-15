@@ -14,19 +14,14 @@ export default function FloatingLandingModal({ showModal, link }: FloatingLandin
 
   useEffect(() => {
     if (showModal && link) {
-      const hasClosed = sessionStorage.getItem("fsm_landing_modal_closed");
-      if (hasClosed === "true") {
-        setIsMinimized(true);
-      } else {
-        setIsOpen(true);
-      }
+      setIsOpen(true);
+      setIsMinimized(false);
     }
   }, [showModal, link]);
 
   const handleClose = () => {
     setIsOpen(false);
     setIsMinimized(true);
-    sessionStorage.setItem("fsm_landing_modal_closed", "true");
   };
 
   if (!showModal || !link) return null;
