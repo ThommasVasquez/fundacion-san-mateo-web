@@ -6,9 +6,10 @@ import { X, FileText } from "lucide-react";
 interface FloatingLandingModalProps {
   showModal: boolean;
   link: string;
+  buttonText?: string;
 }
 
-export default function FloatingLandingModal({ showModal, link }: FloatingLandingModalProps) {
+export default function FloatingLandingModal({ showModal, link, buttonText = "¡Inscríbete Ahora!" }: FloatingLandingModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
 
@@ -35,7 +36,7 @@ export default function FloatingLandingModal({ showModal, link }: FloatingLandin
           className="fixed bottom-6 left-6 z-[120] bg-fsm-red text-white px-5 py-4 rounded-2xl shadow-premium border border-fsm-red/20 hover:bg-fsm-blue hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-2 font-black text-[10px] tracking-widest uppercase"
         >
           <FileText size={16} className="animate-pulse" />
-          ¡Inscríbete Ahora!
+          {buttonText}
         </button>
       )}
 

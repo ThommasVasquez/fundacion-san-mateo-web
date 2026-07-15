@@ -58,6 +58,7 @@ export default async function Home() {
       <FloatingLandingModal 
         showModal={content['home_landing_modal_show'] !== 'false'}
         link={content['home_landing_modal_link'] || 'https://fundacionsanmateosoacha.escalapages.com/empoderamiento-formulario-con-1-campo'}
+        buttonText={content['home_landing_modal_btn_text'] || '¡Inscríbete Ahora!'}
       />
     </main>
   );
