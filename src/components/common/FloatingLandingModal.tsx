@@ -49,32 +49,34 @@ export default function FloatingLandingModal({ showModal, link }: FloatingLandin
         </button>
       )}
 
-      {/* Floating Modal Box */}
+      {/* Centered Lightbox Modal with Backdrop */}
       {isOpen && (
-        <div className="fixed bottom-6 left-6 z-[120] w-[360px] max-w-[calc(100vw-3rem)] bg-white rounded-[2.5rem] border border-gray-100 shadow-premium overflow-hidden transition-all duration-500 animate-in slide-in-from-bottom-8 ease-out flex flex-col">
-          {/* Header */}
-          <div className="flex justify-between items-center bg-fsm-blue text-white px-8 py-4">
-            <span className="text-[9px] font-black tracking-widest uppercase flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-400 animate-ping"></span>
-              INSCRIPCIÓN DIGITAL
-            </span>
-            <button
-              onClick={handleClose}
-              className="text-white/70 hover:text-fsm-red transition-colors p-1"
-              title="Minimizar"
-            >
-              <X size={18} />
-            </button>
-          </div>
+        <div className="fixed inset-0 z-[130] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl overflow-hidden w-full max-w-5xl h-[80vh] flex flex-col relative animate-in zoom-in-95 duration-300 ease-out">
+            {/* Header */}
+            <div className="flex justify-between items-center bg-fsm-blue text-white px-8 py-4">
+              <span className="text-[9px] font-black tracking-widest uppercase flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-green-400 animate-ping"></span>
+                INSCRIPCIÓN DIGITAL
+              </span>
+              <button
+                onClick={handleClose}
+                className="text-white/70 hover:text-fsm-red transition-colors p-1"
+                title="Cerrar y Minimizar"
+              >
+                <X size={20} />
+              </button>
+            </div>
 
-          {/* IFrame Lead Form */}
-          <div className="relative h-[480px] w-full bg-gray-50">
-            <iframe
-              src={link}
-              className="w-full h-full border-0 rounded-b-[2.5rem]"
-              title="Formulario de Inscripción Escala"
-              allow="clipboard-write"
-            />
+            {/* IFrame Lead Form */}
+            <div className="flex-1 w-full bg-gray-50">
+              <iframe
+                src={link}
+                className="w-full h-full border-0"
+                title="Formulario de Inscripción Escala"
+                allow="clipboard-write"
+              />
+            </div>
           </div>
         </div>
       )}
