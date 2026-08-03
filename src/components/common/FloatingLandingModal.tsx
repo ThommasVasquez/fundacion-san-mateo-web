@@ -6,10 +6,16 @@ import { X, FileText, ExternalLink } from "lucide-react";
 interface FloatingLandingModalProps {
   showModal: boolean;
   link: string;
+  image?: string;
   buttonText?: string;
 }
 
-export default function FloatingLandingModal({ showModal, link, buttonText = "¡Inscríbete Ahora!" }: FloatingLandingModalProps) {
+export default function FloatingLandingModal({
+  showModal,
+  link,
+  image,
+  buttonText = "¡Inscríbete Ahora!",
+}: FloatingLandingModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
 
@@ -28,8 +34,12 @@ export default function FloatingLandingModal({ showModal, link, buttonText = "¡
   if (!showModal || !link) return null;
 
   const isImageUrl = (url: string) => {
-    return /\.(jpg|jpeg|png|webp|avif|gif|svg)(\?.*)?$/i.test(url);
+    if (!url) return false;
+    return /\.(jpg|jpeg|png|webp|avif|gif|svg)(\?.*)?$/i.test(url) || url.startsWith("data:image/");
   };
+
+  // Determine if we have an image to display (either explicitly passed as image prop or if link is an image URL)
+  const modalImageSrc = image || (isImageUrl(link) ? link : null);
 
   return (
     <>
@@ -85,16 +95,26 @@ export default function FloatingLandingModal({ showModal, link, buttonText = "¡
             </div>
           </div>
 
-          {/* Modal Content (Iframe or Image preview) */}
+          {/* Modal Content (Image preview wrapped in link or Iframe) */}
           <div className="relative h-[420px] w-full bg-gray-50 overflow-hidden">
-            {isImageUrl(link) ? (
+            {modalImageSrc ? (
               <a
                 href={link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block w-full h-full cursor-pointer hover:opacity-95 transition-opacity"
+                className="block w-full h-full cursor-pointer group/img relative overflow-hidden"
               >
-                <img src={link} alt="Inscripción" className="w-full h-full object-cover" />
+                <img
+                  src={modalImageSrc}
+                  alt="Inscripción"
+                  className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-black/10 group-hover/img:bg-transparent transition-colors flex items-center justify-center">
+                  <span className="bg-black/60 text-white text-[10px] font-bold px-3.5 py-1.5 rounded-full backdrop-blur-sm opacity-0 group-hover/img:opacity-100 transition-opacity duration-300 flex items-center gap-1.5 shadow-md">
+                    <ExternalLink size={12} />
+                    Abrir enlace
+                  </span>
+                </div>
               </a>
             ) : (
               <iframe

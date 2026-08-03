@@ -226,6 +226,13 @@ export const cmsStructure: Record<string, any> = {
     },
     {
       group: "Modal Flotante Landing (Escala)",
+      key: "home_landing_modal_image",
+      label: "Imagen del Modal Flotante (Opcional)",
+      type: "image",
+      default: "",
+    },
+    {
+      group: "Modal Flotante Landing (Escala)",
       key: "home_landing_modal_link",
       label: "Enlace de la Landing Page",
       type: "text",
