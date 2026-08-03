@@ -654,3 +654,99 @@ export async function deleteFooterCertification(id: string) {
   }
 }
 
+export async function setEnrollmentStudent(studentId: string | null) {
+  try {
+    await sql`
+      INSERT INTO site_content (content_key, content_type, value, page_path)
+      VALUES ('enrollment_active_student_id', 'text', ${studentId || ''}, '/admin/attendance')
+      ON CONFLICT (content_key) DO UPDATE SET value = EXCLUDED.value
+    `;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error setting enrollment student:', error);
+    return { error: error.message || 'Failed to set enrollment mode' };
+  }
+}
+
+export async function linkStudentTag(studentId: string, tagUid: string) {
+  try {
+    // Check if tag is already linked
+    const existing = await sql`
+      SELECT id, nombre FROM students 
+      WHERE rfid_tag_uid = ${tagUid} AND id != ${studentId}::uuid 
+      LIMIT 1
+    `;
+    if (existing.length > 0) {
+      return { error: `Esta tarjeta ya está vinculada a ${existing[0].nombre}` };
+    }
+
+    await sql`
+      UPDATE students 
+      SET rfid_tag_uid = ${tagUid} 
+      WHERE id = ${studentId}::uuid
+    `;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error linking tag to student:', error);
+    return { error: error.message || 'Failed to link card' };
+  }
+}
+
+export async function unlinkStudentTag(studentId: string) {
+  try {
+    await sql`
+      UPDATE students 
+      SET rfid_tag_uid = NULL 
+      WHERE id = ${studentId}::uuid
+    `;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error unlinking student tag:', error);
+    return { error: error.message || 'Failed to unlink card' };
+  }
+}
+
+export async function teacherLogin(formData: FormData) {
+  const email = formData.get('email') as string;
+  const password = formData.get('password') as string;
+
+  if (!email || !password) {
+    return { error: 'Email y contraseña son requeridos' };
+  }
+
+  try {
+    const teachers = await sql`
+      SELECT id, password_hash 
+      FROM teachers 
+      WHERE email = ${email} 
+      LIMIT 1
+    `;
+    if (teachers.length === 0) {
+      return { error: 'Credenciales inválidas' };
+    }
+
+    const teacher = teachers[0];
+    const passwordMatch = await bcrypt.compare(password, teacher.password_hash);
+
+    if (!passwordMatch) {
+      return { error: 'Credenciales inválidas' };
+    }
+
+    // Create session
+    const sessionToken = await encrypt({ teacherId: teacher.id });
+    
+    (await cookies()).set('session', sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 // 24 hours
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Teacher login error:', error);
+    return { error: 'Ocurrió un error inesperado' };
+  }
+}
+

@@ -1,4 +1,4 @@
-import { Layout, FileText, HelpCircle } from 'lucide-react';
+import { Layout, FileText, HelpCircle, Users, Tag, Cpu } from 'lucide-react';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
@@ -50,6 +50,45 @@ export default async function AdminDashboard() {
             <div>
               <p className="text-[10px] font-black tracking-widest text-gray-500 uppercase leading-none mb-1">Ayuda y Soporte</p>
               <h3 className="text-lg font-black text-fsm-blue uppercase tracking-tight">Preguntas Frecuentes</h3>
+            </div>
+          </Link>
+
+          <Link 
+            href="/admin/attendance" 
+            className="flex items-center gap-4 bg-white p-6 rounded-[2rem] shadow-premium border border-gray-100 hover:border-fsm-red/20 transition-all group"
+          >
+            <div className="w-14 h-14 bg-fsm-blue/5 rounded-2xl flex items-center justify-center text-fsm-blue group-hover:bg-fsm-red group-hover:text-white transition-all">
+              <Users size={28} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black tracking-widest text-gray-500 uppercase leading-none mb-1">Control de Accesos</p>
+              <h3 className="text-lg font-black text-fsm-blue uppercase tracking-tight">Control de Asistencia</h3>
+            </div>
+          </Link>
+
+          <Link 
+            href="/admin/attendance/enrollment" 
+            className="flex items-center gap-4 bg-white p-6 rounded-[2rem] shadow-premium border border-gray-100 hover:border-fsm-red/20 transition-all group"
+          >
+            <div className="w-14 h-14 bg-fsm-blue/5 rounded-2xl flex items-center justify-center text-fsm-blue group-hover:bg-fsm-red group-hover:text-white transition-all">
+              <Tag size={28} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black tracking-widest text-gray-500 uppercase leading-none mb-1">Registro NFC/RFID</p>
+              <h3 className="text-lg font-black text-fsm-blue uppercase tracking-tight">Matrícula de Tarjetas</h3>
+            </div>
+          </Link>
+
+          <Link 
+            href="/admin/attendance/simulator" 
+            className="flex items-center gap-4 bg-white p-6 rounded-[2rem] shadow-premium border border-gray-100 hover:border-fsm-red/20 transition-all group"
+          >
+            <div className="w-14 h-14 bg-fsm-blue/5 rounded-2xl flex items-center justify-center text-fsm-blue group-hover:bg-fsm-red group-hover:text-white transition-all">
+              <Cpu size={28} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black tracking-widest text-gray-500 uppercase leading-none mb-1">Pruebas de Hardware</p>
+              <h3 className="text-lg font-black text-fsm-blue uppercase tracking-tight">Simulador de Lectores</h3>
             </div>
           </Link>
       </div>
