@@ -1,24 +1,155 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { decrypt } from '@/lib/auth';
+
+// El colegio esta en Colombia (UTC-5, sin horario de verano). La jornada tiene
+// que partirse por el dia local: usando UTC, el dia cambiaria a las 19:00 hora
+// de Bogota y una salida a las 19:30 abriria una jornada nueva.
+//
+// La zona ('America/Bogota') y la ventana antiduplicados (10 segundos) van
+// escritas literalmente dentro de cada consulta, no como parametros: tanto
+// "AT TIME ZONE $1" como "$1 || ' seconds'" dependen de que Postgres infiera el
+// tipo del parametro, y ahi falla. Si hay que cambiarlas, estan en el SQL.
+
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+/** Solo lo justo para leer una cookie por nombre, sin traer una dependencia. */
+function readCookie(header: string | null, name: string): string | undefined {
+  if (!header) return undefined;
+  for (const part of header.split(';')) {
+    const eq = part.indexOf('=');
+    if (eq < 0) continue;
+    if (part.slice(0, eq).trim() !== name) continue;
+    return decodeURIComponent(part.slice(eq + 1).trim());
+  }
+  return undefined;
+}
+
+type AuthResult = { ok: true } | { ok: false; status: number; error: string };
+
+/**
+ * Dos credenciales para una misma puerta, porque hay dos clases de cliente y
+ * ninguna puede presentar la del otro.
+ *
+ * El lector cuelga de un pasillo y lleva su clave compilada dentro: manda
+ * x-api-key. La pagina del profesor corre en un navegador, donde una clave seria
+ * publica en cuanto alguien abriera el inspector; lo que si tiene es la cookie
+ * de sesion que ya obtuvo al iniciar sesion, y esa la pone el navegador sola.
+ *
+ * Exigir solo la clave dejaria a los profesores fuera de su propia pagina, que
+ * llama aqui sin cabecera ninguna. Aceptar solo la sesion dejaria fuera al
+ * lector, que no tiene navegador. Valen las dos, por separado.
+ */
+async function authorize(req: Request): Promise<AuthResult> {
+  const expectedKey = process.env.ATTENDANCE_API_KEY;
+  const providedKey = req.headers.get('x-api-key');
+
+  if (providedKey) {
+    // Este endpoint escribe el historial de asistencia de menores. Si la clave
+    // no esta configurada, no hay nada contra lo que comparar, y dar por buena
+    // una peticion en ese estado seria abrir el endpoint a cualquiera que sepa
+    // la URL. Se falla cerrado.
+    if (!expectedKey) {
+      console.error('ATTENDANCE_API_KEY no esta configurada; se rechaza el escaneo.');
+      return { ok: false, status: 503, error: 'Servicio no configurado (falta ATTENDANCE_API_KEY)' };
+    }
+    if (!safeEqual(providedKey, expectedKey)) {
+      return { ok: false, status: 401, error: 'No autorizado' };
+    }
+    return { ok: true };
+  }
+
+  // Sin clave: solo queda la sesion. Sirve la de profesor y la de admin — las
+  // dos son personal del colegio que ya paso por una contrasena.
+  const session = readCookie(req.headers.get('cookie'), 'session');
+  if (session) {
+    try {
+      const parsed = await decrypt(session);
+      if (parsed && (parsed.teacherId || parsed.adminId)) return { ok: true };
+    } catch {
+      // Firma invalida o caducada: cae al rechazo de abajo.
+    }
+  }
+
+  return { ok: false, status: 401, error: 'No autorizado' };
+}
+
+/**
+ * Decide si el pase es entrada o salida cuando el cliente no lo dice.
+ *
+ * Alterna sobre el ultimo evento del alumno en el dia local: sin eventos hoy, o
+ * si el ultimo fue una salida, toca entrada; en caso contrario, salida. El
+ * estado vive aqui y no en el lector, para que reiniciar el ESP32 no lo pierda
+ * y para que varios lectores compartan el mismo criterio.
+ */
+async function resolveTipoEvento(
+  explicit: string | undefined,
+  studentId: string | null,
+  tagUid: string
+): Promise<'entrada' | 'salida'> {
+  if (explicit === 'entrada' || explicit === 'salida') return explicit;
+
+  // Una tarjeta sin asignar no tiene alumno, asi que se alterna sobre el UID.
+  const rows = studentId
+    ? await sql`
+        SELECT tipo_evento FROM attendance_events
+        WHERE student_id = ${studentId}
+          AND (timestamp AT TIME ZONE 'America/Bogota')::date
+              = (NOW() AT TIME ZONE 'America/Bogota')::date
+        ORDER BY timestamp DESC LIMIT 1
+      `
+    : await sql`
+        SELECT tipo_evento FROM attendance_events
+        WHERE rfid_tag_uid = ${tagUid}
+          AND (timestamp AT TIME ZONE 'America/Bogota')::date
+              = (NOW() AT TIME ZONE 'America/Bogota')::date
+        ORDER BY timestamp DESC LIMIT 1
+      `;
+
+  if (rows.length === 0) return 'entrada';
+  return rows[0].tipo_evento === 'entrada' ? 'salida' : 'entrada';
+}
 
 export async function POST(req: Request) {
   try {
+    // Sin esto, cualquiera que sepa la URL puede inyectar eventos en el
+    // historial de asistencia de menores.
+    const auth = await authorize(req);
+    if (!auth.ok) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     const body = await req.json();
     const { reader_id, tag_uid, tipo_evento, timestamp, geolocalizacion, registrado_por } = body;
 
-    if (!reader_id || !tag_uid || !tipo_evento) {
-      return NextResponse.json({ error: 'Faltan parámetros requeridos (reader_id, tag_uid, tipo_evento)' }, { status: 400 });
+    if (!reader_id || !tag_uid) {
+      return NextResponse.json(
+        { error: 'Faltan parámetros requeridos (reader_id, tag_uid)' },
+        { status: 400 }
+      );
     }
 
-    if (tipo_evento !== 'entrada' && tipo_evento !== 'salida') {
-      return NextResponse.json({ error: 'tipo_evento inválido (debe ser "entrada" o "salida")' }, { status: 400 });
+    // tipo_evento pasa a ser opcional: omitirlo (o mandar "auto") delega la
+    // decision en el servidor. Se sigue aceptando explicito para montajes con
+    // un lector en cada puerta, y para el simulador.
+    if (tipo_evento !== undefined && tipo_evento !== 'auto' &&
+        tipo_evento !== 'entrada' && tipo_evento !== 'salida') {
+      return NextResponse.json(
+        { error: 'tipo_evento inválido (debe ser "entrada", "salida" o "auto")' },
+        { status: 400 }
+      );
     }
 
     // 1. Validate reader exists
     const readers = await sql`
-      SELECT id, tipo, teacher_id 
-      FROM readers 
-      WHERE id = ${reader_id} 
+      SELECT id, tipo, teacher_id
+      FROM readers
+      WHERE id = ${reader_id}
       LIMIT 1
     `;
 
@@ -32,9 +163,9 @@ export async function POST(req: Request) {
 
     // 2. Check if Enrollment Mode is active for a student
     const enrollmentKeys = await sql`
-      SELECT value 
-      FROM site_content 
-      WHERE content_key = 'enrollment_active_student_id' 
+      SELECT value
+      FROM site_content
+      WHERE content_key = 'enrollment_active_student_id'
       LIMIT 1
     `;
 
@@ -46,50 +177,73 @@ export async function POST(req: Request) {
 
       // Update student's rfid_tag_uid
       await sql`
-        UPDATE students 
-        SET rfid_tag_uid = ${tag_uid} 
+        UPDATE students
+        SET rfid_tag_uid = ${tag_uid}
         WHERE id = ${activeStudentId}
       `;
 
       // Clear enrollment active status in site_content
       await sql`
-        UPDATE site_content 
-        SET value = '' 
+        UPDATE site_content
+        SET value = ''
         WHERE content_key = 'enrollment_active_student_id'
       `;
     }
 
     // 3. Find student by tag_uid
     const students = await sql`
-      SELECT id, nombre, grado 
-      FROM students 
-      WHERE rfid_tag_uid = ${tag_uid} AND activo = TRUE 
+      SELECT id, nombre, grado
+      FROM students
+      WHERE rfid_tag_uid = ${tag_uid} AND activo = TRUE
       LIMIT 1
     `;
+
+    const student = students.length > 0 ? students[0] : null;
+
+    // 4. Descartar reenvios antes de decidir nada: un duplicado que llegue a la
+    //    logica de alternancia invertiria el sentido del pase.
+    const recent = await sql`
+      SELECT tipo_evento, timestamp FROM attendance_events
+      WHERE rfid_tag_uid = ${tag_uid}
+        AND timestamp > NOW() - INTERVAL '10 seconds'
+      ORDER BY timestamp DESC LIMIT 1
+    `;
+
+    if (recent.length > 0) {
+      return NextResponse.json({
+        status: 'duplicate',
+        tipo_evento: recent[0].tipo_evento,
+        student: student && { id: student.id, nombre: student.nombre, grado: student.grado },
+        message: `Pase repetido; se conserva el evento de ${recent[0].tipo_evento}.`
+      });
+    }
+
+    const resolvedTipo = await resolveTipoEvento(tipo_evento, student ? student.id : null, tag_uid);
+    const wasAutomatic = tipo_evento === undefined || tipo_evento === 'auto';
 
     const eventTime = timestamp ? new Date(timestamp) : new Date();
     const isSincronizado = true; // Direct scan is synchronized by default
 
-    if (students.length > 0) {
-      const student = students[0];
-
+    if (student) {
       // Insert attendance event
       await sql`
         INSERT INTO attendance_events (
           student_id, rfid_tag_uid, reader_id, tipo_evento, timestamp, origen, sincronizado, geolocalizacion, registrado_por
         ) VALUES (
-          ${student.id}, ${tag_uid}, ${reader_id}, ${tipo_evento}, ${eventTime}, ${origen}, ${isSincronizado}, ${geolocalizacion || null}, ${fallbackRegistradoPor}
+          ${student.id}, ${tag_uid}, ${reader_id}, ${resolvedTipo}, ${eventTime}, ${origen}, ${isSincronizado}, ${geolocalizacion || null}, ${fallbackRegistradoPor}
         )
       `;
 
       return NextResponse.json({
         status: 'success',
+        tipo_evento: resolvedTipo,
+        automatico: wasAutomatic,
         student: {
           id: student.id,
           nombre: student.nombre,
           grado: student.grado
         },
-        message: `Asistencia (${tipo_evento}) registrada con éxito.`
+        message: `Asistencia (${resolvedTipo}) registrada con éxito.`
       });
     } else {
       // Unassigned tag event
@@ -97,12 +251,14 @@ export async function POST(req: Request) {
         INSERT INTO attendance_events (
           student_id, rfid_tag_uid, reader_id, tipo_evento, timestamp, origen, sincronizado, geolocalizacion, registrado_por
         ) VALUES (
-          NULL, ${tag_uid}, ${reader_id}, ${tipo_evento}, ${eventTime}, ${origen}, ${isSincronizado}, ${geolocalizacion || null}, ${fallbackRegistradoPor}
+          NULL, ${tag_uid}, ${reader_id}, ${resolvedTipo}, ${eventTime}, ${origen}, ${isSincronizado}, ${geolocalizacion || null}, ${fallbackRegistradoPor}
         )
       `;
 
       return NextResponse.json({
         status: 'unassigned',
+        tipo_evento: resolvedTipo,
+        automatico: wasAutomatic,
         message: 'Tarjeta no asignada. Evento guardado para revisión.'
       });
     }

@@ -7,8 +7,16 @@ assets = { directory = ".open-next/assets", binding = "ASSETS" }
 
 [vars]
 NODE_VERSION = "22.16.0"
-DATABASE_URL = "postgresql://neondb_owner:npg_e1zifTH5dZaE@ep-gentle-mouse-ankslyb3-pooler.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
-JWT_SECRET = "fsm_super_secret_encryption_key_2024_xyz"
+# DATABASE_URL y JWT_SECRET vivian aqui, en claro, en un repositorio publico:
+# la contrasena de la base del colegio y la clave con la que se firman las
+# sesiones, cualquiera podia leerlas. Ahora son secrets de Cloudflare, que no
+# viajan en el codigo:
+#
+#   npx wrangler secret put DATABASE_URL
+#   npx wrangler secret put JWT_SECRET
+#
+# Las que estuvieron publicadas ya estan rotadas; siguen en el historial de git,
+# pero no abren nada. Nada que sea un secreto vuelve a este fichero.
 
 [[r2_buckets]]
 binding = "IMAGES_BUCKET"

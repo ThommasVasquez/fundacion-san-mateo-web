@@ -20,19 +20,31 @@ export async function POST(req: Request) {
       simulatedTagUid = `SIM-UNASSIGNED-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
     }
 
-    if (!reader_id || !tipo_evento) {
-      return NextResponse.json({ error: 'Faltan parámetros (reader_id, tipo_evento)' }, { status: 400 });
+    // tipo_evento ya no es obligatorio: omitirlo deja que /scan decida por
+    // alternancia, que es justo el camino que interesa poder ensayar aqui.
+    if (!reader_id) {
+      return NextResponse.json({ error: 'Faltan parámetros (reader_id)' }, { status: 400 });
+    }
+
+    // /scan exige la clave incluso viniendo de dentro. Se lee del entorno del
+    // servidor, asi que nunca baja al navegador.
+    const apiKey = process.env.ATTENDANCE_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: 'Servicio no configurado (falta ATTENDANCE_API_KEY)' },
+        { status: 503 }
+      );
     }
 
     // Call the scan API route internally via fetch
     const origin = new URL(req.url).origin;
     const res = await fetch(`${origin}/api/attendance/scan`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
       body: JSON.stringify({
         reader_id,
         tag_uid: simulatedTagUid,
-        tipo_evento,
+        tipo_evento: tipo_evento || 'auto',
         geolocalizacion
       })
     });

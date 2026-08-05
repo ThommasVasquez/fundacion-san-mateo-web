@@ -3,3 +3,15 @@
 /out/
 .open-next/
 .DS_Store
+
+# Nada de esto puede volver a versionarse. .env.local estuvo publicado en un
+# repositorio publico desde abril de 2026 con la contrasena de la base de datos
+# del colegio y la clave de firma de las sesiones dentro, porque aqui no habia
+# ninguna regla que lo impidiera.
+.env
+.env.*
+!.env.example
+
+# Estado local de miniflare: no es codigo, cambia en cada `wrangler dev` y no
+# tiene por que viajar.
+.wrangler/
