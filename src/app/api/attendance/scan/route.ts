@@ -199,6 +199,9 @@ export async function POST(req: Request) {
     `;
 
     let activeStudentId = null;
+    // Por qué no se pudo vincular, si es que se intentó. Viaja en la respuesta
+    // para que la página de matrícula pueda decirlo, sin que eso cueste el pase.
+    let enrollmentBlocked: string | null = null;
     if (enrollmentKeys.length > 0 && enrollmentKeys[0].value.trim() !== '') {
       activeStudentId = enrollmentKeys[0].value.trim();
 
@@ -220,15 +223,21 @@ export async function POST(req: Request) {
          LIMIT 1`;
 
       if (dueno.length > 0 && dueno[0].id !== activeStudentId) {
-        // El modo matrícula NO se apaga: quien está esperando junto al lector
-        // debe poder probar con otra tarjeta sin volver a la pantalla anterior.
-        return NextResponse.json({
-          status: 'tarjeta_ocupada',
-          message: `Esa tarjeta ya es de ${dueno[0].nombre}. Usa otra, o quítasela primero.`,
-          titular: dueno[0].nombre,
-        }, { status: 409 });
-      }
-
+        // No se vincula, pero el pase SIGUE su curso.
+        //
+        // Devolver aquí un error abortaba la petición y con ella el registro de
+        // asistencia: mientras alguien se dejara el modo matrícula encendido,
+        // cada persona que pasaba una tarjeta ya asignada dejaba de fichar. Una
+        // pantalla de matrícula abierta y olvidada apagaba la puerta entera, y
+        // en los datos no quedaba ni rastro de por qué.
+        //
+        // La matrícula es una tarea de oficina; el registro de asistencia es lo
+        // que no puede fallar. Así que se anota que no se pudo vincular, se
+        // deja el modo activo para que puedan probar con otra tarjeta, y se
+        // sigue adelante con el pase como cualquier otro día.
+        enrollmentBlocked = `Esa tarjeta ya es de ${dueno[0].nombre}. Usa otra, o quítasela primero.`;
+        activeStudentId = null;
+      } else {
       await sql`
         UPDATE students
            SET rfid_tag_uid = ${tagHex},
@@ -236,11 +245,12 @@ export async function POST(req: Request) {
          WHERE id = ${activeStudentId}
       `;
 
-      await sql`
-        UPDATE site_content
-        SET value = ''
-        WHERE content_key = 'enrollment_active_student_id'
-      `;
+        await sql`
+          UPDATE site_content
+          SET value = ''
+          WHERE content_key = 'enrollment_active_student_id'
+        `;
+      }
     }
 
     // 3. Find student by tag_uid
@@ -308,7 +318,8 @@ export async function POST(req: Request) {
           nombre: student.nombre,
           grado: student.grado
         },
-        message: `Asistencia (${resolvedTipo}) registrada con éxito.`
+        message: `Asistencia (${resolvedTipo}) registrada con éxito.`,
+        ...(enrollmentBlocked ? { enrollment_error: enrollmentBlocked } : {})
       });
     } else {
       // Unassigned tag event
@@ -324,7 +335,8 @@ export async function POST(req: Request) {
         status: 'unassigned',
         tipo_evento: resolvedTipo,
         automatico: wasAutomatic,
-        message: 'Tarjeta no asignada. Evento guardado para revisión.'
+        message: 'Tarjeta no asignada. Evento guardado para revisión.',
+        ...(enrollmentBlocked ? { enrollment_error: enrollmentBlocked } : {})
       });
     }
 
