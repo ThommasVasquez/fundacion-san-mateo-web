@@ -4,8 +4,9 @@ import { sql } from '@/lib/db';
 import { 
   Users, UserCheck, AlertTriangle, HelpCircle, 
   Search, Calendar, Filter, FileSpreadsheet, MapPin, 
-  ArrowLeft, Clock, RefreshCw, ChevronRight, X, Tag
+  ArrowLeft, Clock, ChevronRight, X, Tag
 } from 'lucide-react';
+import RefreshButton from './RefreshButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -295,12 +296,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
           </label>
         </div>
 
-        <button 
-          type="submit"
-          className="px-6 py-2.5 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all flex items-center gap-2"
-        >
-          <RefreshCw size={14} /> Actualizar
-        </button>
+        <RefreshButton />
       </form>
 
       {/* Attendance Grid */}
