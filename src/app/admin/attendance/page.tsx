@@ -4,10 +4,22 @@ import { sql } from '@/lib/db';
 import { 
   Users, UserCheck, AlertTriangle, HelpCircle, 
   Search, Calendar, Filter, FileSpreadsheet, MapPin, 
-  ArrowLeft, Clock, RefreshCw, ChevronRight, X, Tag, Cpu
+  ArrowLeft, Clock, RefreshCw, ChevronRight, X, Tag
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
+
+/**
+ * Colombia, UTC-5 y sin horario de verano.
+ *
+ * Va escrita aqui porque este componente se renderiza en el servidor -- en el
+ * borde de Cloudflare, que corre en UTC. Sin decirle la zona, toLocaleTimeString
+ * usa la del proceso y pinta todas las horas cinco adelantadas: un pase de las
+ * 18:19 aparecia como las 23:19. Y el dia se partia por la medianoche de
+ * Greenwich, asi que una jornada nocturna caia entera en la hoja del dia
+ * siguiente.
+ */
+const ZONA_HORARIA = 'America/Bogota';
 
 interface AttendancePageProps {
   searchParams: Promise<{
@@ -20,7 +32,13 @@ interface AttendancePageProps {
 
 export default async function AttendancePage({ searchParams }: AttendancePageProps) {
   const params = await searchParams;
-  const todayStr = new Date().toISOString().split('T')[0];
+  // Hoy donde esta el instituto, no donde corre el servidor. Este componente se
+  // renderiza en el borde de Cloudflare, que va en UTC: con toISOString, a las
+  // 19:00 hora de Bogota la pagina cambiaba de dia y dejaba de mostrar la jornada
+  // en curso.
+  const todayStr = new Intl.DateTimeFormat('en-CA', {
+    timeZone: ZONA_HORARIA, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
   const filterDate = params.date || todayStr;
   const filterGrado = params.grado || '';
   const filterAnomalyOnly = params.anomalyOnly === 'true';
@@ -29,19 +47,19 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
   // 1. Fetch Today's Stats
   const totalScansRes = await sql`
     SELECT count(*) FROM attendance_events 
-    WHERE timestamp::date = ${filterDate}::date
+    WHERE (timestamp AT TIME ZONE 'America/Bogota')::date = ${filterDate}::date
   `;
   const totalScans = parseInt(totalScansRes[0].count);
 
   const entradasRes = await sql`
     SELECT count(*) FROM attendance_events 
-    WHERE tipo_evento = 'entrada' AND timestamp::date = ${filterDate}::date
+    WHERE tipo_evento = 'entrada' AND (timestamp AT TIME ZONE 'America/Bogota')::date = ${filterDate}::date
   `;
   const totalEntradas = parseInt(entradasRes[0].count);
 
   const unassignedRes = await sql`
     SELECT count(*) FROM attendance_events 
-    WHERE student_id IS NULL AND timestamp::date = ${filterDate}::date
+    WHERE student_id IS NULL AND (timestamp AT TIME ZONE 'America/Bogota')::date = ${filterDate}::date
   `;
   const unassignedScans = parseInt(unassignedRes[0].count);
 
@@ -50,7 +68,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
     SELECT count(*) FROM (
       SELECT DISTINCT ON (student_id) student_id, tipo_evento
       FROM attendance_events
-      WHERE student_id IS NOT NULL AND timestamp::date = ${filterDate}::date
+      WHERE student_id IS NOT NULL AND (timestamp AT TIME ZONE 'America/Bogota')::date = ${filterDate}::date
       ORDER BY student_id, timestamp DESC
     ) as last_scans WHERE tipo_evento = 'entrada'
   `;
@@ -82,7 +100,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
     FROM attendance_events ae
     LEFT JOIN students s ON ae.student_id = s.id
     LEFT JOIN readers r ON ae.reader_id = r.id
-    WHERE ae.timestamp::date = ${filterDate}::date
+    WHERE (ae.timestamp AT TIME ZONE 'America/Bogota')::date = ${filterDate}::date
     ORDER BY ae.timestamp DESC
   `;
 
@@ -191,12 +209,6 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             className="px-6 py-3 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all shadow-sm flex items-center gap-2"
           >
             <Tag size={14} /> Vincular Tarjetas
-          </Link>
-          <Link
-            href="/admin/attendance/simulator"
-            className="px-6 py-3 bg-gray-100 text-fsm-blue rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-all flex items-center gap-2"
-          >
-            <Cpu size={14} /> Simulador
           </Link>
         </div>
       </div>
@@ -361,7 +373,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                       </span>
                     </td>
                     <td className="py-4 px-6 font-medium text-gray-600">
-                      {new Date(ev.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      {new Date(ev.timestamp).toLocaleTimeString('es-CO', { timeZone: ZONA_HORARIA, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </td>
                     <td className="py-4 px-6">
                       {ev.isAnomaly ? (
@@ -440,7 +452,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                           </span>
                           <span className="text-xs font-bold text-gray-500 flex items-center gap-1">
                             <Clock size={12} />
-                            {new Date(hev.timestamp).toLocaleString()}
+                            {new Date(hev.timestamp).toLocaleString('es-CO', { timeZone: ZONA_HORARIA })}
                           </span>
                         </div>
                         <p className="text-xs font-bold text-gray-800">Ubicación: {hev.reader_name || hev.reader_id}</p>
