@@ -4,7 +4,7 @@ import { sql } from '@/lib/db';
 import { 
   Users, UserCheck, AlertTriangle, HelpCircle, 
   Search, Calendar, Filter, FileSpreadsheet, MapPin, 
-  ArrowLeft, Clock, ChevronRight, X, Tag
+  ArrowLeft, Clock, ChevronRight, X, Tag, Upload
 } from 'lucide-react';
 import RefreshButton from './RefreshButton';
 
@@ -205,6 +205,12 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
           <p className="text-gray-900 font-medium">Visualiza los accesos de los estudiantes vía RFID y dispositivos móviles.</p>
         </div>
         <div className="flex gap-3">
+          <Link
+            href="/admin/attendance/import"
+            className="px-6 py-3 bg-white text-fsm-blue border border-fsm-blue/20 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-blue hover:text-white transition-all shadow-sm flex items-center gap-2"
+          >
+            <Upload size={14} /> Subir Alumnos
+          </Link>
           <Link
             href="/admin/attendance/enrollment"
             className="px-6 py-3 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all shadow-sm flex items-center gap-2"
