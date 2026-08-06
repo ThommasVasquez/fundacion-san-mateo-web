@@ -30,6 +30,31 @@ function readCookie(header: string | null, name: string): string | undefined {
   return undefined;
 }
 
+/**
+ * El mismo objeto escrito de dos maneras que no se deducen la una de la otra.
+ *
+ * El lector reporta cinco bytes de un EM4100: uno de versión y cuatro de ID.
+ * El terminal de control de acceso del que salió el padrón exporta solo esos
+ * cuatro, en decimal, y tira el de versión. Así que desde el padrón no se puede
+ * reconstruir lo que el lector va a leer -- falta un byte y no es constante:
+ * en las tarjetas medidas vale 4F, 59, 4F.
+ *
+ * Al revés sí se puede, y es lo que hace esto: de la lectura se descarta el
+ * byte de versión y quedan los cuatro que el padrón sí tiene. Por eso el cruce
+ * va contra tarjeta_numero y no contra el UID.
+ *
+ * Solo para diez caracteres hexadecimales. Un UID de 4, 7 o 10 bytes es
+ * ISO14443A -- otra tecnología, sin este concepto -- y ahí no hay nada que
+ * convertir.
+ */
+function tarjetaDecimal(tagUid: string): number | null {
+  const hex = tagUid.trim().toUpperCase();
+  if (!/^[0-9A-F]{10}$/.test(hex)) return null;
+  const b = hex.match(/../g)!.map((x) => parseInt(x, 16));
+  // Sin el byte 0. >>> 0 para que el desplazamiento no se lea como negativo.
+  return (((b[1] << 24) >>> 0) + (b[2] << 16) + (b[3] << 8) + b[4]);
+}
+
 type AuthResult = { ok: true } | { ok: false; status: number; error: string };
 
 /**
@@ -161,6 +186,10 @@ export async function POST(req: Request) {
     const origen = reader.tipo === 'mobile_nfc' ? 'movil_profesor' : 'panel';
     const fallbackRegistradoPor = registrado_por || reader.teacher_id || null;
 
+    // Se calculan antes del modo matrícula porque ambos los necesitan.
+    const tagHex = String(tag_uid).replace(/\s+/g, '').toUpperCase();
+    const tarjetaNum = tarjetaDecimal(tagHex);
+
     // 2. Check if Enrollment Mode is active for a student
     const enrollmentKeys = await sql`
       SELECT value
@@ -173,16 +202,40 @@ export async function POST(req: Request) {
     if (enrollmentKeys.length > 0 && enrollmentKeys[0].value.trim() !== '') {
       activeStudentId = enrollmentKeys[0].value.trim();
 
-      console.log(`Enrollment mode active for student ID: ${activeStudentId}. Assigning tag ${tag_uid}...`);
+      // ¿La tarjeta ya es de alguien?
+      //
+      // rfid_tag_uid es único, así que asignar a ciegas una tarjeta que ya tiene
+      // dueño reventaba la petición entera con un 500 de clave duplicada: no se
+      // matriculaba, no se registraba el pase, y la página de matrícula se
+      // quedaba esperando para siempre un escaneo que sí había llegado.
+      //
+      // Se comprueba antes y se rechaza. Quitarle la tarjeta a quien la tiene
+      // para dársela a otro es una decisión que se toma sabiendo a quién se la
+      // quitas -- nunca algo que ocurra porque el modo matrícula estaba activo
+      // cuando esa persona pasó por la puerta.
+      const dueno = await sql`
+        SELECT id, nombre FROM students
+         WHERE rfid_tag_uid = ${tagHex}
+            OR (${tarjetaNum}::bigint IS NOT NULL AND tarjeta_numero = ${tarjetaNum}::bigint)
+         LIMIT 1`;
 
-      // Update student's rfid_tag_uid
+      if (dueno.length > 0 && dueno[0].id !== activeStudentId) {
+        // El modo matrícula NO se apaga: quien está esperando junto al lector
+        // debe poder probar con otra tarjeta sin volver a la pantalla anterior.
+        return NextResponse.json({
+          status: 'tarjeta_ocupada',
+          message: `Esa tarjeta ya es de ${dueno[0].nombre}. Usa otra, o quítasela primero.`,
+          titular: dueno[0].nombre,
+        }, { status: 409 });
+      }
+
       await sql`
         UPDATE students
-        SET rfid_tag_uid = ${tag_uid}
-        WHERE id = ${activeStudentId}
+           SET rfid_tag_uid = ${tagHex},
+               tarjeta_numero = COALESCE(${tarjetaNum}::bigint, tarjeta_numero)
+         WHERE id = ${activeStudentId}
       `;
 
-      // Clear enrollment active status in site_content
       await sql`
         UPDATE site_content
         SET value = ''
@@ -191,10 +244,22 @@ export async function POST(req: Request) {
     }
 
     // 3. Find student by tag_uid
+    // Dos formas de encontrar al mismo alumno, porque hay dos formas de que su
+    // tarjeta haya llegado hasta aquí:
+    //
+    //   rfid_tag_uid    la vinculó alguien desde la página de matrícula, con la
+    //                   tarjeta en la mano y el lector delante.
+    //   tarjeta_numero  vino en el padrón que exportó el terminal viejo, donde
+    //                   ya estaba asignada y solo consta su número en decimal.
+    //
+    // Se buscan las dos a la vez. Exigir la primera obligaría a re-matricular a
+    // mano a los seiscientos que ya tenían tarjeta.
     const students = await sql`
       SELECT id, nombre, grado
       FROM students
-      WHERE rfid_tag_uid = ${tag_uid} AND activo = TRUE
+      WHERE activo = TRUE
+        AND (rfid_tag_uid = ${tagHex}
+             OR (${tarjetaNum}::bigint IS NOT NULL AND tarjeta_numero = ${tarjetaNum}::bigint))
       LIMIT 1
     `;
 
