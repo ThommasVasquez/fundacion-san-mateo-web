@@ -829,3 +829,159 @@ export async function teacherLogin(formData: FormData) {
   }
 }
 
+// ==========================================
+// DOCUMENT VERIFICATION SYSTEM ACTIONS
+// ==========================================
+
+export async function getNextDocumentConsecutivo() {
+  try {
+    const year = new Date().getFullYear();
+    const result = await sql`
+      SELECT consecutivo 
+      FROM issued_documents 
+      WHERE consecutivo LIKE ${`FSM-${year}-%`} 
+      ORDER BY created_at DESC 
+      LIMIT 1
+    `;
+    if (result.length === 0) {
+      return `FSM-${year}-00001`;
+    }
+    const lastConsecutivo = result[0].consecutivo;
+    const parts = lastConsecutivo.split('-');
+    const num = parseInt(parts[parts.length - 1], 10);
+    const nextNum = isNaN(num) ? 1 : num + 1;
+    return `FSM-${year}-${String(nextNum).padStart(5, '0')}`;
+  } catch (error) {
+    const year = new Date().getFullYear();
+    return `FSM-${year}-00001`;
+  }
+}
+
+export async function createIssuedDocument(data: {
+  consecutivo?: string;
+  student_nombre: string;
+  student_documento?: string;
+  tipo_documento: string;
+  programa_curso: string;
+  fecha_expedicion?: string;
+  folio?: string;
+  libro?: string;
+  notas?: string;
+  pdf_url?: string;
+}) {
+  try {
+    const studentNombre = data.student_nombre.trim();
+    const tipoDocumento = data.tipo_documento.trim();
+    const programaCurso = data.programa_curso.trim();
+    let consecutivo = data.consecutivo?.trim();
+
+    if (!studentNombre || !tipoDocumento || !programaCurso) {
+      return { error: 'Nombre, Tipo de Documento y Programa son obligatorios' };
+    }
+
+    if (!consecutivo) {
+      consecutivo = await getNextDocumentConsecutivo();
+    }
+
+    const studentDocumento = data.student_documento?.trim() || null;
+    const fechaExpedicion = data.fecha_expedicion || new Date().toISOString().split('T')[0];
+    const folio = data.folio?.trim() || null;
+    const libro = data.libro?.trim() || null;
+    const notas = data.notas?.trim() || null;
+    const pdfUrl = data.pdf_url?.trim() || null;
+
+    await sql`
+      INSERT INTO issued_documents (
+        consecutivo, student_nombre, student_documento, tipo_documento,
+        programa_curso, fecha_expedicion, folio, libro, estado, notas, pdf_url
+      ) VALUES (
+        ${consecutivo}, ${studentNombre}, ${studentDocumento}, ${tipoDocumento},
+        ${programaCurso}, ${fechaExpedicion}::date, ${folio}, ${libro}, 'valido', ${notas}, ${pdfUrl}
+      )
+    `;
+
+    return { success: true, consecutivo };
+  } catch (error: any) {
+    console.error('Error creating issued document:', error);
+    if (error.message?.includes('unique') || error.message?.includes('duplicate key')) {
+      return { error: `El consecutivo "${data.consecutivo}" ya existe. Por favor usa un código único.` };
+    }
+    return { error: error.message || 'Error al expedir documento' };
+  }
+}
+
+export async function updateIssuedDocument(id: string, data: {
+  consecutivo?: string;
+  student_nombre?: string;
+  student_documento?: string;
+  tipo_documento?: string;
+  programa_curso?: string;
+  fecha_expedicion?: string;
+  folio?: string;
+  libro?: string;
+  estado?: string;
+  notas?: string;
+  pdf_url?: string;
+}) {
+  try {
+    const studentNombre = data.student_nombre?.trim() || null;
+    const tipoDocumento = data.tipo_documento?.trim() || null;
+    const programaCurso = data.programa_curso?.trim() || null;
+    const consecutivo = data.consecutivo?.trim() || null;
+    const studentDocumento = data.student_documento?.trim() || null;
+    const fechaExpedicion = data.fecha_expedicion || null;
+    const folio = data.folio?.trim() || null;
+    const libro = data.libro?.trim() || null;
+    const estado = data.estado || null;
+    const notas = data.notas?.trim() || null;
+    const pdfUrl = data.pdf_url?.trim() || null;
+
+    await sql`
+      UPDATE issued_documents
+      SET 
+        consecutivo = COALESCE(${consecutivo}, consecutivo),
+        student_nombre = COALESCE(${studentNombre}, student_nombre),
+        student_documento = COALESCE(${studentDocumento}, student_documento),
+        tipo_documento = COALESCE(${tipoDocumento}, tipo_documento),
+        programa_curso = COALESCE(${programaCurso}, programa_curso),
+        fecha_expedicion = COALESCE(${fechaExpedicion}::date, fecha_expedicion),
+        folio = COALESCE(${folio}, folio),
+        libro = COALESCE(${libro}, libro),
+        estado = COALESCE(${estado}, estado),
+        notas = COALESCE(${notas}, notas),
+        pdf_url = COALESCE(${pdfUrl}, pdf_url),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${id}::uuid
+    `;
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error updating issued document:', error);
+    return { error: error.message || 'Error al actualizar documento' };
+  }
+}
+
+export async function toggleDocumentStatus(id: string, newEstado: string) {
+  try {
+    await sql`
+      UPDATE issued_documents 
+      SET estado = ${newEstado}, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = ${id}::uuid
+    `;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error toggling document status:', error);
+    return { error: error.message || 'Error al cambiar estado del documento' };
+  }
+}
+
+export async function deleteIssuedDocument(id: string) {
+  try {
+    await sql`DELETE FROM issued_documents WHERE id = ${id}::uuid`;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error deleting issued document:', error);
+    return { error: error.message || 'Error al eliminar documento' };
+  }
+}
+
