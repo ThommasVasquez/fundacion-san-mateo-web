@@ -1,9 +1,21 @@
 import { Layout, FileText, HelpCircle, Users, Tag } from 'lucide-react';
 import Link from 'next/link';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { decrypt } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminDashboard() {
+  const session = (await cookies()).get('session')?.value;
+  if (session) {
+    try {
+      const parsed = await decrypt(session);
+      if (parsed?.role === 'academic' || parsed?.email === 'sacademica@fundacionsanmateosoacha.edu.co') {
+        redirect('/admin/attendance');
+      }
+    } catch {}
+  }
   return (
     <div className="max-w-6xl mx-auto space-y-12">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">

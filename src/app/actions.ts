@@ -14,7 +14,7 @@ export async function login(formData: FormData) {
   }
 
   try {
-    const users = await sql`SELECT id, password_hash FROM admin_users WHERE email = ${email} LIMIT 1`;
+    const users = await sql`SELECT id, email, password_hash, role FROM admin_users WHERE email = ${email} LIMIT 1`;
     if (users.length === 0) {
       return { error: 'Credenciales inválidas' };
     }
@@ -26,8 +26,13 @@ export async function login(formData: FormData) {
       return { error: 'Credenciales inválidas' };
     }
 
-    // Create session
-    const sessionToken = await encrypt({ adminId: user.id });
+    // Create session payload with user role
+    const userRole = user.role || (user.email === 'sacademica@fundacionsanmateosoacha.edu.co' ? 'academic' : 'admin');
+    const sessionToken = await encrypt({ 
+      adminId: user.id, 
+      email: user.email, 
+      role: userRole 
+    });
     
     (await cookies()).set('session', sessionToken, {
       httpOnly: true,
@@ -724,6 +729,56 @@ export async function updateStudentDetails(studentId: string, data: { nombre?: s
   } catch (error: any) {
     console.error('Error updating student details:', error);
     return { error: error.message || 'Error al actualizar estudiante' };
+  }
+}
+
+export async function createStudent(data: { nombre: string; grado: string; rfid_tag_uid?: string }) {
+  try {
+    const nombre = data.nombre.trim();
+    const grado = data.grado.trim();
+    const rfidTagUid = data.rfid_tag_uid?.trim() || null;
+
+    if (!nombre || !grado) {
+      return { error: 'Nombre y Grado son obligatorios' };
+    }
+
+    await sql`
+      INSERT INTO students (nombre, grado, rfid_tag_uid, activo)
+      VALUES (${nombre}, ${grado}, ${rfidTagUid}, TRUE)
+    `;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error creating student:', error);
+    return { error: error.message || 'Error al crear estudiante' };
+  }
+}
+
+export async function bulkUpdateStudentGrado(studentIds: string[], newGrado: string) {
+  try {
+    if (!studentIds || studentIds.length === 0 || !newGrado) {
+      return { error: 'Selecciona al menos un estudiante y un grado válido' };
+    }
+
+    const trimmedGrado = newGrado.trim();
+    await sql`
+      UPDATE students 
+      SET grado = ${trimmedGrado} 
+      WHERE id = ANY(${studentIds}::uuid[])
+    `;
+    return { success: true, count: studentIds.length };
+  } catch (error: any) {
+    console.error('Error bulk updating student grado:', error);
+    return { error: error.message || 'Error al actualizar grados en lote' };
+  }
+}
+
+export async function deleteStudent(studentId: string) {
+  try {
+    await sql`DELETE FROM students WHERE id = ${studentId}::uuid`;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error deleting student:', error);
+    return { error: error.message || 'Error al eliminar estudiante' };
   }
 }
 

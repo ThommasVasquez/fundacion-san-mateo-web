@@ -2,10 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { setEnrollmentStudent, linkStudentTag, unlinkStudentTag, updateStudentDetails } from '@/app/actions';
+import { 
+  setEnrollmentStudent, linkStudentTag, unlinkStudentTag, 
+  updateStudentDetails, createStudent, bulkUpdateStudentGrado, deleteStudent 
+} from '@/app/actions';
 import { 
   Tag, Search, AlertTriangle, ArrowLeft, RefreshCw, 
-  Check, X, Link as LinkIcon, AlertCircle, Plus, Edit2, Save
+  Check, X, Link as LinkIcon, AlertCircle, Plus, Edit2, Save, Trash2, Users, Layers
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -31,24 +34,33 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [statusMsg, setStatusMsg] = useState({ text: '', type: '' });
 
-  // Modal for Editing Student Details (Grado / Turno / Nombre)
+  // Selection for Bulk Actions
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [newBulkGrado, setNewBulkGrado] = useState('');
+  const [isBulkSaving, setIsBulkSaving] = useState(false);
+
+  // Modal for Editing Student Details
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [editNombre, setEditNombre] = useState('');
   const [editGrado, setEditGrado] = useState('');
   const [editActivo, setEditActivo] = useState(true);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
-  // Get active student details
+  // Modal for Creating New Student
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [newNombre, setNewNombre] = useState('');
+  const [newGrado, setNewGrado] = useState('');
+  const [newUid, setNewUid] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+
   const activeStudent = students.find(s => s.id === activeStudentId);
 
-  // Poll database every 2 seconds to see if enrollment succeeded
   useEffect(() => {
     if (!activeStudentId) return;
-
     const interval = setInterval(() => {
       router.refresh();
     }, 2000);
-
     return () => clearInterval(interval);
   }, [activeStudentId, router]);
 
@@ -142,6 +154,83 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
     }
   };
 
+  const handleDelete = async (student: Student) => {
+    if (!confirm(`¿Eliminar definitivamente a ${student.nombre}?`)) return;
+    
+    setLoading(prev => ({ ...prev, [student.id]: true }));
+    const res = await deleteStudent(student.id);
+    setLoading(prev => ({ ...prev, [student.id]: false }));
+
+    if (res.success) {
+      showStatus(`Estudiante ${student.nombre} eliminado.`);
+      setEditingStudent(null);
+      router.refresh();
+    } else {
+      showStatus(res.error || 'Error al eliminar estudiante', 'error');
+    }
+  };
+
+  const handleCreateNewStudent = async () => {
+    if (!newNombre.trim() || !newGrado.trim()) {
+      showStatus('Nombre y Grado son obligatorios.', 'error');
+      return;
+    }
+
+    setIsCreating(true);
+    const res = await createStudent({
+      nombre: newNombre,
+      grado: newGrado,
+      rfid_tag_uid: newUid.trim() || undefined,
+    });
+
+    setIsCreating(false);
+    if (res.success) {
+      showStatus(`Estudiante ${newNombre} creado con éxito.`);
+      setCreateModalOpen(false);
+      setNewNombre('');
+      setNewGrado('');
+      setNewUid('');
+      router.refresh();
+    } else {
+      showStatus(res.error || 'Error al crear estudiante', 'error');
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedStudentIds(filteredStudents.map(s => s.id));
+    } else {
+      setSelectedStudentIds([]);
+    }
+  };
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedStudentIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSaveBulkGrado = async () => {
+    if (!newBulkGrado.trim() || selectedStudentIds.length === 0) {
+      showStatus('Por favor ingresa un grado/curso válido.', 'error');
+      return;
+    }
+
+    setIsBulkSaving(true);
+    const res = await bulkUpdateStudentGrado(selectedStudentIds, newBulkGrado);
+    setIsBulkSaving(false);
+
+    if (res.success) {
+      showStatus(`Grado/Curso actualizado a "${newBulkGrado}" para ${res.count} estudiantes.`);
+      setBulkModalOpen(false);
+      setSelectedStudentIds([]);
+      setNewBulkGrado('');
+      router.refresh();
+    } else {
+      showStatus(res.error || 'Error en actualización masiva', 'error');
+    }
+  };
+
   // Filter students
   const filteredStudents = students.filter(s => {
     const matchesSearch = s.nombre.toLowerCase().includes(search.toLowerCase()) || 
@@ -150,8 +239,8 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
     return matchesSearch && matchesGrado;
   });
 
-  // Get distinct grades
   const grades = Array.from(new Set(students.map(s => s.grado))).sort();
+  const allFilteredSelected = filteredStudents.length > 0 && filteredStudents.every(s => selectedStudentIds.includes(s.id));
 
   return (
     <div className="space-y-8">
@@ -204,6 +293,39 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
         </div>
       )}
 
+      {/* Action Toolbar */}
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <button
+            onClick={() => setCreateModalOpen(true)}
+            className="px-5 py-2.5 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all shadow-sm flex items-center gap-2"
+          >
+            <Plus size={16} /> Crear Nuevo Estudiante
+          </button>
+
+          {selectedStudentIds.length > 0 && (
+            <button
+              onClick={() => setBulkModalOpen(true)}
+              className="px-5 py-2.5 bg-purple-700 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-purple-800 transition-all shadow-sm flex items-center gap-2 animate-bounce"
+            >
+              <Layers size={16} /> Cambiar Grado Masivo ({selectedStudentIds.length})
+            </button>
+          )}
+        </div>
+
+        <div className="text-xs font-bold text-gray-500 flex items-center gap-2">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input 
+              type="checkbox" 
+              checked={allFilteredSelected}
+              onChange={e => handleSelectAll(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-fsm-blue focus:ring-fsm-blue"
+            />
+            <span>Seleccionar todos los visibles ({filteredStudents.length})</span>
+          </label>
+        </div>
+      </div>
+
       {/* Filter and Search Bar */}
       <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-premium flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto items-center">
@@ -246,43 +368,53 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
         ) : (
           filteredStudents.map(student => {
             const isPendingLink = pendingUid && !student.rfid_tag_uid;
+            const isSelected = selectedStudentIds.includes(student.id);
             
             return (
               <div 
                 key={student.id} 
-                className={`bg-white p-6 rounded-[2rem] border shadow-premium transition-all duration-300 flex flex-col justify-between gap-6 ${
+                className={`bg-white p-6 rounded-[2rem] border shadow-premium transition-all duration-300 flex flex-col justify-between gap-6 relative ${
+                  isSelected ? 'border-purple-300 ring-2 ring-purple-100' :
                   isPendingLink ? 'border-yellow-200 bg-yellow-50/10' : 'border-gray-100 hover:border-fsm-blue/20'
                 }`}
               >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[9px] font-black text-fsm-blue uppercase bg-fsm-blue/5 px-2 py-0.5 rounded">
-                        Grado/Curso: {student.grado}
-                      </span>
-                      <button 
-                        onClick={() => openEditModal(student)}
-                        className="text-gray-400 hover:text-fsm-blue transition-colors p-1"
-                        title="Editar Grado, Curso o Turno"
-                      >
-                        <Edit2 size={13} />
-                      </button>
+                <div className="flex justify-between items-start gap-4">
+                  <div className="flex items-start gap-3">
+                    <input 
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => handleToggleSelect(student.id)}
+                      className="mt-1 w-4 h-4 rounded border-gray-300 text-fsm-blue focus:ring-fsm-blue"
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-black text-fsm-blue uppercase bg-fsm-blue/5 px-2 py-0.5 rounded">
+                          Grado/Curso: {student.grado}
+                        </span>
+                        <button 
+                          onClick={() => openEditModal(student)}
+                          className="text-gray-400 hover:text-fsm-blue transition-colors p-1"
+                          title="Editar Grado, Curso o Turno"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                      </div>
+                      <h4 className="text-lg font-black text-fsm-blue uppercase mt-1 leading-tight">{student.nombre}</h4>
+                      {student.rfid_tag_uid ? (
+                        <p className="text-xs text-green-600 font-bold mt-1 flex items-center gap-1">
+                          <Check size={14} /> Tarjeta vinculada: <span className="font-mono bg-green-50 px-2 py-0.5 rounded text-[10px]">{student.rfid_tag_uid}</span>
+                        </p>
+                      ) : (
+                        <p className="text-xs text-gray-400 font-bold mt-1 flex items-center gap-1">
+                          <AlertTriangle size={14} className="text-gray-400" /> Sin tarjeta vinculada
+                        </p>
+                      )}
                     </div>
-                    <h4 className="text-lg font-black text-fsm-blue uppercase mt-1 leading-tight">{student.nombre}</h4>
-                    {student.rfid_tag_uid ? (
-                      <p className="text-xs text-green-600 font-bold mt-1 flex items-center gap-1">
-                        <Check size={14} /> Tarjeta vinculada: <span className="font-mono bg-green-50 px-2 py-0.5 rounded text-[10px]">{student.rfid_tag_uid}</span>
-                      </p>
-                    ) : (
-                      <p className="text-xs text-gray-400 font-bold mt-1 flex items-center gap-1">
-                        <AlertTriangle size={14} className="text-gray-400" /> Sin tarjeta vinculada
-                      </p>
-                    )}
                   </div>
 
                   <button
                     onClick={() => openEditModal(student)}
-                    className="px-3 py-1.5 bg-gray-50 text-gray-700 border border-gray-100 hover:bg-fsm-blue hover:text-white transition-all text-xs font-bold rounded-xl flex items-center gap-1"
+                    className="px-3 py-1.5 bg-gray-50 text-gray-700 border border-gray-100 hover:bg-fsm-blue hover:text-white transition-all text-xs font-bold rounded-xl flex items-center gap-1 shrink-0"
                   >
                     <Edit2 size={12} /> Editar
                   </button>
@@ -347,7 +479,7 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
         )}
       </div>
 
-      {/* Edit Student Modal */}
+      {/* Modal 1: Edit Student Details Modal */}
       {editingStudent && (
         <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl overflow-hidden w-full max-w-md p-8 space-y-6 animate-in zoom-in-95 duration-200">
@@ -400,21 +532,159 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
               </div>
             </div>
 
+            <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => handleDelete(editingStudent)}
+                className="px-4 py-2 bg-red-50 text-fsm-red hover:bg-fsm-red hover:text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-1"
+              >
+                <Trash2 size={14} /> Eliminar
+              </button>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingStudent(null)}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEdit}
+                  disabled={isSavingEdit}
+                  className="px-5 py-2 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all flex items-center gap-2 disabled:opacity-50"
+                >
+                  <Save size={14} /> {isSavingEdit ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 2: Create New Student Modal */}
+      {createModalOpen && (
+        <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl overflow-hidden w-full max-w-md p-8 space-y-6 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center border-b border-gray-100 pb-4">
+              <div>
+                <span className="text-[10px] font-black text-fsm-blue uppercase tracking-widest">NUEVO REGISTRO</span>
+                <h3 className="text-lg font-black text-fsm-blue uppercase leading-tight mt-0.5">CREAR NUEVO ESTUDIANTE</h3>
+              </div>
+              <button 
+                onClick={() => setCreateModalOpen(false)}
+                className="text-gray-400 hover:text-fsm-red transition-colors p-1"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Nombre Completo:*</label>
+                <input 
+                  type="text" 
+                  placeholder="Ej: MARÍA CAMILA RODRÍGUEZ"
+                  value={newNombre}
+                  onChange={e => setNewNombre(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Grado / Curso / Turno:*</label>
+                <input 
+                  type="text" 
+                  placeholder="Ej: 10A, 11B, 3 SABADO A, NOCTURNO B"
+                  value={newGrado}
+                  onChange={e => setNewGrado(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">UID Tarjeta RFID (Opcional):</label>
+                <input 
+                  type="text" 
+                  placeholder="Ej: 5400357EAC"
+                  value={newUid}
+                  onChange={e => setNewUid(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
+                />
+              </div>
+            </div>
+
             <div className="flex gap-3 pt-4 border-t border-gray-100 justify-end">
               <button
                 type="button"
-                onClick={() => setEditingStudent(null)}
+                onClick={() => setCreateModalOpen(false)}
                 className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-all"
               >
                 Cancelar
               </button>
               <button
                 type="button"
-                onClick={handleSaveEdit}
-                disabled={isSavingEdit}
+                onClick={handleCreateNewStudent}
+                disabled={isCreating}
                 className="px-6 py-2.5 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all flex items-center gap-2 disabled:opacity-50"
               >
-                <Save size={14} /> {isSavingEdit ? 'Guardando...' : 'Guardar Cambios'}
+                <Plus size={16} /> {isCreating ? 'Creando...' : 'Crear Estudiante'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 3: Bulk Update Grade Modal */}
+      {bulkModalOpen && (
+        <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl overflow-hidden w-full max-w-md p-8 space-y-6 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center border-b border-gray-100 pb-4">
+              <div>
+                <span className="text-[10px] font-black text-purple-700 uppercase tracking-widest">ACTUALIZACIÓN MASIVA</span>
+                <h3 className="text-lg font-black text-fsm-blue uppercase leading-tight mt-0.5">CAMBIAR GRADO/CURSO</h3>
+              </div>
+              <button 
+                onClick={() => setBulkModalOpen(false)}
+                className="text-gray-400 hover:text-fsm-red transition-colors p-1"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-xs font-semibold text-gray-600">
+                Se cambiará el grado/curso a los <strong className="text-purple-700">{selectedStudentIds.length} estudiantes seleccionados</strong>.
+              </p>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Nuevo Grado / Curso / Turno:</label>
+                <input 
+                  type="text" 
+                  placeholder="Ej: 11A, PROMO 2026, 3 SABADO B"
+                  value={newBulkGrado}
+                  onChange={e => setNewBulkGrado(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-purple-600"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4 border-t border-gray-100 justify-end">
+              <button
+                type="button"
+                onClick={() => setBulkModalOpen(false)}
+                className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveBulkGrado}
+                disabled={isBulkSaving}
+                className="px-6 py-2.5 bg-purple-700 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-purple-800 transition-all flex items-center gap-2 disabled:opacity-50"
+              >
+                <Save size={14} /> {isBulkSaving ? 'Aplicando...' : 'Aplicar a Selección'}
               </button>
             </div>
           </div>
@@ -423,4 +693,5 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
     </div>
   );
 }
+
 
