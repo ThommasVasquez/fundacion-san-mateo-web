@@ -693,6 +693,20 @@ export async function linkStudentTag(studentId: string, tagUid: string) {
       SET rfid_tag_uid = ${tagUid} 
       WHERE id = ${studentId}::uuid
     `;
+
+    // Backfill previous unassigned attendance events for this card UID
+    const studentRes = await sql`SELECT nombre, grado FROM students WHERE id = ${studentId}::uuid LIMIT 1`;
+    if (studentRes.length > 0) {
+      await sql`
+        UPDATE attendance_events 
+        SET 
+          student_id = ${studentId}::uuid,
+          student_name = ${studentRes[0].nombre},
+          student_grado = ${studentRes[0].grado}
+        WHERE rfid_tag_uid = ${tagUid} AND student_id IS NULL
+      `;
+    }
+
     return { success: true };
   } catch (error: any) {
     console.error('Error linking tag to student:', error);
