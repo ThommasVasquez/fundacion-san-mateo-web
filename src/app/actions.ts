@@ -706,6 +706,27 @@ export async function unlinkStudentTag(studentId: string) {
   }
 }
 
+export async function updateStudentDetails(studentId: string, data: { nombre?: string; grado?: string; activo?: boolean }) {
+  try {
+    const nombre = data.nombre?.trim() || null;
+    const grado = data.grado?.trim() || null;
+    const activo = data.activo ?? true;
+
+    await sql`
+      UPDATE students 
+      SET 
+        nombre = COALESCE(${nombre}, nombre),
+        grado = COALESCE(${grado}, grado),
+        activo = ${activo}
+      WHERE id = ${studentId}::uuid
+    `;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error updating student details:', error);
+    return { error: error.message || 'Error al actualizar estudiante' };
+  }
+}
+
 export async function teacherLogin(formData: FormData) {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;

@@ -55,18 +55,18 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
   `;
   const unassignedScans = parseInt(unassignedRes[0].count);
 
-  // Active inside for date range (last scan was entry)
-  const activeInsideRes = await sql`
-    SELECT count(*) FROM (
-      SELECT DISTINCT ON (student_id) student_id, tipo_evento
-      FROM attendance_events
-      WHERE student_id IS NOT NULL 
-        AND (timestamp AT TIME ZONE 'America/Bogota')::date >= ${filterStartDate}::date
-        AND (timestamp AT TIME ZONE 'America/Bogota')::date <= ${filterEndDate}::date
-      ORDER BY student_id, timestamp DESC
-    ) as last_scans WHERE tipo_evento = 'entrada'
+  // Unique students who attended during selected date range
+  const uniqueStudentsRes = await sql`
+    SELECT count(DISTINCT student_id) FROM attendance_events
+    WHERE student_id IS NOT NULL 
+      AND (timestamp AT TIME ZONE 'America/Bogota')::date >= ${filterStartDate}::date
+      AND (timestamp AT TIME ZONE 'America/Bogota')::date <= ${filterEndDate}::date
   `;
-  const activeInside = parseInt(activeInsideRes[0].count);
+  const uniqueStudents = parseInt(uniqueStudentsRes[0].count);
+
+  // Total active students in DB
+  const totalStudentsRes = await sql`SELECT count(*) FROM students WHERE activo = TRUE`;
+  const totalStudentsInDB = parseInt(totalStudentsRes[0].count);
 
   // 2. Fetch Grades for Filter
   const gradesRes = await sql`
@@ -99,43 +99,10 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
     ORDER BY ae.timestamp DESC
   `;
 
-  // 4. Calculate anomalies and sequence check
-  const studentEventsMap: Record<string, any[]> = {};
-  events.forEach((ev: any) => {
-    if (ev.student_id) {
-      if (!studentEventsMap[ev.student_id]) studentEventsMap[ev.student_id] = [];
-      studentEventsMap[ev.student_id].push(ev);
-    }
-  });
-
-  const anomalousStudentIds = new Set<string>();
-  Object.entries(studentEventsMap).forEach(([studentId, studentEvs]) => {
-    const sorted = [...studentEvs].reverse();
-    let lastType = '';
-    for (const ev of sorted) {
-      if (ev.tipo_evento === lastType) {
-        anomalousStudentIds.add(studentId);
-      }
-      lastType = ev.tipo_evento;
-    }
-    if (sorted.length > 0 && sorted[0].tipo_evento === 'salida') {
-      anomalousStudentIds.add(studentId);
-    }
-  });
-
+  // Process events: Anomaly = Unassigned Tag
   const processedEvents = events.map((ev: any) => {
-    const isUnassigned = !ev.student_id;
-    const isSequenceAnomaly = ev.student_id && anomalousStudentIds.has(ev.student_id);
-    const isAnomaly = isUnassigned || isSequenceAnomaly;
-
-    let anomalyReason = '';
-    if (isUnassigned) anomalyReason = 'Tarjeta sin asignar';
-    else if (isSequenceAnomaly) {
-      const stEvs = studentEventsMap[ev.student_id];
-      const sorted = [...stEvs].reverse();
-      const firstIsExit = sorted.length > 0 && sorted[0].tipo_evento === 'salida';
-      anomalyReason = firstIsExit ? 'Salida sin entrada previa' : 'Duplicidad de eventos (Entrada sin Salida)';
-    }
+    const isAnomaly = !ev.student_id;
+    const anomalyReason = isAnomaly ? 'Tarjeta sin asignar' : '';
 
     return {
       ...ev,
@@ -219,7 +186,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-black text-fsm-blue uppercase tracking-tighter mb-2">CONTROL DE ASISTENCIA</h1>
-          <p className="text-gray-900 font-medium">Filtra, busca, ordena y descarga los registros de asistencia en Excel.</p>
+          <p className="text-gray-900 font-medium">Asistencia diaria y hora de entrada de los estudiantes.</p>
         </div>
         <div className="flex flex-wrap gap-3 items-center">
           <ExportCsvButton events={filteredEvents} startDate={filterStartDate} endDate={filterEndDate} />
@@ -245,7 +212,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             <Users size={22} />
           </div>
           <div>
-            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">Escaneos en Rango</p>
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">Total Asistencias</p>
             <h3 className="text-2xl font-black text-fsm-blue leading-none">{totalScans}</h3>
           </div>
         </div>
@@ -255,8 +222,8 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             <UserCheck size={22} />
           </div>
           <div>
-            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">Dentro del Colegio</p>
-            <h3 className="text-2xl font-black text-fsm-blue leading-none">{activeInside}</h3>
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">Alumnos Asistentes</p>
+            <h3 className="text-2xl font-black text-fsm-blue leading-none">{uniqueStudents} <span className="text-xs font-normal text-gray-400">/ {totalStudentsInDB}</span></h3>
           </div>
         </div>
 
@@ -275,7 +242,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             <AlertTriangle size={22} />
           </div>
           <div>
-            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">Anomalías</p>
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">Sin Asignar (Anomalías)</p>
             <h3 className="text-2xl font-black text-fsm-blue leading-none">{totalAnomalies}</h3>
           </div>
         </div>
@@ -329,7 +296,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
               defaultValue={filterGrado}
               className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none"
             >
-              <option value="">Todos los Grados</option>
+              <option value="">Todos los Grados / Turnos</option>
               {grades.map((g: string) => (
                 <option key={g} value={g}>{g}</option>
               ))}
@@ -361,7 +328,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
               defaultChecked={filterAnomalyOnly}
               className="w-4 h-4 rounded border-gray-300 text-fsm-red focus:ring-fsm-red" 
             />
-            <span>Solo Anomalías</span>
+            <span>Solo Sin Asignar</span>
           </label>
 
           <RefreshButton />
@@ -375,11 +342,10 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             <thead>
               <tr className="border-b border-gray-100 text-gray-500 font-black text-[9px] uppercase tracking-widest bg-gray-50/50">
                 <th className="py-4 px-8">Estudiante</th>
-                <th className="py-4 px-6">Grado</th>
-                <th className="py-4 px-6">Tipo</th>
-                <th className="py-4 px-6">Lector/Ubicación</th>
+                <th className="py-4 px-6">Grado / Turno</th>
+                <th className="py-4 px-6">Lector / Ubicación</th>
                 <th className="py-4 px-6">Origen</th>
-                <th className="py-4 px-6">Hora</th>
+                <th className="py-4 px-6">Hora de Entrada</th>
                 <th className="py-4 px-6">Estado</th>
                 <th className="py-4 px-8 text-right">Acciones</th>
               </tr>
@@ -387,7 +353,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             <tbody className="divide-y divide-gray-100">
               {filteredEvents.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-sm font-medium text-gray-400">
+                  <td colSpan={7} className="py-12 text-center text-sm font-medium text-gray-400">
                     No se encontraron registros de asistencia para los filtros seleccionados.
                   </td>
                 </tr>
@@ -408,15 +374,6 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                       )}
                     </td>
                     <td className="py-4 px-6 font-bold text-gray-700">{ev.student_grado || 'N/A'}</td>
-                    <td className="py-4 px-6">
-                      <span className={`px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase ${
-                        ev.tipo_evento === 'entrada' 
-                          ? 'bg-green-50 text-green-700' 
-                          : 'bg-orange-50 text-orange-700'
-                      }`}>
-                        {ev.tipo_evento}
-                      </span>
-                    </td>
                     <td className="py-4 px-6">
                       <p className="font-bold text-gray-800">{ev.reader_name || 'Desconocido'}</p>
                       <p className="text-[10px] text-gray-500 font-medium flex items-center gap-1">
@@ -445,11 +402,11 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                     <td className="py-4 px-6">
                       {ev.isAnomaly ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-red-50 text-fsm-red border border-red-100" title={ev.anomalyReason}>
-                          <AlertTriangle size={10} /> Anomalía
+                          <AlertTriangle size={10} /> Sin Asignar
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-green-50 text-green-700">
-                          Correcto
+                          Asistió
                         </span>
                       )}
                     </td>

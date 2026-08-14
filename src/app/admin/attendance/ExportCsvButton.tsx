@@ -32,11 +32,10 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
     const headers = [
       'Estudiante',
       'Grado',
-      'Tipo de Evento',
+      'Hora de Entrada',
+      'Fecha (Bogotá)',
       'Lector / Ubicación',
       'Origen',
-      'Fecha (Bogotá)',
-      'Hora (Bogotá)',
       'Estado / Anomalía',
       'UID Tarjeta'
     ];
@@ -48,7 +47,6 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
       
       const studentName = ev.student_name || 'Tarjeta no asignada';
       const grado = ev.student_grado || 'N/A';
-      const tipo = ev.tipo_evento.toUpperCase();
       const reader = ev.reader_name || ev.reader_id;
       const origen = ev.origen === 'movil_profesor' ? 'Móvil Profesor' : 'Panel Fijo';
       const estado = ev.isAnomaly ? `Anomalía (${ev.anomalyReason || 'Revisión'})` : 'Correcto';
@@ -57,11 +55,10 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
       return [
         `"${studentName.replace(/"/g, '""')}"`,
         `"${grado}"`,
-        `"${tipo}"`,
+        `"${timeStr}"`,
+        `"${dateStr}"`,
         `"${reader.replace(/"/g, '""')}"`,
         `"${origen}"`,
-        `"${dateStr}"`,
-        `"${timeStr}"`,
         `"${estado.replace(/"/g, '""')}"`,
         `"${uid}"`
       ].join(';');

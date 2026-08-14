@@ -116,28 +116,8 @@ async function resolveTipoEvento(
   explicit: string | undefined,
   studentId: string | null,
   tagUid: string
-): Promise<'entrada' | 'salida'> {
-  if (explicit === 'entrada' || explicit === 'salida') return explicit;
-
-  // Una tarjeta sin asignar no tiene alumno, asi que se alterna sobre el UID.
-  const rows = studentId
-    ? await sql`
-        SELECT tipo_evento FROM attendance_events
-        WHERE student_id = ${studentId}
-          AND (timestamp AT TIME ZONE 'America/Bogota')::date
-              = (NOW() AT TIME ZONE 'America/Bogota')::date
-        ORDER BY timestamp DESC LIMIT 1
-      `
-    : await sql`
-        SELECT tipo_evento FROM attendance_events
-        WHERE rfid_tag_uid = ${tagUid}
-          AND (timestamp AT TIME ZONE 'America/Bogota')::date
-              = (NOW() AT TIME ZONE 'America/Bogota')::date
-        ORDER BY timestamp DESC LIMIT 1
-      `;
-
-  if (rows.length === 0) return 'entrada';
-  return rows[0].tipo_evento === 'entrada' ? 'salida' : 'entrada';
+): Promise<'entrada'> {
+  return 'entrada';
 }
 
 export async function POST(req: Request) {

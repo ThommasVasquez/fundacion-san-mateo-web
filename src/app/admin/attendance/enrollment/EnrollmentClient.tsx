@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { setEnrollmentStudent, linkStudentTag, unlinkStudentTag } from '@/app/actions';
+import { setEnrollmentStudent, linkStudentTag, unlinkStudentTag, updateStudentDetails } from '@/app/actions';
 import { 
   Tag, Search, AlertTriangle, ArrowLeft, RefreshCw, 
-  Check, X, Link as LinkIcon, AlertCircle, Plus
+  Check, X, Link as LinkIcon, AlertCircle, Plus, Edit2, Save
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -31,10 +31,17 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [statusMsg, setStatusMsg] = useState({ text: '', type: '' });
 
+  // Modal for Editing Student Details (Grado / Turno / Nombre)
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [editNombre, setEditNombre] = useState('');
+  const [editGrado, setEditGrado] = useState('');
+  const [editActivo, setEditActivo] = useState(true);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
   // Get active student details
   const activeStudent = students.find(s => s.id === activeStudentId);
 
-  // Poll database every 3 seconds to see if enrollment succeeded (i.e. tag_uid was written and activeStudentId was cleared)
+  // Poll database every 2 seconds to see if enrollment succeeded
   useEffect(() => {
     if (!activeStudentId) return;
 
@@ -105,6 +112,33 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
       router.refresh();
     } else {
       showStatus(res.error || 'Error al vincular', 'error');
+    }
+  };
+
+  const openEditModal = (student: Student) => {
+    setEditingStudent(student);
+    setEditNombre(student.nombre);
+    setEditGrado(student.grado);
+    setEditActivo(student.activo);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingStudent) return;
+    setIsSavingEdit(true);
+
+    const res = await updateStudentDetails(editingStudent.id, {
+      nombre: editNombre,
+      grado: editGrado,
+      activo: editActivo,
+    });
+
+    setIsSavingEdit(false);
+    if (res.success) {
+      showStatus(`Datos de ${editNombre} actualizados correctamente.`);
+      setEditingStudent(null);
+      router.refresh();
+    } else {
+      showStatus(res.error || 'Error al actualizar estudiante', 'error');
     }
   };
 
@@ -190,7 +224,7 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
               onChange={e => setFilterGrado(e.target.value)}
               className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none w-full"
             >
-              <option value="">Todos los Grados</option>
+              <option value="">Todos los Grados/Turnos</option>
               {grades.map(g => (
                 <option key={g} value={g}>{g}</option>
               ))}
@@ -222,9 +256,18 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
               >
                 <div className="flex justify-between items-start">
                   <div>
-                    <span className="text-[9px] font-black text-fsm-blue uppercase bg-fsm-blue/5 px-2 py-0.5 rounded">
-                      Grado: {student.grado}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] font-black text-fsm-blue uppercase bg-fsm-blue/5 px-2 py-0.5 rounded">
+                        Grado/Curso: {student.grado}
+                      </span>
+                      <button 
+                        onClick={() => openEditModal(student)}
+                        className="text-gray-400 hover:text-fsm-blue transition-colors p-1"
+                        title="Editar Grado, Curso o Turno"
+                      >
+                        <Edit2 size={13} />
+                      </button>
+                    </div>
                     <h4 className="text-lg font-black text-fsm-blue uppercase mt-1 leading-tight">{student.nombre}</h4>
                     {student.rfid_tag_uid ? (
                       <p className="text-xs text-green-600 font-bold mt-1 flex items-center gap-1">
@@ -236,6 +279,13 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
                       </p>
                     )}
                   </div>
+
+                  <button
+                    onClick={() => openEditModal(student)}
+                    className="px-3 py-1.5 bg-gray-50 text-gray-700 border border-gray-100 hover:bg-fsm-blue hover:text-white transition-all text-xs font-bold rounded-xl flex items-center gap-1"
+                  >
+                    <Edit2 size={12} /> Editar
+                  </button>
                 </div>
 
                 <div className="flex flex-col gap-3 pt-4 border-t border-gray-50">
@@ -296,6 +346,81 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
           })
         )}
       </div>
+
+      {/* Edit Student Modal */}
+      {editingStudent && (
+        <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl overflow-hidden w-full max-w-md p-8 space-y-6 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center border-b border-gray-100 pb-4">
+              <div>
+                <span className="text-[10px] font-black text-fsm-blue uppercase tracking-widest">EDITAR DATOS DE ESTUDIANTE</span>
+                <h3 className="text-lg font-black text-fsm-blue uppercase leading-tight mt-0.5">{editingStudent.nombre}</h3>
+              </div>
+              <button 
+                onClick={() => setEditingStudent(null)}
+                className="text-gray-400 hover:text-fsm-red transition-colors p-1"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Nombre Completo:</label>
+                <input 
+                  type="text" 
+                  value={editNombre}
+                  onChange={e => setEditNombre(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Grado / Curso / Turno:</label>
+                <input 
+                  type="text" 
+                  value={editGrado}
+                  onChange={e => setEditGrado(e.target.value)}
+                  placeholder="Ej: 10A, 11B, 3 SABADO A, NOCTURNO B"
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <input 
+                  type="checkbox" 
+                  id="editActivo"
+                  checked={editActivo}
+                  onChange={e => setEditActivo(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 text-fsm-blue focus:ring-fsm-blue"
+                />
+                <label htmlFor="editActivo" className="text-xs font-bold uppercase text-gray-700 cursor-pointer">
+                  Estudiante Activo en la Institución
+                </label>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4 border-t border-gray-100 justify-end">
+              <button
+                type="button"
+                onClick={() => setEditingStudent(null)}
+                className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEdit}
+                disabled={isSavingEdit}
+                className="px-6 py-2.5 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all flex items-center gap-2 disabled:opacity-50"
+              >
+                <Save size={14} /> {isSavingEdit ? 'Guardando...' : 'Guardar Cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
