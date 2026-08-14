@@ -11,6 +11,7 @@ import {
   Check, X, Link as LinkIcon, AlertCircle, Plus, Edit2, Save, Trash2, Users, Layers
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface Student {
   id: string;
@@ -92,19 +93,47 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
     }
   };
 
-  const handleUnlink = async (studentId: string) => {
-    if (!confirm('¿Estás seguro de que quieres desvincular esta tarjeta?')) return;
+  // Custom Fundación San Mateo Confirmation Modal State
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    subtitle?: string;
+    message: string;
+    confirmBtnText: string;
+    confirmBtnClass?: string;
+    badgeText?: string;
+    onConfirm: () => Promise<void> | void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmBtnText: 'Confirmar',
+    onConfirm: () => {},
+  });
 
-    setLoading(prev => ({ ...prev, [studentId]: true }));
-    const res = await unlinkStudentTag(studentId);
-    setLoading(prev => ({ ...prev, [studentId]: false }));
+  const handleUnlink = async (studentId: string, studentName?: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'DESVINCULAR TARJETA RFID',
+      subtitle: studentName || 'Estudiante',
+      message: `¿Estás seguro de que deseas desvincular la tarjeta física del estudiante ${studentName || ''}? El alumno no podrá ingresar por el lector hasta que se le asocie una nueva tarjeta.`,
+      confirmBtnText: 'Sí, Desvincular Tarjeta',
+      confirmBtnClass: 'bg-fsm-red hover:bg-red-700 text-white',
+      badgeText: 'ACCION REVERSIBLE',
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        setLoading(prev => ({ ...prev, [studentId]: true }));
+        const res = await unlinkStudentTag(studentId);
+        setLoading(prev => ({ ...prev, [studentId]: false }));
 
-    if (res.success) {
-      showStatus('Tarjeta desvinculada con éxito.');
-      router.refresh();
-    } else {
-      showStatus(res.error || 'Error al desvincular', 'error');
-    }
+        if (res.success) {
+          showStatus('Tarjeta desvinculada con éxito.');
+          router.refresh();
+        } else {
+          showStatus(res.error || 'Error al desvincular', 'error');
+        }
+      }
+    });
   };
 
   const handleManualLink = async (studentId: string, customUid?: string) => {
@@ -155,19 +184,29 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
   };
 
   const handleDelete = async (student: Student) => {
-    if (!confirm(`¿Eliminar definitivamente a ${student.nombre}?`)) return;
-    
-    setLoading(prev => ({ ...prev, [student.id]: true }));
-    const res = await deleteStudent(student.id);
-    setLoading(prev => ({ ...prev, [student.id]: false }));
+    setConfirmDialog({
+      isOpen: true,
+      title: 'ELIMINAR ESTUDIANTE',
+      subtitle: student.nombre,
+      message: `¿Estás seguro de que deseas ELIMINAR DEFINITIVAMENTE al estudiante ${student.nombre} (${student.grado}) de la base de datos de la Fundación San Mateo? Esta acción no se puede deshacer.`,
+      confirmBtnText: 'Sí, Eliminar Definitivamente',
+      confirmBtnClass: 'bg-red-600 hover:bg-red-700 text-white',
+      badgeText: 'PELIGRO - BORRADO PERMANENTE',
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        setLoading(prev => ({ ...prev, [student.id]: true }));
+        const res = await deleteStudent(student.id);
+        setLoading(prev => ({ ...prev, [student.id]: false }));
 
-    if (res.success) {
-      showStatus(`Estudiante ${student.nombre} eliminado.`);
-      setEditingStudent(null);
-      router.refresh();
-    } else {
-      showStatus(res.error || 'Error al eliminar estudiante', 'error');
-    }
+        if (res.success) {
+          showStatus(`Estudiante ${student.nombre} eliminado.`);
+          setEditingStudent(null);
+          router.refresh();
+        } else {
+          showStatus(res.error || 'Error al eliminar estudiante', 'error');
+        }
+      }
+    });
   };
 
   const handleCreateNewStudent = async () => {
@@ -236,19 +275,32 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
 
   const handleToggleFreeze = async (student: Student) => {
     const newActivoState = !student.activo;
-    const actionLabel = newActivoState ? 'DESCONGELAR (reactivar)' : 'CONGELAR (aplazar)';
-    if (!confirm(`¿Estás seguro de que deseas ${actionLabel} a ${student.nombre}?`)) return;
+    const isFreezing = !newActivoState;
 
-    setLoading(prev => ({ ...prev, [student.id]: true }));
-    const res = await updateStudentDetails(student.id, { activo: newActivoState });
-    setLoading(prev => ({ ...prev, [student.id]: false }));
+    setConfirmDialog({
+      isOpen: true,
+      title: isFreezing ? 'CONGELAR ALUMNO Y TARJETA' : 'DESCONGELAR ALUMNO Y TARJETA',
+      subtitle: student.nombre,
+      message: isFreezing 
+        ? `Al congelar al estudiante ${student.nombre} (${student.grado}), se aplazará su estado académico y su tarjeta RFID/NFC quedará INHABILITADA INMEDIATAMENTE en la entrada de la institución.`
+        : `Al descongelar al estudiante ${student.nombre} (${student.grado}), su estado cambiará a ACTIVO y su tarjeta volverá a funcionar de inmediato en los lectores.`,
+      confirmBtnText: isFreezing ? 'Sí, Congelar Estudiante y Tarjeta' : 'Sí, Descongelar Estudiante',
+      confirmBtnClass: isFreezing ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-fsm-blue hover:bg-fsm-red text-white',
+      badgeText: isFreezing ? 'APLAZAMIENTO ACADÉMICO' : 'REINTEGRO ACADÉMICO',
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        setLoading(prev => ({ ...prev, [student.id]: true }));
+        const res = await updateStudentDetails(student.id, { activo: newActivoState });
+        setLoading(prev => ({ ...prev, [student.id]: false }));
 
-    if (res.success) {
-      showStatus(`Estudiante ${student.nombre} ${newActivoState ? 'descongelado y reactivado' : 'congelado (aplazado)'} con éxito.`);
-      router.refresh();
-    } else {
-      showStatus(res.error || 'Error al cambiar estado del estudiante', 'error');
-    }
+        if (res.success) {
+          showStatus(`Estudiante ${student.nombre} ${newActivoState ? 'descongelado y reactivado' : 'congelado (aplazado)'} con éxito.`);
+          router.refresh();
+        } else {
+          showStatus(res.error || 'Error al cambiar estado del estudiante', 'error');
+        }
+      }
+    });
   };
 
   // Filter students
@@ -744,6 +796,61 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
                 className="px-6 py-2.5 bg-purple-700 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-purple-800 transition-all flex items-center gap-2 disabled:opacity-50"
               >
                 <Save size={14} /> {isBulkSaving ? 'Aplicando...' : 'Aplicar a Selección'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 4: Custom Branded Fundación San Mateo Confirmation Modal */}
+      {confirmDialog.isOpen && (
+        <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl overflow-hidden w-full max-w-md p-8 text-center space-y-6 animate-in zoom-in-95 duration-200 relative">
+            
+            {/* Header Logo */}
+            <div className="flex flex-col items-center justify-center space-y-2">
+              <div className="w-16 h-16 relative bg-fsm-blue/5 rounded-full p-2 border border-fsm-blue/10 flex items-center justify-center shadow-inner">
+                <Image src="/FSM.png" alt="Escudo Fundación San Mateo" width={48} height={48} className="object-contain" />
+              </div>
+              {confirmDialog.badgeText && (
+                <span className="text-[9px] font-black text-fsm-blue tracking-widest uppercase bg-fsm-blue/5 border border-fsm-blue/10 px-3 py-1 rounded-full">
+                  {confirmDialog.badgeText}
+                </span>
+              )}
+            </div>
+
+            {/* Modal Title & Body */}
+            <div className="space-y-2">
+              <h3 className="text-xl font-black text-fsm-blue uppercase tracking-tight leading-tight">
+                {confirmDialog.title}
+              </h3>
+              {confirmDialog.subtitle && (
+                <p className="text-xs font-black text-fsm-red uppercase tracking-wider">
+                  {confirmDialog.subtitle}
+                </p>
+              )}
+              <p className="text-xs font-semibold text-gray-600 leading-relaxed pt-2">
+                {confirmDialog.message}
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+                className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmDialog.onConfirm}
+                className={`flex-1 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-md active:scale-95 ${
+                  confirmDialog.confirmBtnClass || 'bg-fsm-blue text-white hover:bg-fsm-red'
+                }`}
+              >
+                {confirmDialog.confirmBtnText}
               </button>
             </div>
           </div>
