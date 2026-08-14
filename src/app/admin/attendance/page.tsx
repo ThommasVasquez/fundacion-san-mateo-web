@@ -200,7 +200,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             href="/admin/attendance/enrollment"
             className="px-5 py-2.5 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all shadow-sm flex items-center gap-2"
           >
-            <Tag size={14} /> Vincular Tarjetas
+            <Users size={14} /> Gestión y Edición de Estudiantes
           </Link>
         </div>
       </div>

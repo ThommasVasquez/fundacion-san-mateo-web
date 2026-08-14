@@ -36,20 +36,16 @@ export default async function EnrollmentPage({ searchParams }: EnrollmentPagePro
     <div className="max-w-6xl mx-auto space-y-8">
       {/* Breadcrumbs */}
       <div className="flex items-center gap-3 text-xs font-black tracking-widest uppercase text-gray-700 mb-4">
-        <Link href="/admin" className="hover:text-fsm-red transition-colors flex items-center gap-2">
-          <ArrowLeft size={14} /> Panel
+        <Link href="/admin/attendance" className="hover:text-fsm-red transition-colors flex items-center gap-2">
+          <ArrowLeft size={14} /> Asistencia
         </Link>
         <ChevronRight size={14} />
-        <Link href="/admin/attendance" className="hover:text-fsm-red transition-colors">
-          Asistencia
-        </Link>
-        <ChevronRight size={14} />
-        <span className="text-fsm-blue">Matrícula de Tarjetas</span>
+        <span className="text-fsm-blue">Gestión de Estudiantes y Tarjetas</span>
       </div>
 
       <div>
-        <h1 className="text-3xl font-black text-fsm-blue uppercase tracking-tighter mb-2">MATRÍCULA DE TARJETAS</h1>
-        <p className="text-gray-900 font-medium">Asocia tarjetas RFID o etiquetas NFC a los perfiles de los estudiantes.</p>
+        <h1 className="text-3xl font-black text-fsm-blue uppercase tracking-tighter mb-2">GESTIÓN DE ESTUDIANTES Y VINCULACIÓN DE TARJETAS</h1>
+        <p className="text-gray-900 font-medium">Modifica grados/cursos/turnos, crea nuevos estudiantes, o vincula tarjetas RFID y NFC.</p>
       </div>
 
       <EnrollmentClient 

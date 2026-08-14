@@ -42,7 +42,10 @@ export async function login(formData: FormData) {
       maxAge: 60 * 60 * 24 // 24 hours
     });
 
-    return { success: true };
+    return { 
+      success: true, 
+      redirectUrl: userRole === 'academic' ? '/admin/attendance' : '/admin' 
+    };
   } catch (error) {
     console.error('Login error:', error);
     return { error: 'Ocurrió un error inesperado' };

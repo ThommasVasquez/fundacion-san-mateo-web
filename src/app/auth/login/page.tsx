@@ -23,7 +23,7 @@ export default function LoginPage() {
       setError(result.error);
       setLoading(false);
     } else {
-       router.push('/admin');
+       router.push(result.redirectUrl || '/admin');
        router.refresh();
     }
   }
