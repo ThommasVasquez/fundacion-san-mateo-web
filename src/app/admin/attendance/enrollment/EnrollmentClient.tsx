@@ -4,11 +4,11 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   setEnrollmentStudent, linkStudentTag, unlinkStudentTag, 
-  updateStudentDetails, createStudent, bulkUpdateStudentGrado, deleteStudent 
+  updateStudentDetails, createStudent, bulkUpdateStudentGrado, deleteStudent, recordManualAttendance 
 } from '@/app/actions';
 import { 
   Tag, Search, AlertTriangle, ArrowLeft, RefreshCw, 
-  Check, X, Link as LinkIcon, AlertCircle, Plus, Edit2, Save, Trash2, Users, Layers
+  Check, X, Link as LinkIcon, AlertCircle, Plus, Edit2, Save, Trash2, Users, Layers, UserCheck
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -303,6 +303,24 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
     });
   };
 
+  const handleRecordManual = async (student: Student) => {
+    if (!student.activo) {
+      showStatus(`No se puede registrar entrada. El estudiante ${student.nombre} está CONGELADO / APLAZADO.`, 'error');
+      return;
+    }
+
+    setLoading(prev => ({ ...prev, [student.id]: true }));
+    const res = await recordManualAttendance(student.id);
+    setLoading(prev => ({ ...prev, [student.id]: false }));
+
+    if (res.success) {
+      showStatus(`✓ Entrada manual registrada para ${student.nombre} (${student.grado}).`);
+      router.refresh();
+    } else {
+      showStatus(res.error || 'Error al registrar entrada', 'error');
+    }
+  };
+
   // Filter students
   const filteredStudents = students.filter(s => {
     const matchesSearch = s.nombre.toLowerCase().includes(search.toLowerCase()) || 
@@ -510,6 +528,16 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0">
+                    {student.activo && (
+                      <button
+                        onClick={() => handleRecordManual(student)}
+                        disabled={loading[student.id]}
+                        className="px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-600 hover:text-white transition-all text-xs font-bold rounded-xl flex items-center gap-1"
+                        title="Marcar entrada manual sin carnet"
+                      >
+                        <UserCheck size={12} /> Entrada Manual
+                      </button>
+                    )}
                     <button
                       onClick={() => handleToggleFreeze(student)}
                       disabled={loading[student.id]}

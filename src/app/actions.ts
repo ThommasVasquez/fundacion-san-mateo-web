@@ -785,6 +785,56 @@ export async function deleteStudent(studentId: string) {
   }
 }
 
+export async function recordManualAttendance(studentId: string) {
+  try {
+    const studentQuery = await sql`
+      SELECT id, nombre, grado, rfid_tag_uid, activo 
+      FROM students 
+      WHERE id = ${studentId}::uuid 
+      LIMIT 1
+    `;
+
+    if (studentQuery.length === 0) {
+      return { error: 'Estudiante no encontrado' };
+    }
+
+    const student = studentQuery[0];
+
+    if (!student.activo) {
+      return { error: `No se puede registrar entrada. El estudiante ${student.nombre} está CONGELADO / APLAZADO.` };
+    }
+
+    // Check duplicate manual entry within 30 seconds
+    const recent = await sql`
+      SELECT id FROM attendance_events
+      WHERE student_id = ${student.id}::uuid
+        AND timestamp > NOW() - INTERVAL '30 seconds'
+      LIMIT 1
+    `;
+
+    if (recent.length > 0) {
+      return { error: `Ya se registró una entrada reciente para ${student.nombre}.` };
+    }
+
+    const tagUid = student.rfid_tag_uid || 'MANUAL';
+
+    await sql`
+      INSERT INTO attendance_events (
+        student_id, student_name, student_grado, tipo_evento,
+        reader_id, reader_name, origen, timestamp, rfid_tag_uid
+      ) VALUES (
+        ${student.id}::uuid, ${student.nombre}, ${student.grado}, 'entrada',
+        'MANUAL_WEB', 'Entrada Manual (Sin Carnet)', 'manual', CURRENT_TIMESTAMP, ${tagUid}
+      )
+    `;
+
+    return { success: true, studentName: student.nombre };
+  } catch (error: any) {
+    console.error('Error recording manual attendance:', error);
+    return { error: error.message || 'Error al registrar entrada manual' };
+  }
+}
+
 export async function teacherLogin(formData: FormData) {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import RefreshButton from './RefreshButton';
 import ExportCsvButton from './ExportCsvButton';
+import ManualAttendanceModal from './ManualAttendanceModal';
 
 export const dynamic = 'force-dynamic';
 
@@ -172,6 +173,12 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
     }
   }
 
+  const allStudentsForManual = await sql`
+    SELECT id, nombre, grado, activo
+    FROM students
+    ORDER BY grado, nombre
+  `;
+
   return (
     <div className="max-w-6xl mx-auto space-y-8 relative">
       {/* Breadcrumbs */}
@@ -189,6 +196,14 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
           <p className="text-gray-900 font-medium">Asistencia diaria y hora de entrada de los estudiantes.</p>
         </div>
         <div className="flex flex-wrap gap-3 items-center">
+          <ManualAttendanceModal 
+            students={allStudentsForManual.map((s: any) => ({
+              id: s.id,
+              nombre: s.nombre,
+              grado: s.grado,
+              activo: s.activo
+            }))} 
+          />
           <ExportCsvButton events={filteredEvents} startDate={filterStartDate} endDate={filterEndDate} />
           <Link
             href="/admin/attendance/import"
