@@ -231,12 +231,35 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
     }
   };
 
+  // Filter for Student Active/Frozen Status
+  const [filterEstado, setFilterEstado] = useState<'all' | 'active' | 'inactive'>('all');
+
+  const handleToggleFreeze = async (student: Student) => {
+    const newActivoState = !student.activo;
+    const actionLabel = newActivoState ? 'DESCONGELAR (reactivar)' : 'CONGELAR (aplazar)';
+    if (!confirm(`¿Estás seguro de que deseas ${actionLabel} a ${student.nombre}?`)) return;
+
+    setLoading(prev => ({ ...prev, [student.id]: true }));
+    const res = await updateStudentDetails(student.id, { activo: newActivoState });
+    setLoading(prev => ({ ...prev, [student.id]: false }));
+
+    if (res.success) {
+      showStatus(`Estudiante ${student.nombre} ${newActivoState ? 'descongelado y reactivado' : 'congelado (aplazado)'} con éxito.`);
+      router.refresh();
+    } else {
+      showStatus(res.error || 'Error al cambiar estado del estudiante', 'error');
+    }
+  };
+
   // Filter students
   const filteredStudents = students.filter(s => {
     const matchesSearch = s.nombre.toLowerCase().includes(search.toLowerCase()) || 
                           (s.rfid_tag_uid && s.rfid_tag_uid.toLowerCase().includes(search.toLowerCase()));
     const matchesGrado = !filterGrado || s.grado === filterGrado;
-    return matchesSearch && matchesGrado;
+    const matchesEstado = filterEstado === 'all' || 
+                          (filterEstado === 'active' && s.activo) || 
+                          (filterEstado === 'inactive' && !s.activo);
+    return matchesSearch && matchesGrado && matchesEstado;
   });
 
   const grades = Array.from(new Set(students.map(s => s.grado))).sort();
@@ -352,6 +375,18 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
               ))}
             </select>
           </div>
+
+          <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100 w-full md:w-48">
+            <select
+              value={filterEstado}
+              onChange={e => setFilterEstado(e.target.value as any)}
+              className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none w-full"
+            >
+              <option value="all">Todos los Estados</option>
+              <option value="active">Solo Activos (En Estudio)</option>
+              <option value="inactive">Solo Aplazados / Congelados</option>
+            </select>
+          </div>
         </div>
         
         <div className="text-xs font-black text-gray-500 uppercase tracking-widest">
@@ -363,7 +398,7 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {filteredStudents.length === 0 ? (
           <div className="col-span-full bg-white p-12 text-center text-sm font-medium text-gray-400 rounded-[2rem] border border-gray-100 shadow-premium">
-            No se encontraron estudiantes que coincidan con la búsqueda.
+            No se encontraron estudiantes que coincidan con los filtros seleccionados.
           </div>
         ) : (
           filteredStudents.map(student => {
@@ -374,6 +409,7 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
               <div 
                 key={student.id} 
                 className={`bg-white p-6 rounded-[2rem] border shadow-premium transition-all duration-300 flex flex-col justify-between gap-6 relative ${
+                  !student.activo ? 'border-amber-200 bg-amber-50/20 opacity-85' :
                   isSelected ? 'border-purple-300 ring-2 ring-purple-100' :
                   isPendingLink ? 'border-yellow-200 bg-yellow-50/10' : 'border-gray-100 hover:border-fsm-blue/20'
                 }`}
@@ -387,10 +423,19 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
                       className="mt-1 w-4 h-4 rounded border-gray-300 text-fsm-blue focus:ring-fsm-blue"
                     />
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="text-[9px] font-black text-fsm-blue uppercase bg-fsm-blue/5 px-2 py-0.5 rounded">
                           Grado/Curso: {student.grado}
                         </span>
+                        {!student.activo ? (
+                          <span className="text-[9px] font-black text-amber-800 uppercase bg-amber-100 border border-amber-200 px-2 py-0.5 rounded flex items-center gap-1">
+                            ❄️ APLAZADO / CONGELADO
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-black text-green-700 uppercase bg-green-50 px-2 py-0.5 rounded">
+                            ✓ ACTIVO
+                          </span>
+                        )}
                         <button 
                           onClick={() => openEditModal(student)}
                           className="text-gray-400 hover:text-fsm-blue transition-colors p-1"
@@ -412,12 +457,26 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => openEditModal(student)}
-                    className="px-3 py-1.5 bg-gray-50 text-gray-700 border border-gray-100 hover:bg-fsm-blue hover:text-white transition-all text-xs font-bold rounded-xl flex items-center gap-1 shrink-0"
-                  >
-                    <Edit2 size={12} /> Editar
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => handleToggleFreeze(student)}
+                      disabled={loading[student.id]}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                        student.activo 
+                          ? 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-amber-100 hover:text-amber-900' 
+                          : 'bg-amber-500 text-white border-amber-600 hover:bg-amber-600 shadow-sm'
+                      }`}
+                      title={student.activo ? 'Congelar / Aplazar alumno' : 'Descongelar y reactivar alumno'}
+                    >
+                      {student.activo ? '❄️ Congelar' : '🔥 Descongelar'}
+                    </button>
+                    <button
+                      onClick={() => openEditModal(student)}
+                      className="px-3 py-1.5 bg-gray-50 text-gray-700 border border-gray-100 hover:bg-fsm-blue hover:text-white transition-all text-xs font-bold rounded-xl flex items-center gap-1"
+                    >
+                      <Edit2 size={12} /> Editar
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex flex-col gap-3 pt-4 border-t border-gray-50">

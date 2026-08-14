@@ -255,15 +255,22 @@ export async function POST(req: Request) {
     // Se buscan las dos a la vez. Exigir la primera obligaría a re-matricular a
     // mano a los seiscientos que ya tenían tarjeta.
     const students = await sql`
-      SELECT id, nombre, grado
+      SELECT id, nombre, grado, activo
       FROM students
-      WHERE activo = TRUE
-        AND (rfid_tag_uid = ${tagHex}
+      WHERE (rfid_tag_uid = ${tagHex}
              OR (${tarjetaNum}::bigint IS NOT NULL AND tarjeta_numero = ${tarjetaNum}::bigint))
       LIMIT 1
     `;
 
-    const student = students.length > 0 ? students[0] : null;
+    if (students.length > 0 && !students[0].activo) {
+      return NextResponse.json({
+        status: 'student_inactive',
+        error: `El estudiante ${students[0].nombre} se encuentra en estado APLAZADO / INACTIVO.`,
+        student: { id: students[0].id, nombre: students[0].nombre, grado: students[0].grado }
+      }, { status: 400 });
+    }
+
+    const student = (students.length > 0 && students[0].activo) ? students[0] : null;
 
     // 4. Descartar reenvios antes de decidir nada: un duplicado que llegue a la
     //    logica de alternancia invertiria el sentido del pase.
