@@ -695,17 +695,11 @@ export async function linkStudentTag(studentId: string, tagUid: string) {
     `;
 
     // Backfill previous unassigned attendance events for this card UID
-    const studentRes = await sql`SELECT nombre, grado FROM students WHERE id = ${studentId}::uuid LIMIT 1`;
-    if (studentRes.length > 0) {
-      await sql`
-        UPDATE attendance_events 
-        SET 
-          student_id = ${studentId}::uuid,
-          student_name = ${studentRes[0].nombre},
-          student_grado = ${studentRes[0].grado}
-        WHERE rfid_tag_uid = ${tagUid} AND student_id IS NULL
-      `;
-    }
+    await sql`
+      UPDATE attendance_events 
+      SET student_id = ${studentId}::uuid
+      WHERE rfid_tag_uid = ${tagUid} AND student_id IS NULL
+    `;
 
     return { success: true };
   } catch (error: any) {
@@ -834,11 +828,9 @@ export async function recordManualAttendance(studentId: string) {
 
     await sql`
       INSERT INTO attendance_events (
-        student_id, student_name, student_grado, tipo_evento,
-        reader_id, reader_name, origen, timestamp, rfid_tag_uid
+        student_id, rfid_tag_uid, reader_id, tipo_evento, timestamp, origen, sincronizado
       ) VALUES (
-        ${student.id}::uuid, ${student.nombre}, ${student.grado}, 'entrada',
-        'MANUAL_WEB', 'Entrada Manual (Sin Carnet)', 'manual', CURRENT_TIMESTAMP, ${tagUid}
+        ${student.id}::uuid, ${tagUid}, 'MANUAL_WEB', 'entrada', CURRENT_TIMESTAMP, 'manual', true
       )
     `;
 
