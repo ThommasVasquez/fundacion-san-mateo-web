@@ -188,6 +188,16 @@ export async function POST(req: Request) {
 
     // Se calculan antes del modo matrícula porque ambos los necesitan.
     const tagHex = String(tag_uid).replace(/\s+/g, '').toUpperCase();
+
+    // Rechazar lecturas nulas/ficticias de hardware (0000000000 o FFFFFFFFFF)
+    // Esto ocurre cuando el módulo lector RFID perdiología comunicación SPI o requiere reinicio.
+    if (/^0+$/.test(tagHex) || /^F+$/i.test(tagHex)) {
+      return NextResponse.json(
+        { error: 'Lectura nula de hardware (0000000000). Verifique las conexiones del lector RFID o reinícielo.' },
+        { status: 400 }
+      );
+    }
+
     const tarjetaNum = tarjetaDecimal(tagHex);
 
     // 2. Check if Enrollment Mode is active for a student
