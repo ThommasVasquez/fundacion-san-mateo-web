@@ -20,8 +20,20 @@ import { clasificar, bloqueos, type RegistroPadron } from '@/lib/padron';
  *
  * `ON CONFLICT (usuario_nro)` hace que reimportar el mismo fichero actualice en
  * vez de duplicar, que es lo que se espera de "volver a subir la lista con tres
- * alumnos nuevos". El número de tarjeta se respeta tal cual venga: si el padrón
- * trae uno distinto para alguien, manda el padrón.
+ * alumnos nuevos". Un número de tarjeta distinto manda sobre el que hubiera: si
+ * el padrón dice otra cosa, el padrón gana.
+ *
+ * Lo que ya no puede pasar es que lo *borre*. Una celda vacía —o un fichero sin
+ * columna de tarjeta— dejaba `tarjeta_numero` en NULL para todos los alumnos que
+ * coincidían, y como esta ruta no toca `rfid_tag_uid`, los del padrón se
+ * quedaban sin ninguna de las dos formas de ser reconocidos. El síntoma no
+ * llevaba a la causa: cada pase suyo entraba como "tarjeta sin asignar" en
+ * /admin/attendance y la puerta empezaba a denegarles, todo a la vez, sin que
+ * nadie hubiera tocado una tarjeta. Subir una lista de nombres para corregir
+ * cursos bastaba para desmatricular al colegio entero.
+ *
+ * Soltar una tarjeta sigue siendo posible, pero como acto deliberado y de una en
+ * una: la página de Vincular Tarjetas, o /api/students/unlink. Nunca de rebote.
  */
 
 /** El layout de /admin protege las páginas; una ruta de API tiene que mirarlo ella. */
@@ -81,7 +93,9 @@ export async function POST(req: Request) {
         -- constraint matching".
         ON CONFLICT (usuario_nro) WHERE usuario_nro IS NOT NULL DO UPDATE
                 SET nombre = EXCLUDED.nombre, grado = EXCLUDED.grado,
-                    tarjeta_numero = EXCLUDED.tarjeta_numero,
+                    -- COALESCE y no asignación directa: ver la nota de arriba.
+                    -- Un número nuevo pisa al viejo; un hueco no borra nada.
+                    tarjeta_numero = COALESCE(EXCLUDED.tarjeta_numero, students.tarjeta_numero),
                     departamento = EXCLUDED.departamento, rol = EXCLUDED.rol,
                     telefono = EXCLUDED.telefono, domicilio = EXCLUDED.domicilio,
                     dispositivos = EXCLUDED.dispositivos

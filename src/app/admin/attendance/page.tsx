@@ -3,73 +3,66 @@ import Link from 'next/link';
 import { sql } from '@/lib/db';
 import { 
   Users, UserCheck, AlertTriangle, HelpCircle, 
-  Search, Calendar, Filter, FileSpreadsheet, MapPin, 
-  ArrowLeft, Clock, ChevronRight, X, Tag, Upload
+  Search, Calendar, Filter, ArrowLeft, Clock, ChevronRight, X, Tag, Upload, ArrowUpDown
 } from 'lucide-react';
 import RefreshButton from './RefreshButton';
+import ExportCsvButton from './ExportCsvButton';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * Colombia, UTC-5 y sin horario de verano.
- *
- * Va escrita aqui porque este componente se renderiza en el servidor -- en el
- * borde de Cloudflare, que corre en UTC. Sin decirle la zona, toLocaleTimeString
- * usa la del proceso y pinta todas las horas cinco adelantadas: un pase de las
- * 18:19 aparecia como las 23:19. Y el dia se partia por la medianoche de
- * Greenwich, asi que una jornada nocturna caia entera en la hoja del dia
- * siguiente.
- */
 const ZONA_HORARIA = 'America/Bogota';
 
 interface AttendancePageProps {
   searchParams: Promise<{
     date?: string;
+    startDate?: string;
+    endDate?: string;
+    search?: string;
     grado?: string;
     anomalyOnly?: string;
+    sort?: string;
     studentHistoryId?: string;
   }>;
 }
 
 export default async function AttendancePage({ searchParams }: AttendancePageProps) {
   const params = await searchParams;
-  // Hoy donde esta el instituto, no donde corre el servidor. Este componente se
-  // renderiza en el borde de Cloudflare, que va en UTC: con toISOString, a las
-  // 19:00 hora de Bogota la pagina cambiaba de dia y dejaba de mostrar la jornada
-  // en curso.
   const todayStr = new Intl.DateTimeFormat('en-CA', {
     timeZone: ZONA_HORARIA, year: 'numeric', month: '2-digit', day: '2-digit',
   }).format(new Date());
-  const filterDate = params.date || todayStr;
+
+  const filterStartDate = params.startDate || params.date || todayStr;
+  const filterEndDate = params.endDate || params.date || filterStartDate;
+  const filterSearch = (params.search || '').trim();
   const filterGrado = params.grado || '';
   const filterAnomalyOnly = params.anomalyOnly === 'true';
+  const filterSort = params.sort || 'time_desc';
   const historyStudentId = params.studentHistoryId || '';
 
-  // 1. Fetch Today's Stats
+  // 1. Fetch Stats for selected range
   const totalScansRes = await sql`
     SELECT count(*) FROM attendance_events 
-    WHERE (timestamp AT TIME ZONE 'America/Bogota')::date = ${filterDate}::date
+    WHERE (timestamp AT TIME ZONE 'America/Bogota')::date >= ${filterStartDate}::date
+      AND (timestamp AT TIME ZONE 'America/Bogota')::date <= ${filterEndDate}::date
   `;
   const totalScans = parseInt(totalScansRes[0].count);
 
-  const entradasRes = await sql`
-    SELECT count(*) FROM attendance_events 
-    WHERE tipo_evento = 'entrada' AND (timestamp AT TIME ZONE 'America/Bogota')::date = ${filterDate}::date
-  `;
-  const totalEntradas = parseInt(entradasRes[0].count);
-
   const unassignedRes = await sql`
     SELECT count(*) FROM attendance_events 
-    WHERE student_id IS NULL AND (timestamp AT TIME ZONE 'America/Bogota')::date = ${filterDate}::date
+    WHERE student_id IS NULL 
+      AND (timestamp AT TIME ZONE 'America/Bogota')::date >= ${filterStartDate}::date
+      AND (timestamp AT TIME ZONE 'America/Bogota')::date <= ${filterEndDate}::date
   `;
   const unassignedScans = parseInt(unassignedRes[0].count);
 
-  // Active inside: last event today is entry
+  // Active inside for date range (last scan was entry)
   const activeInsideRes = await sql`
     SELECT count(*) FROM (
       SELECT DISTINCT ON (student_id) student_id, tipo_evento
       FROM attendance_events
-      WHERE student_id IS NOT NULL AND (timestamp AT TIME ZONE 'America/Bogota')::date = ${filterDate}::date
+      WHERE student_id IS NOT NULL 
+        AND (timestamp AT TIME ZONE 'America/Bogota')::date >= ${filterStartDate}::date
+        AND (timestamp AT TIME ZONE 'America/Bogota')::date <= ${filterEndDate}::date
       ORDER BY student_id, timestamp DESC
     ) as last_scans WHERE tipo_evento = 'entrada'
   `;
@@ -81,7 +74,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
   `;
   const grades = gradesRes.map((g: any) => g.grado);
 
-  // 3. Fetch Events
+  // 3. Fetch Events for date range
   const events = await sql`
     SELECT 
       ae.id,
@@ -101,16 +94,12 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
     FROM attendance_events ae
     LEFT JOIN students s ON ae.student_id = s.id
     LEFT JOIN readers r ON ae.reader_id = r.id
-    WHERE (ae.timestamp AT TIME ZONE 'America/Bogota')::date = ${filterDate}::date
+    WHERE (ae.timestamp AT TIME ZONE 'America/Bogota')::date >= ${filterStartDate}::date
+      AND (ae.timestamp AT TIME ZONE 'America/Bogota')::date <= ${filterEndDate}::date
     ORDER BY ae.timestamp DESC
   `;
 
-  // 4. Calculate anomalies and filter in memory
-  // Anomaly criteria: 
-  // - unassigned tags (student_id is null)
-  // - sequential entry without exit, or exit without entry (checked per student)
-  
-  // We need to look up all events for active students today to find sequence issues
+  // 4. Calculate anomalies and sequence check
   const studentEventsMap: Record<string, any[]> = {};
   events.forEach((ev: any) => {
     if (ev.student_id) {
@@ -121,22 +110,19 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
 
   const anomalousStudentIds = new Set<string>();
   Object.entries(studentEventsMap).forEach(([studentId, studentEvs]) => {
-    // Sort chronological: oldest first
     const sorted = [...studentEvs].reverse();
     let lastType = '';
     for (const ev of sorted) {
       if (ev.tipo_evento === lastType) {
-        anomalousStudentIds.add(studentId); // duplicate (e.g. entry-entry or exit-exit)
+        anomalousStudentIds.add(studentId);
       }
       lastType = ev.tipo_evento;
     }
-    // If the first event of the day was an exit, it's also anomalous (exit without entry today)
     if (sorted.length > 0 && sorted[0].tipo_evento === 'salida') {
       anomalousStudentIds.add(studentId);
     }
   });
 
-  // Map events adding anomaly flag
   const processedEvents = events.map((ev: any) => {
     const isUnassigned = !ev.student_id;
     const isSequenceAnomaly = ev.student_id && anomalousStudentIds.has(ev.student_id);
@@ -158,17 +144,48 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
     };
   });
 
-  // Filter list
-  const filteredEvents = processedEvents.filter((ev: any) => {
+  // Filter in memory by search, degree, and anomaly
+  const searchLower = filterSearch.toLowerCase();
+  let filteredEvents = processedEvents.filter((ev: any) => {
     if (filterGrado && ev.student_grado !== filterGrado) return false;
     if (filterAnomalyOnly && !ev.isAnomaly) return false;
+    if (filterSearch) {
+      const nameMatch = (ev.student_name || 'Tarjeta no asignada').toLowerCase().includes(searchLower);
+      const gradoMatch = (ev.student_grado || '').toLowerCase().includes(searchLower);
+      const uidMatch = (ev.rfid_tag_uid || '').toLowerCase().includes(searchLower);
+      const readerMatch = (ev.reader_name || ev.reader_id || '').toLowerCase().includes(searchLower);
+      return nameMatch || gradoMatch || uidMatch || readerMatch;
+    }
     return true;
   });
 
-  // Anomaly Count
+  // Sorting
+  filteredEvents.sort((a: any, b: any) => {
+    if (filterSort === 'time_asc') {
+      return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+    }
+    if (filterSort === 'name_asc') {
+      const nameA = a.student_name || 'ZZZ';
+      const nameB = b.student_name || 'ZZZ';
+      return nameA.localeCompare(nameB);
+    }
+    if (filterSort === 'name_desc') {
+      const nameA = a.student_name || 'AAA';
+      const nameB = b.student_name || 'AAA';
+      return nameB.localeCompare(nameA);
+    }
+    if (filterSort === 'grado_asc') {
+      const gA = a.student_grado || 'ZZZ';
+      const gB = b.student_grado || 'ZZZ';
+      return gA.localeCompare(gB);
+    }
+    // Default: time_desc
+    return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+  });
+
   const totalAnomalies = processedEvents.filter((ev: any) => ev.isAnomaly).length;
 
-  // 5. Fetch Student History if requested
+  // Student History overlay
   let historyStudent = null;
   let historyEvents = [];
   if (historyStudentId) {
@@ -202,18 +219,19 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-black text-fsm-blue uppercase tracking-tighter mb-2">CONTROL DE ASISTENCIA</h1>
-          <p className="text-gray-900 font-medium">Visualiza los accesos de los estudiantes vía RFID y dispositivos móviles.</p>
+          <p className="text-gray-900 font-medium">Filtra, busca, ordena y descarga los registros de asistencia en Excel.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3 items-center">
+          <ExportCsvButton events={filteredEvents} startDate={filterStartDate} endDate={filterEndDate} />
           <Link
             href="/admin/attendance/import"
-            className="px-6 py-3 bg-white text-fsm-blue border border-fsm-blue/20 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-blue hover:text-white transition-all shadow-sm flex items-center gap-2"
+            className="px-5 py-2.5 bg-white text-fsm-blue border border-fsm-blue/20 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-blue hover:text-white transition-all shadow-sm flex items-center gap-2"
           >
             <Upload size={14} /> Subir Alumnos
           </Link>
           <Link
             href="/admin/attendance/enrollment"
-            className="px-6 py-3 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all shadow-sm flex items-center gap-2"
+            className="px-5 py-2.5 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all shadow-sm flex items-center gap-2"
           >
             <Tag size={14} /> Vincular Tarjetas
           </Link>
@@ -227,7 +245,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             <Users size={22} />
           </div>
           <div>
-            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">Escaneos Hoy</p>
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">Escaneos en Rango</p>
             <h3 className="text-2xl font-black text-fsm-blue leading-none">{totalScans}</h3>
           </div>
         </div>
@@ -247,7 +265,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             <HelpCircle size={22} />
           </div>
           <div>
-            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">Sin Asignar Hoy</p>
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">Sin Asignar</p>
             <h3 className="text-2xl font-black text-fsm-blue leading-none">{unassignedScans}</h3>
           </div>
         </div>
@@ -257,25 +275,53 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             <AlertTriangle size={22} />
           </div>
           <div>
-            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">Anomalías Hoy</p>
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">Anomalías</p>
             <h3 className="text-2xl font-black text-fsm-blue leading-none">{totalAnomalies}</h3>
           </div>
         </div>
       </div>
 
-      {/* Filters Bar */}
-      <form method="GET" className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-premium flex flex-wrap gap-4 items-center justify-between">
-        <div className="flex flex-wrap gap-4 items-center">
+      {/* Advanced Filters Form */}
+      <form method="GET" className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-premium flex flex-col gap-4">
+        <div className="flex flex-wrap gap-4 items-center justify-between">
+          
+          {/* Search Input */}
+          <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100 flex-1 min-w-[220px]">
+            <Search size={16} className="text-gray-400" />
+            <input 
+              type="text" 
+              name="search"
+              placeholder="Buscar estudiante, UID o lector..."
+              defaultValue={filterSearch}
+              className="bg-transparent font-bold text-xs text-gray-700 outline-none w-full" 
+            />
+          </div>
+
+          {/* Date Range: Start Date */}
           <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100">
             <Calendar size={16} className="text-gray-400" />
+            <span className="text-[10px] font-black uppercase text-gray-400">Desde:</span>
             <input 
               type="date" 
-              name="date"
-              defaultValue={filterDate}
+              name="startDate"
+              defaultValue={filterStartDate}
               className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none" 
             />
           </div>
 
+          {/* Date Range: End Date */}
+          <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100">
+            <Calendar size={16} className="text-gray-400" />
+            <span className="text-[10px] font-black uppercase text-gray-400">Hasta:</span>
+            <input 
+              type="date" 
+              name="endDate"
+              defaultValue={filterEndDate}
+              className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none" 
+            />
+          </div>
+
+          {/* Grade Selector */}
           <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100">
             <Filter size={16} className="text-gray-400" />
             <select 
@@ -290,6 +336,23 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             </select>
           </div>
 
+          {/* Sort Order Selector */}
+          <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100">
+            <ArrowUpDown size={16} className="text-gray-400" />
+            <select 
+              name="sort"
+              defaultValue={filterSort}
+              className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none"
+            >
+              <option value="time_desc">Hora (Más reciente primero)</option>
+              <option value="time_asc">Hora (Más antiguo primero)</option>
+              <option value="name_asc">Nombre (A - Z)</option>
+              <option value="name_desc">Nombre (Z - A)</option>
+              <option value="grado_asc">Grado (A - Z)</option>
+            </select>
+          </div>
+
+          {/* Anomaly Checkbox */}
           <label className="flex items-center gap-2 cursor-pointer font-bold text-xs uppercase text-gray-700 select-none">
             <input 
               type="checkbox" 
@@ -300,9 +363,9 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             />
             <span>Solo Anomalías</span>
           </label>
-        </div>
 
-        <RefreshButton />
+          <RefreshButton />
+        </div>
       </form>
 
       {/* Attendance Grid */}
@@ -358,11 +421,6 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                       <p className="font-bold text-gray-800">{ev.reader_name || 'Desconocido'}</p>
                       <p className="text-[10px] text-gray-500 font-medium flex items-center gap-1">
                         ID: {ev.reader_id}
-                        {ev.geolocalizacion && (
-                          <span className="flex items-center gap-0.5 text-fsm-red font-bold" title={ev.geolocalizacion}>
-                            <MapPin size={10} /> GPS
-                          </span>
-                        )}
                       </p>
                     </td>
                     <td className="py-4 px-6">
@@ -375,7 +433,14 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                       </span>
                     </td>
                     <td className="py-4 px-6 font-medium text-gray-600">
-                      {new Date(ev.timestamp).toLocaleTimeString('es-CO', { timeZone: ZONA_HORARIA, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      <div>
+                        <p className="font-bold text-gray-800">
+                          {new Date(ev.timestamp).toLocaleTimeString('es-CO', { timeZone: ZONA_HORARIA, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                        </p>
+                        <p className="text-[10px] text-gray-400">
+                          {new Date(ev.timestamp).toLocaleDateString('es-CO', { timeZone: ZONA_HORARIA })}
+                        </p>
+                      </div>
                     </td>
                     <td className="py-4 px-6">
                       {ev.isAnomaly ? (
@@ -391,7 +456,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                     <td className="py-4 px-8 text-right">
                       {ev.student_id ? (
                         <Link 
-                          href={`/admin/attendance?date=${filterDate}&grado=${filterGrado}&anomalyOnly=${filterAnomalyOnly ? 'true' : ''}&studentHistoryId=${ev.student_id}`}
+                          href={`/admin/attendance?startDate=${filterStartDate}&endDate=${filterEndDate}&grado=${filterGrado}&anomalyOnly=${filterAnomalyOnly ? 'true' : ''}&studentHistoryId=${ev.student_id}`}
                           className="px-3 py-1.5 bg-gray-50 text-fsm-blue border border-gray-100 hover:bg-fsm-blue hover:text-white transition-all text-xs font-bold rounded-lg"
                         >
                           Historial
@@ -425,7 +490,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                 <p className="text-xs opacity-75 font-semibold">Grado: {historyStudent.grado} | Tag UID: {historyStudent.rfid_tag_uid || 'No vinculado'}</p>
               </div>
               <Link 
-                href={`/admin/attendance?date=${filterDate}&grado=${filterGrado}&anomalyOnly=${filterAnomalyOnly ? 'true' : ''}`}
+                href={`/admin/attendance?startDate=${filterStartDate}&endDate=${filterEndDate}&grado=${filterGrado}&anomalyOnly=${filterAnomalyOnly ? 'true' : ''}`}
                 className="text-white/70 hover:text-fsm-red transition-colors p-1"
               >
                 <X size={20} />
@@ -460,7 +525,6 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                         <p className="text-xs font-bold text-gray-800">Ubicación: {hev.reader_name || hev.reader_id}</p>
                         <p className="text-[10px] text-gray-500 font-medium">
                           Origen: {hev.origen === 'movil_profesor' ? 'Dispositivo Móvil' : 'Lector Fijo'}
-                          {hev.geolocalizacion && ` | Coordenadas: ${hev.geolocalizacion}`}
                         </p>
                       </div>
                     </div>
@@ -472,7 +536,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             {/* Footer */}
             <div className="border-t border-gray-100 bg-gray-50 px-8 py-4 text-right">
               <Link 
-                href={`/admin/attendance?date=${filterDate}&grado=${filterGrado}&anomalyOnly=${filterAnomalyOnly ? 'true' : ''}`}
+                href={`/admin/attendance?startDate=${filterStartDate}&endDate=${filterEndDate}&grado=${filterGrado}&anomalyOnly=${filterAnomalyOnly ? 'true' : ''}`}
                 className="px-6 py-2 bg-white text-fsm-blue border border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-100 transition-all"
               >
                 Cerrar
@@ -484,3 +548,4 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
     </div>
   );
 }
+

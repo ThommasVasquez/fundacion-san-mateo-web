@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Cotización No. 002-2026 - Sistema de Verificación Documental</title>
+  <style>
+    @page {
+      size: letter;
+      margin: 10mm 15mm 10mm 15mm;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #1e293b;
+      line-height: 1.35;
+      font-size: 10pt;
+      margin: 0;
+      padding: 0;
+    }
+    .header-title {
+      color: #0f2b5c;
+      font-size: 20pt;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      margin: 0 0 2px 0;
+    }
+    .header-subtitle {
+      color: #64748b;
+      font-size: 10pt;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    .divider {
+      border-bottom: 2px solid #0f2b5c;
+      margin-bottom: 12px;
+    }
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 12px;
+    }
+    .info-table td {
+      border: 1.5px solid #000000;
+      padding: 6px 10px;
+      vertical-align: top;
+      width: 50%;
+    }
+    .info-title {
+      font-weight: bold;
+      margin-bottom: 2px;
+      font-size: 10pt;
+    }
+    .section-title {
+      color: #0f2b5c;
+      font-size: 11.5pt;
+      font-weight: 800;
+      margin-top: 12px;
+      margin-bottom: 4px;
+    }
+    .section-desc {
+      font-size: 9.5pt;
+      color: #334155;
+      margin-bottom: 6px;
+    }
+    ul {
+      margin: 3px 0 8px 16px;
+      padding: 0;
+    }
+    li {
+      margin-bottom: 2px;
+      font-size: 9.5pt;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 10px;
+      font-size: 9pt;
+    }
+    .data-table th {
+      background-color: #112c56;
+      color: #ffffff;
+      font-weight: 700;
+      padding: 6px 8px;
+      text-align: left;
+      border: 1px solid #112c56;
+    }
+    .data-table td {
+      border: 1px solid #cbd5e1;
+      padding: 5px 8px;
+    }
+    .data-table tr:nth-child(even) td {
+      background-color: #f8fafc;
+    }
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+    .font-bold { font-weight: bold; }
+
+    .total-row td {
+      background-color: #e2e8f0 !important;
+      font-weight: 800;
+      font-size: 9.5pt;
+      border-top: 2px solid #0f2b5c;
+    }
+
+    .condiciones-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 14px;
+      font-size: 9pt;
+    }
+    .condiciones-table td {
+      border: 1px solid #000000;
+      padding: 6px 10px;
+    }
+    .condiciones-table td:first-child {
+      font-weight: bold;
+      width: 25%;
+      background-color: #f1f5f9;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <div class="header-title">COTIZACIÓN</div>
+  <div class="header-subtitle">Sistema de verificación documental, hojas membreteadas y validación por QR</div>
+  <div class="divider"></div>
+
+  <!-- DE / PARA BOX -->
+  <table class="info-table">
+    <tr>
+      <td>
+        <div class="info-title">De:</div>
+        <strong>Sergio Vásquez</strong><br>
+        1151951615<br>
+        (315) 705 - 2810 | energysoftmedia@gmail.com
+      </td>
+      <td>
+        <div class="info-title">Para:</div>
+        <strong>Fundación San Mateo</strong><br>
+        Juan Manuel<br>
+        Fecha: 14 de agosto de 2026 · <strong>Cotización No. 002-2026</strong>
+      </td>
+    </tr>
+  </table>
+
+  <!-- SECTION 1 -->
+  <div class="section-title">1. Descripción general</div>
+  <div class="section-desc">
+    Se propone un sistema de verificación y autenticidad documental integrado a la plataforma web existente de la Fundación San Mateo (Next.js + Neon Postgres). El sistema permite validar en tiempo real tanto los documentos emitidos en hoja membreteada mediante su número de consecutivo, como los diplomas y certificados mediante la lectura de códigos QR únicos desde cualquier dispositivo móvil.
+  </div>
+  <ul>
+    <li><strong>Validación por Consecutivo:</strong> Buscador público donde empresas o estudiantes verifican la autenticidad introduciendo el número consecutivo de la hoja membreteada.</li>
+    <li><strong>Verificación por Código QR:</strong> Redirección automática al escanear el QR impreso en diplomas o cartas, mostrando el sello digital de <em>"Documento Auténtico y Válido"</em>.</li>
+    <li><strong>Panel de Administración Dedicado:</strong> Módulo en el CMS para la gestión, emisión, anulación y consulta de documentos registrados.</li>
+    <li><strong>Lectura Ágil sin App Adicional:</strong> Escaneo directo desde la cámara de cualquier smartphone (Android / iOS) sin requerir instalación de software adicional.</li>
+  </ul>
+
+  <!-- SECTION 2 -->
+  <div class="section-title">2. Opción A — Sistema Esencial</div>
+  <div class="section-desc">
+    Opción ágil diseñada para cubrir la validación por consecutivo y QR con carga y gestión individual de documentos desde el panel administrativo.
+  </div>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th style="width: 8%;" class="text-center">Ítem</th>
+        <th style="width: 58%;">Descripción</th>
+        <th style="width: 8%;" class="text-center">Cant.</th>
+        <th style="width: 13%;" class="text-right">Vr. Unitario</th>
+        <th style="width: 13%;" class="text-right">Vr. Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="text-center">1</td>
+        <td>Módulo público de consulta por consecutivo y validación por QR dinámico con sello de autenticidad</td>
+        <td class="text-center">1</td>
+        <td class="text-right">$500.000</td>
+        <td class="text-right">$500.000</td>
+      </tr>
+      <tr>
+        <td class="text-center">2</td>
+        <td>Panel de administración para registro, edición y anulación individual de documentos</td>
+        <td class="text-center">1</td>
+        <td class="text-right">$500.000</td>
+        <td class="text-right">$500.000</td>
+      </tr>
+      <tr>
+        <td class="text-center">3</td>
+        <td>Generador de códigos QR individuales e integración a base de datos relacional</td>
+        <td class="text-center">1</td>
+        <td class="text-right">$400.000</td>
+        <td class="text-right">$400.000</td>
+      </tr>
+      <tr class="total-row">
+        <td colspan="4" class="text-right">TOTAL</td>
+        <td class="text-right">$1.400.000</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SECTION 3 -->
+  <div class="section-title">3. Opción B — Sistema Completo e Integral (Recomendada)</div>
+  <div class="section-desc">
+    Solución integral con carga masiva de egresados desde Excel, descarga de QR en alta resolución, visor de PDF adjunto y módulo de auditoría de escaneos.
+  </div>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th style="width: 8%;" class="text-center">Ítem</th>
+        <th style="width: 58%;">Descripción</th>
+        <th style="width: 8%;" class="text-center">Cant.</th>
+        <th style="width: 13%;" class="text-right">Vr. Unitario</th>
+        <th style="width: 13%;" class="text-right">Vr. Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="text-center">1</td>
+        <td>Módulo público de consulta por consecutivo y validación por QR dinámico con sello de autenticidad</td>
+        <td class="text-center">1</td>
+        <td class="text-right">$500.000</td>
+        <td class="text-right">$500.000</td>
+      </tr>
+      <tr>
+        <td class="text-center">2</td>
+        <td>Panel de administración avanzado con carga masiva en lote desde archivos Excel / CSV</td>
+        <td class="text-center">1</td>
+        <td class="text-right">$600.000</td>
+        <td class="text-right">$600.000</td>
+      </tr>
+      <tr>
+        <td class="text-center">3</td>
+        <td>Generador de códigos QR vectoriales (descargables en PNG/SVG) y visor de PDF oficial</td>
+        <td class="text-center">1</td>
+        <td class="text-right">$500.000</td>
+        <td class="text-right">$500.000</td>
+      </tr>
+      <tr>
+        <td class="text-center">4</td>
+        <td>Registro de auditoría y rastreo de escaneos (conteo de vistas, fecha, hora e IP)</td>
+        <td class="text-center">1</td>
+        <td class="text-right">$400.000</td>
+        <td class="text-right">$400.000</td>
+      </tr>
+      <tr>
+        <td class="text-center">5</td>
+        <td>Estructuración de base de datos en Neon Postgres e integración a la arquitectura web existente</td>
+        <td class="text-center">1</td>
+        <td class="text-right">$400.000</td>
+        <td class="text-right">$400.000</td>
+      </tr>
+      <tr class="total-row">
+        <td colspan="4" class="text-right">TOTAL</td>
+        <td class="text-right">$2.400.000</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SECTION 4 -->
+  <div class="section-title">4. Condiciones comerciales</div>
+
+  <table class="condiciones-table">
+    <tr>
+      <td>Validez de la oferta</td>
+      <td>15 días calendario a partir de la fecha de emisión</td>
+    </tr>
+    <tr>
+      <td>Forma de pago</td>
+      <td>50% anticipo para iniciar desarrollo · 50% contra entrega y puesta en funcionamiento</td>
+    </tr>
+    <tr>
+      <td>Tiempo de entrega</td>
+      <td>Opción A: 4 a 5 días hábiles · Opción B: 6 a 8 días hábiles</td>
+    </tr>
+    <tr>
+      <td>Garantía</td>
+      <td>3 meses de garantía sobre el desarrollo de software + 15 días de ajustes menores sin costo adicional</td>
+    </tr>
+    <tr>
+      <td>Soporte y mantenimiento</td>
+      <td>Incluido dentro del monitoreo de la plataforma web existente</td>
+    </tr>
+    <tr>
+      <td>Impuestos</td>
+      <td>Precios no incluyen IVA</td>
+    </tr>
+    <tr>
+      <td>Alcance QR / Movil</td>
+      <td>Aplica para dispositivos Android e iOS (Cámara nativa / Navegadores Web). No requiere app adicional</td>
+    </tr>
+  </table>
+
+  <!-- SECTION 5 -->
+  <div class="section-title">5. Aprobación</div>
+  <div class="section-desc">
+    Para confirmar el inicio del proyecto, por favor indique la opción elegida (A o B) y firme a continuación.
+  </div>
+
+  <table style="width: 100%; margin-top: 30px; border-collapse: collapse;">
+    <tr>
+      <td style="width: 45%; vertical-align: top; border: none; padding: 0;">
+        <div style="border-bottom: 1px solid #000; margin-bottom: 6px; width: 100%; height: 30px;"></div>
+        <strong>Nombre y firma — Juan Manuel</strong><br>
+        Fundación San Mateo
+      </td>
+      <td style="width: 10%; border: none;"></td>
+      <td style="width: 45%; vertical-align: top; border: none; padding: 0;">
+        <div style="border-bottom: 1px solid #000; margin-bottom: 6px; width: 100%; height: 30px;"></div>
+        <strong>Nombre y firma — Sergio Vásquez Meneses</strong><br>
+        Desarrollador / Representante Técnico
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

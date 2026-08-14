@@ -109,11 +109,12 @@ export default function ImportClient() {
       // cabecera y hace que "Usuario Nro." deje de reconocerse.
       else filas = parseCsv((await file.text()).replace(/^﻿/, ''));
 
-      const { registros, columnasNoReconocidas, faltanColumnas } = filasARegistros(filas);
+      const { registros, columnasNoReconocidas, faltanColumnas, sinColumnaTarjeta } =
+        filasARegistros(filas);
       setEstado({
         fase: 'listo',
         nombre: file.name,
-        clase: clasificar(registros, { columnasNoReconocidas, faltanColumnas }),
+        clase: clasificar(registros, { columnasNoReconocidas, faltanColumnas, sinColumnaTarjeta }),
       });
     } catch (e: any) {
       setEstado({ fase: 'error', mensaje: e?.message ?? String(e) });
@@ -313,6 +314,23 @@ function Preview({
         </div>
       )}
 
+      {/* Una columna ausente no aparece en columnasNoReconocidas -- ahí solo caen
+          las que vienen y no se saben leer -- así que sin este aviso el fichero
+          se veía impecable y el recuento "Sin tarjeta" era el único rastro. */}
+      {clase.sinColumnaTarjeta && (
+        <div className="bg-amber-50 p-5 rounded-[2rem] border border-amber-200 text-sm text-gray-900">
+          <p className="font-black text-amber-700 uppercase tracking-widest text-xs mb-2 flex items-center gap-2">
+            <AlertTriangle size={14} /> Este fichero no trae columna de tarjeta
+          </p>
+          <p className="text-gray-600">
+            Los {clase.sinTarjeta.length} alumnos aparecen como «sin tarjeta» porque el fichero no
+            dice nada de tarjetas, no porque no la tengan. Se importarán nombres, cursos y datos de
+            contacto, y <b>las tarjetas que ya estén asignadas se conservan</b>. Si querías
+            actualizarlas, la columna se llama «Tarjeta Nro.».
+          </p>
+        </div>
+      )}
+
       {clase.columnasNoReconocidas.length > 0 && (
         <div className="bg-amber-50 p-5 rounded-[2rem] border border-amber-200 text-sm text-gray-900">
           <p className="font-black text-amber-700 uppercase tracking-widest text-xs mb-2 flex items-center gap-2">
@@ -395,10 +413,10 @@ function Preview({
         <span className="text-gray-500 text-sm">desde {nombre}</span>
       </div>
 
-      {clase.sinTarjeta.length > 0 && razones.length === 0 && (
+      {clase.sinTarjeta.length > 0 && razones.length === 0 && !clase.sinColumnaTarjeta && (
         <p className="text-gray-600 text-sm">
-          {clase.sinTarjeta.length} alumnos entrarán <b>sin tarjeta asignada</b>. Se les puede
-          asignar una después desde <Link href="/admin/attendance/enrollment" className="text-fsm-blue font-bold hover:text-fsm-red">Vincular Tarjetas</Link>.
+          {clase.sinTarjeta.length} alumnos entrarán <b>sin tarjeta asignada</b> (los que ya tengan
+          una la conservan). Se les puede asignar una después desde <Link href="/admin/attendance/enrollment" className="text-fsm-blue font-bold hover:text-fsm-red">Vincular Tarjetas</Link>.
         </p>
       )}
     </div>

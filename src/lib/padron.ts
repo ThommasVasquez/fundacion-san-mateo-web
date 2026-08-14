@@ -50,6 +50,17 @@ export interface Clasificacion {
   cursos: string[];
   columnasNoReconocidas: string[];
   faltanColumnas: string[];
+  /**
+   * El fichero no traía columna de tarjeta en absoluto.
+   *
+   * No es lo mismo que "618 alumnos sin tarjeta", aunque la clasificación los
+   * cuente igual: una celda vacía dice que a esa persona no le han asignado
+   * ninguna, y una columna ausente no dice nada de nadie. Distinguirlo importa
+   * porque la pantalla enseñaba "Sin tarjeta: 618" para las dos cosas, y ese
+   * número invita a seguir adelante creyendo que se ha leído un padrón sin
+   * tarjetas cuando lo que se ha leído es una lista de nombres.
+   */
+  sinColumnaTarjeta: boolean;
 }
 
 /** Un CSV con comas dentro de campos entrecomillados; suficiente para este. */
@@ -126,10 +137,16 @@ export function filasARegistros(filas: string[][]): {
   registros: RegistroPadron[];
   columnasNoReconocidas: string[];
   faltanColumnas: string[];
+  sinColumnaTarjeta: boolean;
 } {
   const utiles = filas.filter((f) => f.some((c) => (c ?? '').trim()));
   if (utiles.length === 0) {
-    return { registros: [], columnasNoReconocidas: [], faltanColumnas: [...OBLIGATORIAS] };
+    return {
+      registros: [],
+      columnasNoReconocidas: [],
+      faltanColumnas: [...OBLIGATORIAS],
+      sinColumnaTarjeta: true,
+    };
   }
 
   const [cabecera, ...cuerpo] = utiles;
@@ -169,12 +186,16 @@ export function filasARegistros(filas: string[][]): {
     dispositivos: dato(f, 'dispositivos') || null,
   }));
 
-  return { registros, columnasNoReconocidas, faltanColumnas };
+  return { registros, columnasNoReconocidas, faltanColumnas, sinColumnaTarjeta: indice.tarjeta < 0 };
 }
 
 export function clasificar(
   registros: RegistroPadron[],
-  extra: { columnasNoReconocidas?: string[]; faltanColumnas?: string[] } = {},
+  extra: {
+    columnasNoReconocidas?: string[];
+    faltanColumnas?: string[];
+    sinColumnaTarjeta?: boolean;
+  } = {},
 ): Clasificacion {
   const conTarjeta: RegistroPadron[] = [];
   const sinTarjeta: RegistroPadron[] = [];
@@ -243,6 +264,7 @@ export function clasificar(
     cursos,
     columnasNoReconocidas: extra.columnasNoReconocidas ?? [],
     faltanColumnas: extra.faltanColumnas ?? [],
+    sinColumnaTarjeta: extra.sinColumnaTarjeta ?? false,
   };
 }
 
