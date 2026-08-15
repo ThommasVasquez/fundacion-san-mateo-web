@@ -112,11 +112,38 @@ async function authorize(req: Request): Promise<AuthResult> {
  * estado vive aqui y no en el lector, para que reiniciar el ESP32 no lo pierda
  * y para que varios lectores compartan el mismo criterio.
  */
+function isAdministrativeStaff(grado: string): boolean {
+  const g = (grado || '').toUpperCase();
+  return g.includes('SECRETARI') || 
+         g.includes('COORDINADOR') || 
+         g.includes('ADMINISTRATIV') || 
+         g.includes('DOCENTE') || 
+         g.includes('DIRECTIV') ||
+         g.includes('RECTOR');
+}
+
 async function resolveTipoEvento(
   explicit: string | undefined,
   studentId: string | null,
-  tagUid: string
-): Promise<'entrada'> {
+  tagUid: string,
+  grado?: string
+): Promise<'entrada' | 'salida'> {
+  if (explicit === 'entrada' || explicit === 'salida') {
+    return explicit;
+  }
+
+  if (studentId && isAdministrativeStaff(grado || '')) {
+    const lastEvent = await sql`
+      SELECT tipo_evento FROM attendance_events
+      WHERE student_id = ${studentId}::uuid
+        AND DATE(timestamp AT TIME ZONE 'America/Bogota') = CURRENT_DATE
+      ORDER BY timestamp DESC LIMIT 1
+    `;
+    if (lastEvent.length > 0 && lastEvent[0].tipo_evento === 'entrada') {
+      return 'salida';
+    }
+  }
+
   return 'entrada';
 }
 
@@ -290,7 +317,7 @@ export async function POST(req: Request) {
       });
     }
 
-    const resolvedTipo = await resolveTipoEvento(tipo_evento, student ? student.id : null, tag_uid);
+    const resolvedTipo = await resolveTipoEvento(tipo_evento, student ? student.id : null, tag_uid, student ? student.grado : undefined);
     const wasAutomatic = tipo_evento === undefined || tipo_evento === 'auto';
 
     const eventTime = timestamp ? new Date(timestamp) : new Date();

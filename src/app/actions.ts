@@ -793,7 +793,7 @@ export async function deleteStudent(studentId: string) {
   }
 }
 
-export async function recordManualAttendance(studentId: string) {
+export async function recordManualAttendance(studentId: string, tipoEvento: 'entrada' | 'salida' = 'entrada') {
   try {
     const studentQuery = await sql`
       SELECT id, nombre, grado, rfid_tag_uid, activo 
@@ -803,25 +803,26 @@ export async function recordManualAttendance(studentId: string) {
     `;
 
     if (studentQuery.length === 0) {
-      return { error: 'Estudiante no encontrado' };
+      return { error: 'Usuario no encontrado' };
     }
 
     const student = studentQuery[0];
 
     if (!student.activo) {
-      return { error: `No se puede registrar entrada. El estudiante ${student.nombre} está CONGELADO / APLAZADO.` };
+      return { error: `No se puede registrar ${tipoEvento}. El usuario ${student.nombre} está CONGELADO / APLAZADO.` };
     }
 
-    // Check duplicate manual entry within 30 seconds
+    // Check duplicate manual entry within 5 seconds
     const recent = await sql`
       SELECT id FROM attendance_events
       WHERE student_id = ${student.id}::uuid
-        AND timestamp > NOW() - INTERVAL '30 seconds'
+        AND tipo_evento = ${tipoEvento}
+        AND timestamp > NOW() - INTERVAL '5 seconds'
       LIMIT 1
     `;
 
     if (recent.length > 0) {
-      return { error: `Ya se registró una entrada reciente para ${student.nombre}.` };
+      return { error: `Ya se registró una ${tipoEvento} reciente para ${student.nombre}.` };
     }
 
     const tagUid = student.rfid_tag_uid || 'MANUAL';
@@ -830,14 +831,14 @@ export async function recordManualAttendance(studentId: string) {
       INSERT INTO attendance_events (
         student_id, rfid_tag_uid, reader_id, tipo_evento, timestamp, origen, sincronizado
       ) VALUES (
-        ${student.id}::uuid, ${tagUid}, 'manual-web', 'entrada', CURRENT_TIMESTAMP, 'manual', true
+        ${student.id}::uuid, ${tagUid}, 'manual-web', ${tipoEvento}, CURRENT_TIMESTAMP, 'manual', true
       )
     `;
 
     return { success: true, studentName: student.nombre };
   } catch (error: any) {
     console.error('Error recording manual attendance:', error);
-    return { error: error.message || 'Error al registrar entrada manual' };
+    return { error: error.message || 'Error al registrar asistencia manual' };
   }
 }
 

@@ -32,7 +32,8 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
     const headers = [
       'Estudiante',
       'Grado',
-      'Hora de Entrada',
+      'Tipo Evento',
+      'Hora',
       'Fecha (Bogotá)',
       'Lector / Ubicación',
       'Origen',
@@ -47,14 +48,16 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
       
       const studentName = ev.student_name || 'Tarjeta no asignada';
       const grado = ev.student_grado || 'N/A';
+      const tipoEvento = ev.tipo_evento === 'salida' ? 'Salida' : 'Entrada';
       const reader = ev.reader_name || ev.reader_id;
-      const origen = ev.origen === 'movil_profesor' ? 'Móvil Profesor' : 'Panel Fijo';
+      const origen = ev.origen === 'manual' ? 'Registro Manual Secretaría' : ev.origen === 'movil_profesor' ? 'Móvil Profesor' : 'Panel Fijo';
       const estado = ev.isAnomaly ? `Anomalía (${ev.anomalyReason || 'Revisión'})` : 'Correcto';
       const uid = ev.rfid_tag_uid;
 
       return [
         `"${studentName.replace(/"/g, '""')}"`,
         `"${grado}"`,
+        `"${tipoEvento}"`,
         `"${timeStr}"`,
         `"${dateStr}"`,
         `"${reader.replace(/"/g, '""')}"`,

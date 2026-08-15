@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { recordManualAttendance } from '@/app/actions';
 import { 
-  UserCheck, Search, X, Check, AlertTriangle, UserX, Clock
+  UserCheck, Search, X, Check, AlertTriangle, UserX, Clock, LogOut
 } from 'lucide-react';
 
 interface StudentItem {
@@ -31,16 +31,16 @@ export default function ManualAttendanceModal({ students }: ManualAttendanceModa
     setTimeout(() => setStatusMsg({ text: '', type: '' }), 5000);
   };
 
-  const handleMarkEntry = async (student: StudentItem) => {
+  const handleMarkAttendance = async (student: StudentItem, tipoEvento: 'entrada' | 'salida') => {
     setLoading(prev => ({ ...prev, [student.id]: true }));
-    const res = await recordManualAttendance(student.id);
+    const res = await recordManualAttendance(student.id, tipoEvento);
     setLoading(prev => ({ ...prev, [student.id]: false }));
 
     if (res.success) {
-      showStatus(`✓ Entrada marcada correctamente para ${student.nombre} (${student.grado}).`);
+      showStatus(`✓ ${tipoEvento === 'salida' ? 'Salida' : 'Entrada'} marcada correctamente para ${student.nombre} (${student.grado}).`);
       router.refresh();
     } else {
-      showStatus(res.error || 'Error al registrar entrada', 'error');
+      showStatus(res.error || 'Error al registrar asistencia', 'error');
     }
   };
 
@@ -153,13 +153,22 @@ export default function ManualAttendanceModal({ students }: ManualAttendanceModa
                       </div>
 
                       {student.activo ? (
-                        <button
-                          onClick={() => handleMarkEntry(student)}
-                          disabled={loading[student.id]}
-                          className="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-xl font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50 shrink-0"
-                        >
-                          <Check size={14} /> {loading[student.id] ? 'Registrando...' : 'Marcar Entrada'}
-                        </button>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            onClick={() => handleMarkAttendance(student, 'entrada')}
+                            disabled={loading[student.id]}
+                            className="px-3 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1 shadow-sm active:scale-95 disabled:opacity-50"
+                          >
+                            <Check size={13} /> Entrada
+                          </button>
+                          <button
+                            onClick={() => handleMarkAttendance(student, 'salida')}
+                            disabled={loading[student.id]}
+                            className="px-3 py-1.5 bg-amber-600 text-white hover:bg-amber-700 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1 shadow-sm active:scale-95 disabled:opacity-50"
+                          >
+                            <LogOut size={13} /> Salida
+                          </button>
+                        </div>
                       ) : (
                         <span className="text-xs font-bold text-amber-800 flex items-center gap-1">
                           <UserX size={14} /> Inactivo

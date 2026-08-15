@@ -303,21 +303,21 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
     });
   };
 
-  const handleRecordManual = async (student: Student) => {
+  const handleRecordManual = async (student: Student, tipoEvento: 'entrada' | 'salida' = 'entrada') => {
     if (!student.activo) {
-      showStatus(`No se puede registrar entrada. El estudiante ${student.nombre} está CONGELADO / APLAZADO.`, 'error');
+      showStatus(`No se puede registrar ${tipoEvento}. El usuario ${student.nombre} está CONGELADO / APLAZADO.`, 'error');
       return;
     }
 
     setLoading(prev => ({ ...prev, [student.id]: true }));
-    const res = await recordManualAttendance(student.id);
+    const res = await recordManualAttendance(student.id, tipoEvento);
     setLoading(prev => ({ ...prev, [student.id]: false }));
 
     if (res.success) {
-      showStatus(`✓ Entrada manual registrada para ${student.nombre} (${student.grado}).`);
+      showStatus(`✓ ${tipoEvento === 'salida' ? 'Salida' : 'Entrada'} manual registrada para ${student.nombre} (${student.grado}).`);
       router.refresh();
     } else {
-      showStatus(res.error || 'Error al registrar entrada', 'error');
+      showStatus(res.error || 'Error al registrar asistencia', 'error');
     }
   };
 
@@ -529,14 +529,24 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
 
                   <div className="flex items-center gap-1 shrink-0">
                     {student.activo && (
-                      <button
-                        onClick={() => handleRecordManual(student)}
-                        disabled={loading[student.id]}
-                        className="px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-600 hover:text-white transition-all text-xs font-bold rounded-xl flex items-center gap-1"
-                        title="Marcar entrada manual sin carnet"
-                      >
-                        <UserCheck size={12} /> Entrada Manual
-                      </button>
+                      <>
+                        <button
+                          onClick={() => handleRecordManual(student, 'entrada')}
+                          disabled={loading[student.id]}
+                          className="px-2.5 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-600 hover:text-white transition-all text-xs font-bold rounded-xl flex items-center gap-1"
+                          title="Marcar entrada manual"
+                        >
+                          <UserCheck size={12} /> Entrada
+                        </button>
+                        <button
+                          onClick={() => handleRecordManual(student, 'salida')}
+                          disabled={loading[student.id]}
+                          className="px-2.5 py-1.5 bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-600 hover:text-white transition-all text-xs font-bold rounded-xl flex items-center gap-1"
+                          title="Marcar salida manual"
+                        >
+                          <UserCheck size={12} /> Salida
+                        </button>
+                      </>
                     )}
                     <button
                       onClick={() => handleToggleFreeze(student)}

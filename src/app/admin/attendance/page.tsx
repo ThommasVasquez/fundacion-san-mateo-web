@@ -392,7 +392,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                 <th className="py-4 px-6">Grado / Turno</th>
                 <th className="py-4 px-6">Lector / Ubicación</th>
                 <th className="py-4 px-6">Origen</th>
-                <th className="py-4 px-6">Hora de Entrada</th>
+                <th className="py-4 px-6">Tipo / Hora</th>
                 <th className="py-4 px-6">Estado</th>
                 <th className="py-4 px-8 text-right">Acciones</th>
               </tr>
@@ -428,16 +428,25 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                       </p>
                     </td>
                     <td className="py-4 px-6">
-                      <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase ${
-                        ev.origen === 'movil_profesor'
-                          ? 'bg-purple-50 text-purple-700'
-                          : 'bg-blue-50 text-blue-700'
+                      <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase border ${
+                        ev.origen === 'manual'
+                          ? 'bg-purple-50 text-purple-700 border-purple-200'
+                          : ev.origen === 'movil_profesor'
+                          ? 'bg-blue-50 text-blue-700 border-blue-200'
+                          : 'bg-gray-50 text-gray-700 border-gray-200'
                       }`}>
-                        {ev.origen === 'movil_profesor' ? 'Móvil Profesor' : 'Panel Fijo'}
+                        {ev.origen === 'manual' ? '✏️ Manual' : ev.origen === 'movil_profesor' ? '📱 Móvil' : '🖥️ Panel Fijo'}
                       </span>
                     </td>
                     <td className="py-4 px-6 font-medium text-gray-600">
                       <div>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-black uppercase mb-1 ${
+                          ev.tipo_evento === 'salida'
+                            ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                            : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                        }`}>
+                          {ev.tipo_evento === 'salida' ? '📤 SALIDA' : '📥 ENTRADA'}
+                        </span>
                         <p className="font-bold text-gray-800">
                           {new Date(ev.timestamp).toLocaleTimeString('es-CO', { timeZone: ZONA_HORARIA, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                         </p>
