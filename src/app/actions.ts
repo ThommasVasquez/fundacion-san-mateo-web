@@ -1128,15 +1128,11 @@ export async function getPendingAbsenceAlertsCount() {
   try {
     const todayStr = new Date().toISOString().split('T')[0];
     
-    // Check absent students from target date (today or yesterday) who have not been successfully contacted
+    // Count explicit absence followups flagged as pending or un-contacted
     const res = await sql`
       SELECT COUNT(*)::int as pending_count
-      FROM students s
-      LEFT JOIN attendance_events ae ON s.id = ae.student_id AND DATE(ae.timestamp AT TIME ZONE 'America/Bogota') = ${todayStr}::date
-      LEFT JOIN absence_followups af ON s.id = af.student_id AND af.fecha = ${todayStr}::date
-      WHERE s.activo = TRUE
-        AND ae.id IS NULL
-        AND (af.se_llamo IS NULL OR af.se_llamo = FALSE OR af.estado_llamada = 'pendiente' OR af.estado_llamada = 'no_contesto')
+      FROM absence_followups af
+      WHERE (af.se_llamo IS NULL OR af.se_llamo = FALSE OR af.estado_llamada = 'pendiente' OR af.estado_llamada = 'no_contesto')
     `;
 
     return { success: true, pendingCount: res[0]?.pending_count || 0 };

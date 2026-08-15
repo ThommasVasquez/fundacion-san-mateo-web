@@ -18,6 +18,7 @@ interface AbsentStudent {
   telefono: string | null;
   rfid_tag_uid: string | null;
   turno_calculado: string;
+  followup_id: string | null;
   se_llamo: boolean | null;
   estado_llamada: string | null;
   comentarios: string | null;
@@ -165,12 +166,24 @@ export default function AbsenceFollowupClient({
     }
   };
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showOnlyFollowups, setShowOnlyFollowups] = useState(true);
+
   // Filter students based on UI filters
   const filteredStudents = initialStudents.filter(s => {
     const data = followupData[s.student_id];
     const matchesShift = selectedShift === 'ALL' || s.turno_calculado === selectedShift;
+    const matchesSearch = !searchQuery || 
+                          s.nombre.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          s.grado.toLowerCase().includes(searchQuery.toLowerCase());
 
-    if (!matchesShift) return false;
+    if (!matchesShift || !matchesSearch) return false;
+
+    // If showOnlyFollowups is enabled, only show students who have a followup record or comment/call
+    const hasFollowupRecord = s.followup_id || data?.seLlamo || data?.comentarios || data?.excusaUrl;
+    if (showOnlyFollowups && !hasFollowupRecord && !searchQuery) {
+      return false;
+    }
 
     if (statusFilter === 'PENDING') {
       return !data?.seLlamo || data?.estadoLlamada === 'pendiente' || data?.estadoLlamada === 'no_contesto';
@@ -185,6 +198,8 @@ export default function AbsenceFollowupClient({
   const pendingNightCount = initialStudents.filter(s => 
     s.turno_calculado === 'NOCHE' && (!s.se_llamo || s.estado_llamada === 'pendiente' || s.estado_llamada === 'no_contesto')
   ).length;
+
+  const totalWithFollowup = initialStudents.filter(s => s.followup_id || followupData[s.student_id]?.seLlamo || followupData[s.student_id]?.comentarios).length;
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-16">
@@ -240,7 +255,7 @@ export default function AbsenceFollowupClient({
           </div>
 
           <button
-            onClick={() => setSelectedShift('NOCHE')}
+            onClick={() => { setSelectedShift('NOCHE'); setShowOnlyFollowups(false); }}
             className="px-5 py-2.5 bg-fsm-red text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-red-700 transition-all shadow-sm shrink-0"
           >
             Ver Turno Noche
@@ -258,56 +273,83 @@ export default function AbsenceFollowupClient({
       )}
 
       {/* Filter Controls Bar */}
-      <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-premium flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+      <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-premium space-y-4">
         
-        {/* Date Selector */}
-        <div className="flex items-center gap-3 bg-gray-50 px-4 py-2.5 rounded-2xl border border-gray-200">
-          <Calendar size={18} className="text-fsm-blue" />
-          <span className="text-xs font-black text-gray-500 uppercase tracking-widest">Fecha:</span>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={handleDateChange}
-            className="bg-transparent font-bold text-sm text-fsm-blue outline-none cursor-pointer"
-          />
-        </div>
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+          {/* Date Selector */}
+          <div className="flex items-center gap-3 bg-gray-50 px-4 py-2.5 rounded-2xl border border-gray-200">
+            <Calendar size={18} className="text-fsm-blue" />
+            <span className="text-xs font-black text-gray-500 uppercase tracking-widest">Fecha:</span>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={handleDateChange}
+              className="bg-transparent font-bold text-sm text-fsm-blue outline-none cursor-pointer"
+            />
+          </div>
 
-        {/* Turno Filter Tabs */}
-        <div className="flex flex-wrap gap-2">
-          {[
-            { id: 'ALL', label: 'Todos los Turnos' },
-            { id: 'NOCHE', label: '🌙 Turno Noche' },
-            { id: 'DIURNO', label: '☀️ Turno Diurno' },
-            { id: 'SABADO', label: '📅 Turno Sábado' },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => handleShiftChange(tab.id)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
-                selectedShift === tab.id
-                  ? 'bg-fsm-blue text-white border-fsm-blue shadow-sm'
-                  : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
-              }`}
+          {/* Search Input */}
+          <div className="flex-1 bg-gray-50 px-4 py-2.5 rounded-2xl border border-gray-200 flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Buscar estudiante por nombre o grado..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="bg-transparent font-bold text-xs text-gray-800 outline-none w-full"
+            />
+          </div>
+
+          {/* Status Filter Dropdown */}
+          <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-2xl border border-gray-200">
+            <Filter size={16} className="text-gray-400" />
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none"
             >
-              {tab.label}
-            </button>
-          ))}
+              <option value="ALL">Todos los Estados</option>
+              <option value="PENDING">Pendientes por Llamar</option>
+              <option value="CONTESTO">Contestó</option>
+              <option value="NO_CONTESTO">No Contestó</option>
+              <option value="EXCUSA">Con Excusa Adjunta</option>
+            </select>
+          </div>
         </div>
 
-        {/* Status Filter Dropdown */}
-        <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-2xl border border-gray-200">
-          <Filter size={16} className="text-gray-400" />
-          <select
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
-            className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none"
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-3 border-t border-gray-100">
+          {/* Turno Filter Tabs */}
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: 'ALL', label: 'Todos los Turnos' },
+              { id: 'NOCHE', label: '🌙 Turno Noche' },
+              { id: 'DIURNO', label: '☀️ Turno Diurno' },
+              { id: 'SABADO', label: '📅 Turno Sábado' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => handleShiftChange(tab.id)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
+                  selectedShift === tab.id
+                    ? 'bg-fsm-blue text-white border-fsm-blue shadow-sm'
+                    : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Toggle View Mode: Only Cases with Followup vs All Un-scanned */}
+          <button
+            onClick={() => setShowOnlyFollowups(!showOnlyFollowups)}
+            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
+              showOnlyFollowups
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                : 'bg-amber-50 text-amber-900 border-amber-300'
+            }`}
           >
-            <option value="ALL">Todos los Estados</option>
-            <option value="PENDING">Pendientes por Llamar</option>
-            <option value="CONTESTO">Contestó</option>
-            <option value="NO_CONTESTO">No Contestó</option>
-            <option value="EXCUSA">Con Excusa Adjunta</option>
-          </select>
+            {showOnlyFollowups ? `📋 Mostrando ${totalWithFollowup} Caso(s) Registrados` : `🌐 Mostrando Todos los ${initialStudents.length} Sin Marcación`}
+          </button>
         </div>
       </div>
 
