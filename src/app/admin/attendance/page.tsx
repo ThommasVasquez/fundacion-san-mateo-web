@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { sql } from '@/lib/db';
 import { 
   Users, UserCheck, AlertTriangle, HelpCircle, 
-  Search, Calendar, Filter, ArrowLeft, Clock, ChevronRight, X, Tag, Upload, ArrowUpDown
+  Search, Calendar, Filter, ArrowLeft, Clock, ChevronRight, X, Tag, Upload, ArrowUpDown, Bell
 } from 'lucide-react';
 import RefreshButton from './RefreshButton';
 import ExportCsvButton from './ExportCsvButton';
@@ -195,16 +195,16 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
 
       {/* Inter-Shift Absence Alert Banner */}
       {pendingAlerts.pendingCount > 0 && (
-        <div className="bg-red-50 border-2 border-red-200 p-6 rounded-[2rem] shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="bg-blue-50/80 border-2 border-blue-200 p-6 rounded-[2rem] shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-fsm-red text-white rounded-2xl flex items-center justify-center shrink-0 font-black shadow-md">
-              <AlertTriangle size={24} />
+            <div className="w-12 h-12 bg-fsm-blue text-white rounded-2xl flex items-center justify-center shrink-0 font-black shadow-md">
+              <Bell size={24} />
             </div>
             <div>
-              <span className="text-[10px] font-black text-fsm-red uppercase tracking-widest bg-white px-2.5 py-0.5 rounded border border-red-200">
-                ALERTA DE TRASPASO ENTRE TURNOS
+              <span className="text-[10px] font-black text-fsm-blue uppercase tracking-widest bg-white px-2.5 py-0.5 rounded border border-blue-200">
+                NOTIFICACIÓN DE TRASPASO ENTRE TURNOS
               </span>
-              <h3 className="text-lg font-black text-fsm-red uppercase mt-0.5">
+              <h3 className="text-lg font-black text-fsm-blue uppercase mt-0.5">
                 {pendingAlerts.pendingCount} ESTUDIANTE(S) INASISTENTE(S) PENDIENTES POR CONTACTAR
               </h3>
               <p className="text-xs font-semibold text-gray-700">
@@ -215,7 +215,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
 
           <Link
             href="/admin/attendance/absences"
-            className="px-6 py-3 bg-fsm-red text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-red-700 transition-all shadow-md shrink-0 flex items-center gap-2"
+            className="px-6 py-3 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all shadow-md shrink-0 flex items-center gap-2"
           >
             Gestionar Ausencias <ChevronRight size={16} />
           </Link>
