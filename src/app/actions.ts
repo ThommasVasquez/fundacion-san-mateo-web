@@ -830,7 +830,7 @@ export async function recordManualAttendance(studentId: string) {
       INSERT INTO attendance_events (
         student_id, rfid_tag_uid, reader_id, tipo_evento, timestamp, origen, sincronizado
       ) VALUES (
-        ${student.id}::uuid, ${tagUid}, 'MANUAL_WEB', 'entrada', CURRENT_TIMESTAMP, 'manual', true
+        ${student.id}::uuid, ${tagUid}, 'manual-web', 'entrada', CURRENT_TIMESTAMP, 'manual', true
       )
     `;
 
