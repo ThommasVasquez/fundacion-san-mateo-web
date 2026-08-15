@@ -1041,3 +1041,108 @@ export async function deleteIssuedDocument(id: string) {
   }
 }
 
+export async function getAbsentStudentsReport(targetDate?: string, targetShift?: string) {
+  try {
+    const dateStr = targetDate || new Date().toISOString().split('T')[0];
+
+    // Fetch active students and left join attendance_events on targetDate, and left join absence_followups
+    const rows = await sql`
+      SELECT 
+        s.id as student_id,
+        s.nombre,
+        s.grado,
+        s.telefono,
+        s.rfid_tag_uid,
+        CASE 
+          WHEN UPPER(s.grado) LIKE '%NOCHE%' THEN 'NOCHE'
+          WHEN UPPER(s.grado) LIKE '%SABADO%' OR UPPER(s.grado) LIKE '%SB%' THEN 'SABADO'
+          ELSE 'DIURNO'
+        END as turno_calculado,
+        ae.id as event_id,
+        ae.timestamp::text as hora_entrada,
+        af.id as followup_id,
+        af.se_llamo,
+        af.estado_llamada,
+        af.comentarios,
+        af.excusa_url,
+        af.registrado_por,
+        af.updated_at::text as fecha_seguimiento
+      FROM students s
+      LEFT JOIN attendance_events ae ON s.id = ae.student_id AND DATE(ae.timestamp AT TIME ZONE 'America/Bogota') = ${dateStr}::date
+      LEFT JOIN absence_followups af ON s.id = af.student_id AND af.fecha = ${dateStr}::date
+      WHERE s.activo = TRUE
+        AND ae.id IS NULL
+      ORDER BY turno_calculado, s.grado, s.nombre
+    `;
+
+    // Filter by shift if specified
+    const filtered = targetShift && targetShift !== 'ALL' 
+      ? rows.filter((r: any) => r.turno_calculado === targetShift)
+      : rows;
+
+    return { success: true, date: dateStr, absentStudents: filtered };
+  } catch (error: any) {
+    console.error('Error fetching absent students report:', error);
+    return { error: error.message || 'Error al obtener reporte de ausencias' };
+  }
+}
+
+export async function saveAbsenceFollowup(data: {
+  studentId: string;
+  fecha: string;
+  turno: string;
+  seLlamo: boolean;
+  estadoLlamada: string;
+  comentarios: string;
+  excusaUrl?: string;
+  registradoPor?: string;
+}) {
+  try {
+    await sql`
+      INSERT INTO absence_followups (
+        student_id, fecha, turno, se_llamo, estado_llamada, comentarios, excusa_url, registrado_por, updated_at
+      ) VALUES (
+        ${data.studentId}::uuid, ${data.fecha}::date, ${data.turno}, ${data.seLlamo}, 
+        ${data.estadoLlamada}, ${data.comentarios || ''}, ${data.excusaUrl || null}, 
+        ${data.registradoPor || 'Secretaría'}, CURRENT_TIMESTAMP
+      )
+      ON CONFLICT (student_id, fecha) 
+      DO UPDATE SET
+        turno = EXCLUDED.turno,
+        se_llamo = EXCLUDED.se_llamo,
+        estado_llamada = EXCLUDED.estado_llamada,
+        comentarios = EXCLUDED.comentarios,
+        excusa_url = COALESCE(EXCLUDED.excusa_url, absence_followups.excusa_url),
+        registrado_por = EXCLUDED.registrado_por,
+        updated_at = CURRENT_TIMESTAMP
+    `;
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error saving absence followup:', error);
+    return { error: error.message || 'Error al guardar seguimiento de ausencia' };
+  }
+}
+
+export async function getPendingAbsenceAlertsCount() {
+  try {
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    // Check absent students from target date (today or yesterday) who have not been successfully contacted
+    const res = await sql`
+      SELECT COUNT(*)::int as pending_count
+      FROM students s
+      LEFT JOIN attendance_events ae ON s.id = ae.student_id AND DATE(ae.timestamp AT TIME ZONE 'America/Bogota') = ${todayStr}::date
+      LEFT JOIN absence_followups af ON s.id = af.student_id AND af.fecha = ${todayStr}::date
+      WHERE s.activo = TRUE
+        AND ae.id IS NULL
+        AND (af.se_llamo IS NULL OR af.se_llamo = FALSE OR af.estado_llamada = 'pendiente' OR af.estado_llamada = 'no_contesto')
+    `;
+
+    return { success: true, pendingCount: res[0]?.pending_count || 0 };
+  } catch (error: any) {
+    console.error('Error counting pending absence alerts:', error);
+    return { success: false, pendingCount: 0 };
+  }
+}
+

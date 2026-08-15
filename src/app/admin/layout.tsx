@@ -54,6 +54,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
              <Link href="/admin/attendance" className="px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase hover:bg-white transition-all text-fsm-blue">
                Asistencia
              </Link>
+             <Link href="/admin/attendance/absences" className="px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase bg-red-50 text-fsm-red hover:bg-fsm-red hover:text-white transition-all border border-red-200">
+               🚨 Alertas de Ausencias
+             </Link>
              <Link href="/admin/attendance/enrollment" className="px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase hover:bg-white transition-all text-fsm-blue">
                Matrícula y Alumnos
              </Link>
