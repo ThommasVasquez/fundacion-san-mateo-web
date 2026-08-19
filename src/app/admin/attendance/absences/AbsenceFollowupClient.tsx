@@ -8,7 +8,7 @@ import { saveAbsenceFollowup } from '@/app/actions';
 import { 
   AlertTriangle, PhoneCall, PhoneOff, PhoneMissed, Phone, 
   FileText, Upload, Check, Save, Calendar, Filter, ArrowLeft, 
-  ChevronRight, ExternalLink, ShieldCheck, UserX, Clock, MessageSquare, Bell
+  ChevronRight, ExternalLink, ShieldCheck, UserX, Clock, MessageSquare, Bell, Users
 } from 'lucide-react';
 
 interface AbsentStudent {
@@ -354,13 +354,14 @@ export default function AbsenceFollowupClient({
           </div>
 
           {/* Specific Course / Grado Selector */}
-          <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-2xl border border-gray-200">
+          <div className="flex items-center gap-2 bg-blue-50/80 px-4 py-2.5 rounded-2xl border-2 border-blue-300">
+            <Users size={16} className="text-fsm-blue shrink-0" />
             <select
               value={filterGradoSpecific}
               onChange={e => setFilterGradoSpecific(e.target.value)}
-              className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none max-w-[160px] text-ellipsis"
+              className="bg-transparent font-black text-xs uppercase text-fsm-blue outline-none cursor-pointer"
             >
-              <option value="">Todos los Cursos</option>
+              <option value="">🏫 Filtrar por Curso / Salón...</option>
               {distinctGrados.map(g => (
                 <option key={g} value={g}>{g}</option>
               ))}
@@ -434,9 +435,16 @@ export default function AbsenceFollowupClient({
       </div>
 
       {/* Counter Summary */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs font-black text-gray-500 uppercase tracking-widest px-2 gap-2">
-        <span>Inasistencias Registradas: {filteredStudents.length} estudiantes sin marcación (de {initialStudents.length} matriculados en cursos de hoy)</span>
-        <span>Fecha Seleccionada: {selectedDate}</span>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs font-black text-gray-700 uppercase tracking-widest px-4 py-3 bg-white rounded-2xl border border-gray-100 shadow-sm gap-2">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-fsm-blue animate-pulse"></span>
+          <span>
+            {filterGradoSpecific 
+              ? `Curso ${filterGradoSpecific}: ${filteredStudents.length} Inasistente(s) Registrados` 
+              : `Inasistencias Mostradas: ${filteredStudents.length} Estudiante(s)`}
+          </span>
+        </div>
+        <span className="text-gray-400 font-medium">Fecha: {selectedDate}</span>
       </div>
 
       {/* Absent Students Cards Grid */}
