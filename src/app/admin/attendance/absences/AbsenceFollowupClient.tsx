@@ -30,12 +30,16 @@ interface AbsentStudent {
 interface AbsenceFollowupClientProps {
   initialDate: string;
   initialShift: string;
+  totalScansOnDate?: number;
+  isFutureOrZeroScan?: boolean;
   absentStudents: AbsentStudent[];
 }
 
 export default function AbsenceFollowupClient({
   initialDate,
   initialShift,
+  totalScansOnDate = 0,
+  isFutureOrZeroScan = false,
   absentStudents: initialStudents,
 }: AbsenceFollowupClientProps) {
   const router = useRouter();
@@ -237,6 +241,26 @@ export default function AbsenceFollowupClient({
           <ArrowLeft size={16} /> Volver a Asistencia
         </Link>
       </div>
+
+      {/* Zero Scans / Future Date Info Banner */}
+      {totalScansOnDate === 0 && (
+        <div className="bg-amber-50 border-2 border-amber-200 p-6 rounded-[2rem] shadow-sm flex items-start gap-4">
+          <div className="w-12 h-12 bg-amber-500 text-white rounded-2xl flex items-center justify-center shrink-0 font-black shadow-md">
+            <Clock size={24} />
+          </div>
+          <div>
+            <span className="text-[10px] font-black text-amber-800 uppercase tracking-widest bg-white px-2.5 py-0.5 rounded border border-amber-200">
+              INFORMACIÓN DE FECHA SELECCIONADA
+            </span>
+            <h3 className="text-base font-black text-amber-900 uppercase mt-0.5">
+              Sin lecturas de asistencia registradas para {selectedDate}
+            </h3>
+            <p className="text-xs font-medium text-amber-800 mt-0.5">
+              Aún no hay escaneos de tarjeta en pasillos para este día. Selecciona la fecha actual o un día de clases para ver la asistencia en tiempo real.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Inter-Shift Handover Alert Banner */}
       {pendingNightCount > 0 && (

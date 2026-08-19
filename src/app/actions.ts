@@ -1044,9 +1044,24 @@ export async function deleteIssuedDocument(id: string) {
 
 export async function getAbsentStudentsReport(targetDate?: string, targetShift?: string) {
   try {
-    const dateStr = targetDate || new Date().toISOString().split('T')[0];
+    const todayStr = new Date().toLocaleDateString('sv', { timeZone: 'America/Bogota' });
+    const dateStr = targetDate || todayStr;
 
-    // Fetch active students and left join attendance_events on targetDate, and left join absence_followups
+    // Check total attendance events on targetDate
+    const eventCountRes = await sql`
+      SELECT COUNT(*)::int as count
+      FROM attendance_events
+      WHERE DATE(timestamp AT TIME ZONE 'America/Bogota') = ${dateStr}::date
+    `;
+    const totalScans = eventCountRes[0]?.count || 0;
+
+    // Determine day of week (0 = Sun, 6 = Sat)
+    const dateObj = new Date(`${dateStr}T12:00:00-05:00`);
+    const dayOfWeek = dateObj.getDay();
+    const isSaturday = dayOfWeek === 6;
+    const isSunday = dayOfWeek === 0;
+
+    // Fetch active students without attendance events on targetDate
     const rows = await sql`
       SELECT 
         s.id as student_id,
@@ -1076,12 +1091,29 @@ export async function getAbsentStudentsReport(targetDate?: string, targetShift?:
       ORDER BY turno_calculado, s.grado, s.nombre
     `;
 
-    // Filter by shift if specified
-    const filtered = targetShift && targetShift !== 'ALL' 
-      ? rows.filter((r: any) => r.turno_calculado === targetShift)
-      : rows;
+    // Smart shift filtering:
+    // If targetShift is specific ('NOCHE', 'DIURNO', 'SABADO'), use it.
+    // If targetShift is 'ALL', return all.
+    // If targetShift is undefined or 'AUTO', use smart day-of-week rule (exclude Sábado on weekdays).
+    let filtered = rows;
+    if (targetShift && targetShift !== 'ALL' && targetShift !== 'AUTO') {
+      filtered = rows.filter((r: any) => r.turno_calculado === targetShift);
+    } else if (!targetShift || targetShift === 'AUTO') {
+      if (isSaturday) {
+        filtered = rows.filter((r: any) => r.turno_calculado === 'SABADO');
+      } else if (!isSunday) {
+        filtered = rows.filter((r: any) => r.turno_calculado !== 'SABADO');
+      }
+    }
 
-    return { success: true, date: dateStr, absentStudents: filtered };
+    return { 
+      success: true, 
+      date: dateStr, 
+      totalScansOnDate: totalScans,
+      dayOfWeek,
+      isFutureOrZeroScan: totalScans === 0,
+      absentStudents: filtered 
+    };
   } catch (error: any) {
     console.error('Error fetching absent students report:', error);
     return { error: error.message || 'Error al obtener reporte de ausencias' };

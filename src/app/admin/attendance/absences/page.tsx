@@ -13,9 +13,9 @@ interface AbsencesPageProps {
 
 export default async function AbsencesPage({ searchParams }: AbsencesPageProps) {
   const params = await searchParams;
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = new Date().toLocaleDateString('sv', { timeZone: 'America/Bogota' });
   const date = params.date || todayStr;
-  const shift = params.shift || 'ALL';
+  const shift = params.shift || 'AUTO';
 
   const res = await getAbsentStudentsReport(date, shift);
 
@@ -25,6 +25,8 @@ export default async function AbsencesPage({ searchParams }: AbsencesPageProps) 
     <AbsenceFollowupClient
       initialDate={date}
       initialShift={shift}
+      totalScansOnDate={res.totalScansOnDate || 0}
+      isFutureOrZeroScan={!!res.isFutureOrZeroScan}
       absentStudents={absentStudents}
     />
   );
