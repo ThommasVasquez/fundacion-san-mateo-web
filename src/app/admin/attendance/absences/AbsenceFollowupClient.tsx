@@ -172,7 +172,7 @@ export default function AbsenceFollowupClient({
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterGradoSpecific, setFilterGradoSpecific] = useState('');
-  const [viewMode, setViewMode] = useState<'FOLLOWUPS_ONLY' | 'ALL_UNMARKED'>('FOLLOWUPS_ONLY');
+  const [viewMode, setViewMode] = useState<'FOLLOWUPS_ONLY' | 'ALL_UNMARKED'>('ALL_UNMARKED');
 
   const distinctGrados = Array.from(new Set(initialStudents.map(s => s.grado))).sort();
 
