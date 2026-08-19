@@ -167,17 +167,21 @@ export default function AbsenceFollowupClient({
   };
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [showOnlyFollowups, setShowOnlyFollowups] = useState(true);
+  const [filterGradoSpecific, setFilterGradoSpecific] = useState('');
+  const [showOnlyFollowups, setShowOnlyFollowups] = useState(false);
+
+  const distinctGrados = Array.from(new Set(initialStudents.map(s => s.grado))).sort();
 
   // Filter students based on UI filters
   const filteredStudents = initialStudents.filter(s => {
     const data = followupData[s.student_id];
     const matchesShift = selectedShift === 'ALL' || s.turno_calculado === selectedShift;
+    const matchesGrado = !filterGradoSpecific || s.grado === filterGradoSpecific;
     const matchesSearch = !searchQuery || 
                           s.nombre.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           s.grado.toLowerCase().includes(searchQuery.toLowerCase());
 
-    if (!matchesShift || !matchesSearch) return false;
+    if (!matchesShift || !matchesGrado || !matchesSearch) return false;
 
     // If showOnlyFollowups is enabled, only show students who have a followup record or comment/call
     const hasFollowupRecord = s.followup_id || data?.seLlamo || data?.comentarios || data?.excusaUrl;
@@ -297,6 +301,20 @@ export default function AbsenceFollowupClient({
               onChange={e => setSearchQuery(e.target.value)}
               className="bg-transparent font-bold text-xs text-gray-800 outline-none w-full"
             />
+          </div>
+
+          {/* Specific Course / Grado Selector */}
+          <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-2xl border border-gray-200">
+            <select
+              value={filterGradoSpecific}
+              onChange={e => setFilterGradoSpecific(e.target.value)}
+              className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none max-w-[160px] text-ellipsis"
+            >
+              <option value="">Todos los Cursos</option>
+              {distinctGrados.map(g => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
           </div>
 
           {/* Status Filter Dropdown */}
