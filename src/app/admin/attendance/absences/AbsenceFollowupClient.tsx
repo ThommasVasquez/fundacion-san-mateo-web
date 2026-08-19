@@ -434,8 +434,8 @@ export default function AbsenceFollowupClient({
       </div>
 
       {/* Counter Summary */}
-      <div className="flex justify-between items-center text-xs font-black text-gray-500 uppercase tracking-widest px-2">
-        <span>Inasistencias Registradas: {filteredStudents.length} de {initialStudents.length}</span>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs font-black text-gray-500 uppercase tracking-widest px-2 gap-2">
+        <span>Inasistencias Registradas: {filteredStudents.length} estudiantes sin marcación (de {initialStudents.length} matriculados en cursos de hoy)</span>
         <span>Fecha Seleccionada: {selectedDate}</span>
       </div>
 

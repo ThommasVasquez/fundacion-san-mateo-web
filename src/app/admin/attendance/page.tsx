@@ -259,8 +259,8 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             <Users size={22} />
           </div>
           <div>
-            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">Total Asistencias</p>
-            <h3 className="text-2xl font-black text-fsm-blue leading-none">{totalScans}</h3>
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">Total Marcaciones/Escaneos</p>
+            <h3 className="text-2xl font-black text-fsm-blue leading-none">{totalScans} <span className="text-[10px] font-normal text-gray-400">({uniqueStudents} únicos)</span></h3>
           </div>
         </div>
 
