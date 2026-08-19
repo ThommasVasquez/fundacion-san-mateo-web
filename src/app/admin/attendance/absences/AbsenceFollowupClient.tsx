@@ -172,9 +172,13 @@ export default function AbsenceFollowupClient({
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterGradoSpecific, setFilterGradoSpecific] = useState('');
-  const [showOnlyFollowups, setShowOnlyFollowups] = useState(false);
+  const [viewMode, setViewMode] = useState<'FOLLOWUPS_ONLY' | 'ALL_UNMARKED'>('FOLLOWUPS_ONLY');
 
   const distinctGrados = Array.from(new Set(initialStudents.map(s => s.grado))).sort();
+
+  const totalWithFollowup = initialStudents.filter(s => 
+    s.followup_id || followupData[s.student_id]?.seLlamo || followupData[s.student_id]?.comentarios || followupData[s.student_id]?.excusaUrl
+  ).length;
 
   // Filter students based on UI filters
   const filteredStudents = initialStudents.filter(s => {
@@ -187,9 +191,10 @@ export default function AbsenceFollowupClient({
 
     if (!matchesShift || !matchesGrado || !matchesSearch) return false;
 
-    // If showOnlyFollowups is enabled, only show students who have a followup record or comment/call
+    // If viewMode is FOLLOWUPS_ONLY and no specific course or search query is set,
+    // only show students who have a followup record or call/comment/excuse
     const hasFollowupRecord = s.followup_id || data?.seLlamo || data?.comentarios || data?.excusaUrl;
-    if (showOnlyFollowups && !hasFollowupRecord && !searchQuery) {
+    if (viewMode === 'FOLLOWUPS_ONLY' && !filterGradoSpecific && !searchQuery && !hasFollowupRecord) {
       return false;
     }
 
@@ -206,8 +211,6 @@ export default function AbsenceFollowupClient({
   const pendingNightCount = initialStudents.filter(s => 
     s.turno_calculado === 'NOCHE' && (!s.se_llamo || s.estado_llamada === 'pendiente' || s.estado_llamada === 'no_contesto')
   ).length;
-
-  const totalWithFollowup = initialStudents.filter(s => s.followup_id || followupData[s.student_id]?.seLlamo || followupData[s.student_id]?.comentarios).length;
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-16">
@@ -283,7 +286,7 @@ export default function AbsenceFollowupClient({
           </div>
 
           <button
-            onClick={() => { setSelectedShift('NOCHE'); setShowOnlyFollowups(false); }}
+            onClick={() => { setSelectedShift('NOCHE'); setViewMode('ALL_UNMARKED'); }}
             className="px-5 py-2.5 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all shadow-sm shrink-0"
           >
             Ver Turno Noche
@@ -358,7 +361,7 @@ export default function AbsenceFollowupClient({
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-3 border-t border-gray-100">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pt-3 border-t border-gray-100">
           {/* Turno Filter Tabs */}
           <div className="flex flex-wrap gap-2">
             {[
@@ -373,7 +376,7 @@ export default function AbsenceFollowupClient({
                 className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
                   selectedShift === tab.id
                     ? 'bg-fsm-blue text-white border-fsm-blue shadow-sm'
-                    : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                 }`}
               >
                 {tab.label}
@@ -381,17 +384,29 @@ export default function AbsenceFollowupClient({
             ))}
           </div>
 
-          {/* Toggle View Mode: Only Cases with Followup vs All Un-scanned */}
-          <button
-            onClick={() => setShowOnlyFollowups(!showOnlyFollowups)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
-              showOnlyFollowups
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                : 'bg-amber-50 text-amber-900 border-amber-300'
-            }`}
-          >
-            {showOnlyFollowups ? `📋 Mostrando ${totalWithFollowup} Caso(s) Registrados` : `🌐 Mostrando Todos los ${initialStudents.length} Sin Marcación`}
-          </button>
+          {/* View Mode Toggle Switch */}
+          <div className="flex items-center gap-1.5 bg-gray-100 p-1.5 rounded-2xl border border-gray-200 self-stretch lg:self-auto">
+            <button
+              onClick={() => setViewMode('FOLLOWUPS_ONLY')}
+              className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                viewMode === 'FOLLOWUPS_ONLY'
+                  ? 'bg-white text-fsm-blue shadow-sm font-black'
+                  : 'text-gray-600 hover:text-gray-900 font-semibold'
+              }`}
+            >
+              📋 Novedades Registradas ({totalWithFollowup})
+            </button>
+            <button
+              onClick={() => setViewMode('ALL_UNMARKED')}
+              className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                viewMode === 'ALL_UNMARKED'
+                  ? 'bg-white text-fsm-blue shadow-sm font-black'
+                  : 'text-gray-600 hover:text-gray-900 font-semibold'
+              }`}
+            >
+              🌐 Sin Marcación ({initialStudents.length})
+            </button>
+          </div>
         </div>
       </div>
 
