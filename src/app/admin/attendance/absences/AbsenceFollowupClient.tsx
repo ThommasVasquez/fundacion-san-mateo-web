@@ -174,6 +174,29 @@ export default function AbsenceFollowupClient({
   const [filterGradoSpecific, setFilterGradoSpecific] = useState('');
   const [viewMode, setViewMode] = useState<'FOLLOWUPS_ONLY' | 'ALL_UNMARKED'>('ALL_UNMARKED');
 
+  // Sync state when server props change
+  React.useEffect(() => {
+    setSelectedDate(initialDate);
+    setSelectedShift(initialShift);
+  }, [initialDate, initialShift]);
+
+  React.useEffect(() => {
+    setFollowupData(prev => {
+      const updatedMap: Record<string, any> = { ...prev };
+      initialStudents.forEach(s => {
+        if (!updatedMap[s.student_id]) {
+          updatedMap[s.student_id] = {
+            seLlamo: s.se_llamo || false,
+            estadoLlamada: s.estado_llamada || 'pendiente',
+            comentarios: s.comentarios || '',
+            excusaUrl: s.excusa_url || '',
+          };
+        }
+      });
+      return updatedMap;
+    });
+  }, [initialStudents]);
+
   const distinctGrados = Array.from(new Set(initialStudents.map(s => s.grado))).sort();
 
   const totalWithFollowup = initialStudents.filter(s => 
@@ -183,7 +206,7 @@ export default function AbsenceFollowupClient({
   // Filter students based on UI filters
   const filteredStudents = initialStudents.filter(s => {
     const data = followupData[s.student_id];
-    const matchesShift = selectedShift === 'ALL' || s.turno_calculado === selectedShift;
+    const matchesShift = selectedShift === 'ALL' || selectedShift === 'AUTO' || s.turno_calculado === selectedShift;
     const matchesGrado = !filterGradoSpecific || s.grado === filterGradoSpecific;
     const matchesSearch = !searchQuery || 
                           s.nombre.toLowerCase().includes(searchQuery.toLowerCase()) || 
