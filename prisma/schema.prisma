@@ -1,0 +1,131 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum StudentStatus {
+  ACTIVO
+  INACTIVO
+  APLAZADO
+  TRANSFERIDO
+}
+
+enum Shift {
+  DIURNO
+  NOCHE
+  SABADO
+}
+
+enum GroupType {
+  REGULAR
+  AIPI
+  PREESCOLAR
+  CB
+}
+
+enum AttendanceStatusEnum {
+  PRESENTE
+  AUSENTE
+  FESTIVO
+  LIBRE
+  PRACTICAS
+  COMITE_ACADEMICO
+  TERMINACION_DE_SEMESTRE
+  NO_HUBO_CLASE
+  CLASE_NO_SE_LLEVO_A_CABO
+  OTRO
+}
+
+enum AttendanceSource {
+  MANUAL
+  RFID
+}
+
+model Student {
+  id                 String             @id @default(uuid())
+  nombreNormalizado  String             @unique @map("nombre_normalizado")
+  nombreOriginal     String             @map("nombre_original")
+  documento          String?            @unique
+  rfidTagUid         String?            @map("rfid_tag_uid")
+  estado             StudentStatus      @default(ACTIVO)
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  enrollments        Enrollment[]
+  attendanceRecords  AttendanceRecord[]
+
+  @@map("students_normalized")
+}
+
+model Group {
+  id            String         @id @default(uuid())
+  nombre        String         @unique
+  nombreClean   String         @map("nombre_clean")
+  jornada       Shift
+  tipo          GroupType      @default(REGULAR)
+  activo        Boolean        @default(true)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  enrollments   Enrollment[]
+  classSessions ClassSession[]
+
+  @@map("groups")
+}
+
+model Enrollment {
+  id          String    @id @default(uuid())
+  studentId   String    @map("student_id")
+  groupId     String    @map("group_id")
+  fechaInicio DateTime  @default(now()) @map("fecha_inicio")
+  fechaFin    DateTime? @map("fecha_fin")
+  activo      Boolean   @default(true)
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  group       Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, groupId])
+  @@map("enrollments")
+}
+
+model ClassSession {
+  id                String             @id @default(uuid())
+  groupId           String             @map("group_id")
+  fecha             DateTime           @db.Date
+  diaSemanaTexto    String?            @map("dia_semana_texto")
+  diaSemanaCalculado String?           @map("dia_semana_calculado")
+  activa            Boolean            @default(true)
+  createdAt         DateTime           @default(now()) @map("created_at")
+
+  group             Group              @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  attendanceRecords AttendanceRecord[]
+
+  @@unique([groupId, fecha])
+  @@map("class_sessions")
+}
+
+model AttendanceRecord {
+  id            String               @id @default(uuid())
+  studentId     String               @map("student_id")
+  sessionId     String               @map("session_id")
+  estado        AttendanceStatusEnum
+  fuente        AttendanceSource     @default(MANUAL)
+  observaciones String?
+  sede          String               @default("Sede 1")
+  createdAt     DateTime             @default(now()) @map("created_at")
+  updatedAt     DateTime             @updatedAt @map("updated_at")
+
+  student       Student              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  session       ClassSession         @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, sessionId])
+  @@map("attendance_records_normalized")
+}

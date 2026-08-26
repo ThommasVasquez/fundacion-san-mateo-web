@@ -1,0 +1,1623 @@
+{
+  "timestamp": "2026-08-26T20:53:14.815Z",
+  "totalStudents": 454,
+  "totalGroups": 18,
+  "totalSessionsCreated": 2366,
+  "totalRecordsInserted": 58557,
+  "emptyTeacherSheets": [
+    "ANDREA MARTINEZ",
+    "YESICA LOPEZ",
+    "CAMILA BARRETO",
+    "MARIBEL GONZALEZ ",
+    "JULIAN SACRISTAN"
+  ],
+  "multiEnrolledStudents": [
+    {
+      "student": "OSMA MORENO DEYSY JASBLEIDY",
+      "groups": [
+        "II AIPI",
+        "II NOCHE A"
+      ]
+    },
+    {
+      "student": "NIÑO LOPEZ LEIDY CAROLINA",
+      "groups": [
+        "III DIURNO A",
+        "III NOCHE A"
+      ]
+    },
+    {
+      "student": "VARGAS GARAY LAURA XIMENA",
+      "groups": [
+        "III DIURNO A",
+        "I SABADO CB",
+        "I DIURNO A CB",
+        "I DIURNO B CB"
+      ]
+    },
+    {
+      "student": "QUILINDO QUILINDO ANYELA TATIANA",
+      "groups": [
+        "III NOCHE A",
+        "III SABADO B"
+      ]
+    },
+    {
+      "student": "SIERRA HOLGUIN ELIANA SOFIA",
+      "groups": [
+        "III NOCHE A",
+        "II SABADO A"
+      ]
+    },
+    {
+      "student": "CONTRERAS MORALES LEYDI TATIANA",
+      "groups": [
+        "III SABADO B",
+        "II SABADO A"
+      ]
+    },
+    {
+      "student": "ESTACIO FLOREZ LEGUIS MICHAEL",
+      "groups": [
+        "III SABADO B",
+        "II SABADO A"
+      ]
+    }
+  ],
+  "dateDiscrepancies": [
+    {
+      "sheet": "I AIPI",
+      "row": 37,
+      "fecha": "2026-08-05",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I AIPI",
+      "row": 44,
+      "fecha": "2026-08-12",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I AIPI",
+      "row": 51,
+      "fecha": "2026-08-19",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I AIPI",
+      "row": 58,
+      "fecha": "2026-08-26",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I AIPI",
+      "row": 65,
+      "fecha": "2026-09-02",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I AIPI",
+      "row": 72,
+      "fecha": "2026-09-09",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I AIPI",
+      "row": 79,
+      "fecha": "2026-09-16",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I AIPI",
+      "row": 86,
+      "fecha": "2026-09-23",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I AIPI",
+      "row": 93,
+      "fecha": "2026-09-30",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I AIPI",
+      "row": 100,
+      "fecha": "2026-10-07",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I AIPI",
+      "row": 107,
+      "fecha": "2026-10-14",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I AIPI",
+      "row": 114,
+      "fecha": "2026-10-21",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I AIPI",
+      "row": 121,
+      "fecha": "2026-10-28",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I AIPI",
+      "row": 128,
+      "fecha": "2026-11-04",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I AIPI",
+      "row": 135,
+      "fecha": "2026-11-11",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I AIPI",
+      "row": 142,
+      "fecha": "2026-11-18",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I AIPI",
+      "row": 149,
+      "fecha": "2026-11-25",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I AIPI",
+      "row": 156,
+      "fecha": "2026-12-02",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I AIPI",
+      "row": 163,
+      "fecha": "2026-12-09",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II AIPI",
+      "row": 37,
+      "fecha": "2026-08-05",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II AIPI",
+      "row": 44,
+      "fecha": "2026-08-12",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II AIPI",
+      "row": 51,
+      "fecha": "2026-08-19",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II AIPI",
+      "row": 58,
+      "fecha": "2026-08-26",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II AIPI",
+      "row": 65,
+      "fecha": "2026-09-02",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II AIPI",
+      "row": 72,
+      "fecha": "2026-09-09",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II AIPI",
+      "row": 79,
+      "fecha": "2026-09-16",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II AIPI",
+      "row": 86,
+      "fecha": "2026-09-23",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II AIPI",
+      "row": 93,
+      "fecha": "2026-09-30",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II AIPI",
+      "row": 100,
+      "fecha": "2026-10-07",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II AIPI",
+      "row": 107,
+      "fecha": "2026-10-14",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II AIPI",
+      "row": 114,
+      "fecha": "2026-10-21",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II AIPI",
+      "row": 121,
+      "fecha": "2026-10-28",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II AIPI",
+      "row": 128,
+      "fecha": "2026-11-04",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II AIPI",
+      "row": 135,
+      "fecha": "2026-11-11",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II AIPI",
+      "row": 142,
+      "fecha": "2026-11-18",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II AIPI",
+      "row": 149,
+      "fecha": "2026-11-25",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II AIPI",
+      "row": 156,
+      "fecha": "2026-12-02",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II AIPI",
+      "row": 163,
+      "fecha": "2026-12-09",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I DIURNO A",
+      "row": 37,
+      "fecha": "2026-08-05",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I DIURNO A",
+      "row": 44,
+      "fecha": "2026-08-12",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I DIURNO A",
+      "row": 51,
+      "fecha": "2026-08-19",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I DIURNO A",
+      "row": 58,
+      "fecha": "2026-08-26",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I DIURNO A",
+      "row": 65,
+      "fecha": "2026-09-02",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I DIURNO A",
+      "row": 72,
+      "fecha": "2026-09-09",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I DIURNO A",
+      "row": 79,
+      "fecha": "2026-09-16",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I DIURNO A",
+      "row": 86,
+      "fecha": "2026-09-23",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I DIURNO A",
+      "row": 93,
+      "fecha": "2026-09-30",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I DIURNO A",
+      "row": 100,
+      "fecha": "2026-10-07",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I DIURNO A",
+      "row": 107,
+      "fecha": "2026-10-14",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I DIURNO A",
+      "row": 114,
+      "fecha": "2026-10-21",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I DIURNO A",
+      "row": 121,
+      "fecha": "2026-10-28",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I DIURNO A",
+      "row": 128,
+      "fecha": "2026-11-04",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I DIURNO A",
+      "row": 135,
+      "fecha": "2026-11-11",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I DIURNO A",
+      "row": 142,
+      "fecha": "2026-11-18",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I DIURNO A",
+      "row": 149,
+      "fecha": "2026-11-25",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I DIURNO A",
+      "row": 156,
+      "fecha": "2026-12-02",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I DIURNO A",
+      "row": 163,
+      "fecha": "2026-12-09",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO A",
+      "row": 37,
+      "fecha": "2026-08-05",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO A",
+      "row": 44,
+      "fecha": "2026-08-12",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO A",
+      "row": 51,
+      "fecha": "2026-08-19",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO A",
+      "row": 58,
+      "fecha": "2026-08-26",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO A",
+      "row": 65,
+      "fecha": "2026-09-02",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO A",
+      "row": 72,
+      "fecha": "2026-09-09",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO A",
+      "row": 79,
+      "fecha": "2026-09-16",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO A",
+      "row": 86,
+      "fecha": "2026-09-23",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO A",
+      "row": 93,
+      "fecha": "2026-09-30",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO A",
+      "row": 100,
+      "fecha": "2026-10-07",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO A",
+      "row": 107,
+      "fecha": "2026-10-14",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO A",
+      "row": 114,
+      "fecha": "2026-10-21",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO A",
+      "row": 121,
+      "fecha": "2026-10-28",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO A",
+      "row": 128,
+      "fecha": "2026-11-04",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO A",
+      "row": 135,
+      "fecha": "2026-11-11",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO A",
+      "row": 142,
+      "fecha": "2026-11-18",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO A",
+      "row": 149,
+      "fecha": "2026-11-25",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO A",
+      "row": 156,
+      "fecha": "2026-12-02",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO A",
+      "row": 163,
+      "fecha": "2026-12-09",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO B",
+      "row": 37,
+      "fecha": "2026-08-05",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO B",
+      "row": 44,
+      "fecha": "2026-08-12",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO B",
+      "row": 51,
+      "fecha": "2026-08-19",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO B",
+      "row": 58,
+      "fecha": "2026-08-26",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO B",
+      "row": 65,
+      "fecha": "2026-09-02",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO B",
+      "row": 72,
+      "fecha": "2026-09-09",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO B",
+      "row": 79,
+      "fecha": "2026-09-16",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO B",
+      "row": 86,
+      "fecha": "2026-09-23",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO B",
+      "row": 93,
+      "fecha": "2026-09-30",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO B",
+      "row": 100,
+      "fecha": "2026-10-07",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO B",
+      "row": 107,
+      "fecha": "2026-10-14",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO B",
+      "row": 114,
+      "fecha": "2026-10-21",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO B",
+      "row": 121,
+      "fecha": "2026-10-28",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO B",
+      "row": 128,
+      "fecha": "2026-11-04",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO B",
+      "row": 135,
+      "fecha": "2026-11-11",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO B",
+      "row": 142,
+      "fecha": "2026-11-18",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO B",
+      "row": 149,
+      "fecha": "2026-11-25",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO B",
+      "row": 156,
+      "fecha": "2026-12-02",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II DIURNO B",
+      "row": 163,
+      "fecha": "2026-12-09",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III DIURNO A",
+      "row": 37,
+      "fecha": "2026-08-05",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III DIURNO A",
+      "row": 44,
+      "fecha": "2026-08-12",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III DIURNO A",
+      "row": 51,
+      "fecha": "2026-08-19",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III DIURNO A",
+      "row": 58,
+      "fecha": "2026-08-26",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III DIURNO A",
+      "row": 65,
+      "fecha": "2026-09-02",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III DIURNO A",
+      "row": 72,
+      "fecha": "2026-09-09",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III DIURNO A",
+      "row": 79,
+      "fecha": "2026-09-16",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III DIURNO A",
+      "row": 86,
+      "fecha": "2026-09-23",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III DIURNO A",
+      "row": 93,
+      "fecha": "2026-09-30",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III DIURNO A",
+      "row": 100,
+      "fecha": "2026-10-07",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III DIURNO A",
+      "row": 107,
+      "fecha": "2026-10-14",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III DIURNO A",
+      "row": 114,
+      "fecha": "2026-10-21",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III DIURNO A",
+      "row": 121,
+      "fecha": "2026-10-28",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III DIURNO A",
+      "row": 128,
+      "fecha": "2026-11-04",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III DIURNO A",
+      "row": 135,
+      "fecha": "2026-11-11",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III DIURNO A",
+      "row": 142,
+      "fecha": "2026-11-18",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III DIURNO A",
+      "row": 149,
+      "fecha": "2026-11-25",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III DIURNO A",
+      "row": 156,
+      "fecha": "2026-12-02",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III DIURNO A",
+      "row": 163,
+      "fecha": "2026-12-09",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I NOCHE A",
+      "row": 37,
+      "fecha": "2026-08-05",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I NOCHE A",
+      "row": 44,
+      "fecha": "2026-08-12",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I NOCHE A",
+      "row": 51,
+      "fecha": "2026-08-19",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I NOCHE A",
+      "row": 58,
+      "fecha": "2026-08-26",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I NOCHE A",
+      "row": 65,
+      "fecha": "2026-09-02",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I NOCHE A",
+      "row": 72,
+      "fecha": "2026-09-09",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I NOCHE A",
+      "row": 79,
+      "fecha": "2026-09-16",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I NOCHE A",
+      "row": 86,
+      "fecha": "2026-09-23",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I NOCHE A",
+      "row": 93,
+      "fecha": "2026-09-30",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I NOCHE A",
+      "row": 100,
+      "fecha": "2026-10-07",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I NOCHE A",
+      "row": 107,
+      "fecha": "2026-10-14",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I NOCHE A",
+      "row": 114,
+      "fecha": "2026-10-21",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I NOCHE A",
+      "row": 121,
+      "fecha": "2026-10-28",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I NOCHE A",
+      "row": 128,
+      "fecha": "2026-11-04",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I NOCHE A",
+      "row": 135,
+      "fecha": "2026-11-11",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I NOCHE A",
+      "row": 142,
+      "fecha": "2026-11-18",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I NOCHE A",
+      "row": 149,
+      "fecha": "2026-11-25",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I NOCHE A",
+      "row": 156,
+      "fecha": "2026-12-02",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I NOCHE A",
+      "row": 163,
+      "fecha": "2026-12-09",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II NOCHE A",
+      "row": 37,
+      "fecha": "2026-08-05",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II NOCHE A",
+      "row": 44,
+      "fecha": "2026-08-12",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II NOCHE A",
+      "row": 51,
+      "fecha": "2026-08-19",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II NOCHE A",
+      "row": 58,
+      "fecha": "2026-08-26",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II NOCHE A",
+      "row": 65,
+      "fecha": "2026-09-02",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II NOCHE A",
+      "row": 72,
+      "fecha": "2026-09-09",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II NOCHE A",
+      "row": 79,
+      "fecha": "2026-09-16",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II NOCHE A",
+      "row": 86,
+      "fecha": "2026-09-23",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II NOCHE A",
+      "row": 93,
+      "fecha": "2026-09-30",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II NOCHE A",
+      "row": 100,
+      "fecha": "2026-10-07",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II NOCHE A",
+      "row": 107,
+      "fecha": "2026-10-14",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II NOCHE A",
+      "row": 114,
+      "fecha": "2026-10-21",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II NOCHE A",
+      "row": 121,
+      "fecha": "2026-10-28",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II NOCHE A",
+      "row": 128,
+      "fecha": "2026-11-04",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II NOCHE A",
+      "row": 135,
+      "fecha": "2026-11-11",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II NOCHE A",
+      "row": 142,
+      "fecha": "2026-11-18",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II NOCHE A",
+      "row": 149,
+      "fecha": "2026-11-25",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II NOCHE A",
+      "row": 156,
+      "fecha": "2026-12-02",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II NOCHE A",
+      "row": 163,
+      "fecha": "2026-12-09",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III NOCHE A",
+      "row": 37,
+      "fecha": "2026-08-05",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III NOCHE A",
+      "row": 44,
+      "fecha": "2026-08-12",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III NOCHE A",
+      "row": 51,
+      "fecha": "2026-08-19",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III NOCHE A",
+      "row": 58,
+      "fecha": "2026-08-26",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III NOCHE A",
+      "row": 65,
+      "fecha": "2026-09-02",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III NOCHE A",
+      "row": 72,
+      "fecha": "2026-09-09",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III NOCHE A",
+      "row": 79,
+      "fecha": "2026-09-16",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III NOCHE A",
+      "row": 86,
+      "fecha": "2026-09-23",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III NOCHE A",
+      "row": 93,
+      "fecha": "2026-09-30",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III NOCHE A",
+      "row": 100,
+      "fecha": "2026-10-07",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III NOCHE A",
+      "row": 107,
+      "fecha": "2026-10-14",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III NOCHE A",
+      "row": 114,
+      "fecha": "2026-10-21",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III NOCHE A",
+      "row": 121,
+      "fecha": "2026-10-28",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III NOCHE A",
+      "row": 128,
+      "fecha": "2026-11-04",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III NOCHE A",
+      "row": 135,
+      "fecha": "2026-11-11",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III NOCHE A",
+      "row": 142,
+      "fecha": "2026-11-18",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III NOCHE A",
+      "row": 149,
+      "fecha": "2026-11-25",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III NOCHE A",
+      "row": 156,
+      "fecha": "2026-12-02",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "III NOCHE A",
+      "row": 163,
+      "fecha": "2026-12-09",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I SABADO A",
+      "row": 5,
+      "fecha": "2027-07-12",
+      "diaTexto": "DOMINGO",
+      "diaCalculado": "LUNES"
+    },
+    {
+      "sheet": "III SABADO B",
+      "row": 5,
+      "fecha": "2027-07-12",
+      "diaTexto": "DOMINGO",
+      "diaCalculado": "LUNES"
+    },
+    {
+      "sheet": "II SABADO A",
+      "row": 5,
+      "fecha": "2027-07-12",
+      "diaTexto": "DOMINGO",
+      "diaCalculado": "LUNES"
+    },
+    {
+      "sheet": "III SABADO A",
+      "row": 5,
+      "fecha": "2027-07-12",
+      "diaTexto": "DOMINGO",
+      "diaCalculado": "LUNES"
+    },
+    {
+      "sheet": "I SABADO CB",
+      "row": 36,
+      "fecha": "2026-07-08",
+      "diaTexto": "SABADO",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I SABADO CB",
+      "row": 37,
+      "fecha": "2026-07-09",
+      "diaTexto": "DOMINGO",
+      "diaCalculado": "JUEVES"
+    },
+    {
+      "sheet": "I DIURNO B CB",
+      "row": 142,
+      "fecha": "2026-08-24",
+      "diaTexto": "MIERCOLES",
+      "diaCalculado": "LUNES"
+    },
+    {
+      "sheet": "I DIURNO B CB",
+      "row": 143,
+      "fecha": "2026-08-25",
+      "diaTexto": "JUEVES",
+      "diaCalculado": "MARTES"
+    },
+    {
+      "sheet": "I DIURNO B CB",
+      "row": 144,
+      "fecha": "2026-08-26",
+      "diaTexto": "VIERNES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I DIURNO B CB",
+      "row": 145,
+      "fecha": "2026-08-27",
+      "diaTexto": "SABADO",
+      "diaCalculado": "JUEVES"
+    },
+    {
+      "sheet": "I DIURNO B CB",
+      "row": 146,
+      "fecha": "2026-08-28",
+      "diaTexto": "DOMINGO",
+      "diaCalculado": "VIERNES"
+    },
+    {
+      "sheet": "I PREESCOLAR",
+      "row": 37,
+      "fecha": "2026-08-05",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I PREESCOLAR",
+      "row": 44,
+      "fecha": "2026-08-12",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I PREESCOLAR",
+      "row": 51,
+      "fecha": "2026-08-19",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I PREESCOLAR",
+      "row": 58,
+      "fecha": "2026-08-26",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I PREESCOLAR",
+      "row": 65,
+      "fecha": "2026-09-02",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I PREESCOLAR",
+      "row": 72,
+      "fecha": "2026-09-09",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I PREESCOLAR",
+      "row": 79,
+      "fecha": "2026-09-16",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I PREESCOLAR",
+      "row": 86,
+      "fecha": "2026-09-23",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I PREESCOLAR",
+      "row": 93,
+      "fecha": "2026-09-30",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I PREESCOLAR",
+      "row": 100,
+      "fecha": "2026-10-07",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I PREESCOLAR",
+      "row": 107,
+      "fecha": "2026-10-14",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I PREESCOLAR",
+      "row": 114,
+      "fecha": "2026-10-21",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I PREESCOLAR",
+      "row": 121,
+      "fecha": "2026-10-28",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I PREESCOLAR",
+      "row": 128,
+      "fecha": "2026-11-04",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I PREESCOLAR",
+      "row": 135,
+      "fecha": "2026-11-11",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I PREESCOLAR",
+      "row": 142,
+      "fecha": "2026-11-18",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I PREESCOLAR",
+      "row": 149,
+      "fecha": "2026-11-25",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I PREESCOLAR",
+      "row": 156,
+      "fecha": "2026-12-02",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "I PREESCOLAR",
+      "row": 163,
+      "fecha": "2026-12-09",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II PREESCOLAR",
+      "row": 37,
+      "fecha": "2026-08-05",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II PREESCOLAR",
+      "row": 44,
+      "fecha": "2026-08-12",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II PREESCOLAR",
+      "row": 51,
+      "fecha": "2026-08-19",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II PREESCOLAR",
+      "row": 58,
+      "fecha": "2026-08-26",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II PREESCOLAR",
+      "row": 65,
+      "fecha": "2026-09-02",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II PREESCOLAR",
+      "row": 72,
+      "fecha": "2026-09-09",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II PREESCOLAR",
+      "row": 79,
+      "fecha": "2026-09-16",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II PREESCOLAR",
+      "row": 86,
+      "fecha": "2026-09-23",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II PREESCOLAR",
+      "row": 93,
+      "fecha": "2026-09-30",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II PREESCOLAR",
+      "row": 100,
+      "fecha": "2026-10-07",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II PREESCOLAR",
+      "row": 107,
+      "fecha": "2026-10-14",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II PREESCOLAR",
+      "row": 114,
+      "fecha": "2026-10-21",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II PREESCOLAR",
+      "row": 121,
+      "fecha": "2026-10-28",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II PREESCOLAR",
+      "row": 128,
+      "fecha": "2026-11-04",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II PREESCOLAR",
+      "row": 135,
+      "fecha": "2026-11-11",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II PREESCOLAR",
+      "row": 142,
+      "fecha": "2026-11-18",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II PREESCOLAR",
+      "row": 149,
+      "fecha": "2026-11-25",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II PREESCOLAR",
+      "row": 156,
+      "fecha": "2026-12-02",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    },
+    {
+      "sheet": "II PREESCOLAR",
+      "row": 163,
+      "fecha": "2026-12-09",
+      "diaTexto": "MIÉRCOLES",
+      "diaCalculado": "MIERCOLES"
+    }
+  ],
+  "unmappedNotes": [
+    {
+      "sheet": "I AIPI",
+      "student": "TORRES GUARNIZO LEIDY ESMERALDA",
+      "fecha": "2026-08-12",
+      "cellValue": ","
+    },
+    {
+      "sheet": "I NOCHE A",
+      "student": "GONZALEZ CASALLAS KAROL STEFHANY",
+      "fecha": "2026-07-14",
+      "cellValue": "INGRESO EL 15/07/2026"
+    }
+  ]
+}
