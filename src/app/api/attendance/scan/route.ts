@@ -179,7 +179,7 @@ export async function POST(req: Request) {
 
     // 1. Validate reader exists
     const readers = await sql`
-      SELECT id, tipo, teacher_id
+      SELECT id, tipo, teacher_id, sede
       FROM readers
       WHERE id = ${reader_id}
       LIMIT 1
@@ -192,6 +192,7 @@ export async function POST(req: Request) {
     const reader = readers[0];
     const origen = reader.tipo === 'mobile_nfc' ? 'movil_profesor' : 'panel';
     const fallbackRegistradoPor = registrado_por || reader.teacher_id || null;
+    const readerSede = reader.sede || body.sede || 'Sede 1';
 
     // Se calculan antes del modo matrícula porque ambos los necesitan.
     const tagHex = String(tag_uid).replace(/\s+/g, '').toUpperCase();
@@ -327,9 +328,9 @@ export async function POST(req: Request) {
       // Insert attendance event
       await sql`
         INSERT INTO attendance_events (
-          student_id, rfid_tag_uid, reader_id, tipo_evento, timestamp, origen, sincronizado, geolocalizacion, registrado_por
+          student_id, rfid_tag_uid, reader_id, tipo_evento, timestamp, origen, sincronizado, geolocalizacion, registrado_por, sede
         ) VALUES (
-          ${student.id}, ${tag_uid}, ${reader_id}, ${resolvedTipo}, ${eventTime}, ${origen}, ${isSincronizado}, ${geolocalizacion || null}, ${fallbackRegistradoPor}
+          ${student.id}, ${tag_uid}, ${reader_id}, ${resolvedTipo}, ${eventTime}, ${origen}, ${isSincronizado}, ${geolocalizacion || null}, ${fallbackRegistradoPor}, ${readerSede}
         )
       `;
 
@@ -349,9 +350,9 @@ export async function POST(req: Request) {
       // Unassigned tag event
       await sql`
         INSERT INTO attendance_events (
-          student_id, rfid_tag_uid, reader_id, tipo_evento, timestamp, origen, sincronizado, geolocalizacion, registrado_por
+          student_id, rfid_tag_uid, reader_id, tipo_evento, timestamp, origen, sincronizado, geolocalizacion, registrado_por, sede
         ) VALUES (
-          NULL, ${tag_uid}, ${reader_id}, ${resolvedTipo}, ${eventTime}, ${origen}, ${isSincronizado}, ${geolocalizacion || null}, ${fallbackRegistradoPor}
+          NULL, ${tag_uid}, ${reader_id}, ${resolvedTipo}, ${eventTime}, ${origen}, ${isSincronizado}, ${geolocalizacion || null}, ${fallbackRegistradoPor}, ${readerSede}
         )
       `;
 
