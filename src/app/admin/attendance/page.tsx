@@ -23,6 +23,7 @@ interface AttendancePageProps {
     grado?: string;
     sede?: string;
     anomalyOnly?: string;
+    absencesOnly?: string;
     sort?: string;
     studentHistoryId?: string;
   }>;
@@ -40,6 +41,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
   const filterGrado = params.grado || '';
   const filterSede = params.sede || '';
   const filterAnomalyOnly = params.anomalyOnly === 'true';
+  const filterAbsencesOnly = params.absencesOnly === 'true';
   const filterSort = params.sort || 'time_desc';
   const historyStudentId = params.studentHistoryId || '';
 
@@ -80,48 +82,81 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
     .map((g: any) => g.grado)
     .sort((a: string, b: string) => a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' }));
 
-  // 3. Fetch Events for date range
-  const events = await sql`
-    SELECT 
-      ae.id,
-      ae.student_id,
-      ae.rfid_tag_uid,
-      ae.reader_id,
-      ae.tipo_evento,
-      ae.timestamp,
-      ae.origen,
-      ae.sincronizado,
-      ae.geolocalizacion,
-      ae.registrado_por,
-      ae.sede,
-      ae.observaciones,
-      s.nombre as student_name, 
-      s.grado as student_grado, 
-      r.ubicacion as reader_name,
-      r.tipo as reader_tipo
-    FROM attendance_events ae
-    LEFT JOIN students s ON ae.student_id = s.id
-    LEFT JOIN readers r ON ae.reader_id = r.id
-    WHERE (ae.timestamp AT TIME ZONE 'America/Bogota')::date >= ${filterStartDate}::date
-      AND (ae.timestamp AT TIME ZONE 'America/Bogota')::date <= ${filterEndDate}::date
-    ORDER BY ae.timestamp DESC
-  `;
+  // 3. Fetch Events / Absences for date range
+  let rawEvents: any[] = [];
 
-  // Process events: Anomaly = Unassigned Tag
-  const processedEvents = events.map((ev: any) => {
-    const isAnomaly = !ev.student_id;
-    const anomalyReason = isAnomaly ? 'Tarjeta sin asignar' : '';
+  if (filterAbsencesOnly) {
+    // Fetch real absence records from attendance_records_normalized
+    const absencesRes = await sql`
+      SELECT 
+        ar.id,
+        ar.student_id,
+        s.nombre_original as student_name,
+        g.nombre as student_grado,
+        'manual' as origen,
+        'inasistencia' as tipo_evento,
+        cs.fecha as timestamp,
+        ar.sede,
+        ar.observaciones,
+        ar.estado,
+        'Sin marcación de entrada' as reader_name
+      FROM attendance_records_normalized ar
+      JOIN class_sessions cs ON cs.id = ar.session_id
+      JOIN students_normalized s ON s.id = ar.student_id
+      JOIN groups g ON g.id = cs.group_id
+      WHERE ar.estado = 'AUSENTE'
+        AND cs.fecha >= ${filterStartDate}::date
+        AND cs.fecha <= ${filterEndDate}::date
+      ORDER BY cs.fecha DESC, s.nombre_original ASC
+    `;
 
-    return {
-      ...ev,
-      isAnomaly,
-      anomalyReason
-    };
-  });
+    rawEvents = absencesRes.map((a: any) => ({
+      ...a,
+      isAnomaly: false,
+      anomalyReason: '',
+      rfid_tag_uid: 'N/A'
+    }));
+  } else {
+    // Fetch RFID attendance events
+    const events = await sql`
+      SELECT 
+        ae.id,
+        ae.student_id,
+        ae.rfid_tag_uid,
+        ae.reader_id,
+        ae.tipo_evento,
+        ae.timestamp,
+        ae.origen,
+        ae.sincronizado,
+        ae.geolocalizacion,
+        ae.registrado_por,
+        ae.sede,
+        ae.observaciones,
+        s.nombre as student_name, 
+        s.grado as student_grado, 
+        r.ubicacion as reader_name,
+        r.tipo as reader_tipo
+      FROM attendance_events ae
+      LEFT JOIN students s ON ae.student_id = s.id
+      LEFT JOIN readers r ON ae.reader_id = r.id
+      WHERE (ae.timestamp AT TIME ZONE 'America/Bogota')::date >= ${filterStartDate}::date
+        AND (ae.timestamp AT TIME ZONE 'America/Bogota')::date <= ${filterEndDate}::date
+      ORDER BY ae.timestamp DESC
+    `;
+
+    rawEvents = events.map((ev: any) => {
+      const isAnomaly = !ev.student_id;
+      return {
+        ...ev,
+        isAnomaly,
+        anomalyReason: isAnomaly ? 'Tarjeta sin asignar' : ''
+      };
+    });
+  }
 
   // Filter in memory by search, degree, sede, and anomaly
   const searchLower = filterSearch.toLowerCase();
-  let filteredEvents = processedEvents.filter((ev: any) => {
+  let filteredEvents = rawEvents.filter((ev: any) => {
     if (filterGrado && ev.student_grado !== filterGrado) return false;
     if (filterSede && (ev.sede || 'Sede 1') !== filterSede) return false;
     if (filterAnomalyOnly && !ev.isAnomaly) return false;
@@ -161,7 +196,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
     return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
   });
 
-  const totalAnomalies = processedEvents.filter((ev: any) => ev.isAnomaly).length;
+  const totalAnomalies = rawEvents.filter((ev: any) => ev.isAnomaly).length;
 
   // Student History overlay
   let historyStudent: any = null;
@@ -495,6 +530,20 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             <span>Solo Sin Asignar</span>
           </label>
 
+          {/* Absences Only Checkbox */}
+          <label className={`flex items-center gap-2 cursor-pointer font-bold text-xs uppercase select-none px-3 py-2 rounded-xl border transition-all ${
+            filterAbsencesOnly ? 'bg-red-100 text-fsm-red border-red-300 shadow-sm font-black' : 'bg-gray-50 text-gray-700 border-gray-100 hover:bg-gray-100'
+          }`}>
+            <input 
+              type="checkbox" 
+              name="absencesOnly"
+              value="true"
+              defaultChecked={filterAbsencesOnly}
+              className="w-4 h-4 rounded border-red-300 text-fsm-red focus:ring-fsm-red" 
+            />
+            <span>❌ Solo Inasistencias</span>
+          </label>
+
           <RefreshButton />
         </div>
       </form>
@@ -570,14 +619,18 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                     <td className="py-4 px-6 font-medium text-gray-600">
                       <div>
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-black uppercase mb-1 ${
-                          ev.tipo_evento === 'salida'
+                          ev.estado === 'AUSENTE'
+                            ? 'bg-red-100 text-fsm-red border border-red-200 shadow-sm'
+                            : ev.tipo_evento === 'salida'
                             ? 'bg-amber-100 text-amber-900 border border-amber-300'
                             : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                         }`}>
-                          {ev.tipo_evento === 'salida' ? '📤 SALIDA' : '📥 ENTRADA'}
+                          {ev.estado === 'AUSENTE' ? '❌ INASISTENCIA' : ev.tipo_evento === 'salida' ? '📤 SALIDA' : '📥 ENTRADA'}
                         </span>
                         <p className="font-bold text-gray-800">
-                          {new Date(ev.timestamp).toLocaleTimeString('es-CO', { timeZone: ZONA_HORARIA, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          {ev.estado === 'AUSENTE'
+                            ? `Fecha: ${new Date(ev.timestamp).toISOString().split('T')[0]}`
+                            : new Date(ev.timestamp).toLocaleTimeString('es-CO', { timeZone: ZONA_HORARIA, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                         </p>
                         <p className="text-[10px] text-gray-400">
                           {new Date(ev.timestamp).toLocaleDateString('es-CO', { timeZone: ZONA_HORARIA })}
@@ -585,7 +638,11 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                       </div>
                     </td>
                     <td className="py-4 px-6">
-                      {ev.isAnomaly ? (
+                      {ev.estado === 'AUSENTE' ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-red-50 text-fsm-red border border-red-200">
+                          Inasistió
+                        </span>
+                      ) : ev.isAnomaly ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-red-50 text-fsm-red border border-red-100" title={ev.anomalyReason}>
                           <AlertTriangle size={10} /> Sin Asignar
                         </span>
