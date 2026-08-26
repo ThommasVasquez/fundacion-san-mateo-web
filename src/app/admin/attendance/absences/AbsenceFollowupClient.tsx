@@ -330,16 +330,34 @@ export default function AbsenceFollowupClient({
       <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-premium space-y-4">
         
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-          {/* Date Selector */}
-          <div className="flex items-center gap-3 bg-gray-50 px-4 py-2.5 rounded-2xl border border-gray-200">
-            <Calendar size={18} className="text-fsm-blue" />
-            <span className="text-xs font-black text-gray-500 uppercase tracking-widest">Fecha:</span>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={handleDateChange}
-              className="bg-transparent font-bold text-sm text-fsm-blue outline-none cursor-pointer"
-            />
+          {/* Date Selector with Hoy shortcut */}
+          <div className="flex flex-wrap items-center gap-2 bg-gray-50 p-2 rounded-2xl border border-gray-200">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-gray-200 shadow-sm">
+              <Calendar size={16} className="text-fsm-blue shrink-0" />
+              <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Fecha:</span>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={handleDateChange}
+                className="bg-transparent font-bold text-xs text-fsm-blue outline-none cursor-pointer"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                const todayStr = new Date().toLocaleDateString('sv', { timeZone: 'America/Bogota' });
+                setSelectedDate(todayStr);
+                router.push(`/admin/attendance/absences?date=${todayStr}&shift=${selectedShift}`);
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
+                selectedDate === new Date().toLocaleDateString('sv', { timeZone: 'America/Bogota' })
+                  ? 'bg-fsm-blue text-white border-fsm-blue shadow-sm'
+                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'
+              }`}
+            >
+              📅 Hoy
+            </button>
           </div>
 
           {/* Search Input */}
@@ -349,10 +367,37 @@ export default function AbsenceFollowupClient({
               placeholder="Buscar estudiante por nombre o grado..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="bg-transparent font-bold text-xs text-gray-800 outline-none w-full"
+              className="bg-transparent text-xs font-bold text-gray-800 placeholder-gray-400 outline-none w-full"
             />
+            {searchQuery && (
+              <button 
+                type="button" 
+                onClick={() => setSearchQuery('')}
+                className="text-xs font-bold text-gray-400 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            )}
           </div>
 
+          {/* Reset Filters Button (visible when filters active) */}
+          {(filterGradoSpecific || searchQuery || statusFilter !== 'ALL' || (selectedShift !== 'ALL' && selectedShift !== 'AUTO')) && (
+            <button
+              type="button"
+              onClick={() => {
+                setFilterGradoSpecific('');
+                setSearchQuery('');
+                setStatusFilter('ALL');
+                handleShiftChange('ALL');
+              }}
+              className="px-4 py-2.5 bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-fsm-red rounded-2xl font-bold text-xs uppercase tracking-wider transition-all border border-gray-200 flex items-center justify-center gap-1.5 shrink-0"
+            >
+              🔄 Limpiar Filtros
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pt-3 border-t border-gray-100">
           {/* Specific Course / Grado Selector */}
           <div className="flex items-center gap-2 bg-blue-50/80 px-4 py-2.5 rounded-2xl border-2 border-blue-300">
             <Users size={16} className="text-fsm-blue shrink-0" />
