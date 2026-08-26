@@ -19,22 +19,31 @@ export default async function StudentAttendanceHistoryPage({
   const { filter } = await searchParams;
 
   // Query student details from students_normalized or legacy students
-  const studentQuery = await sql`
-    SELECT id, nombre_original, nombre_normalizado, documento, estado
+  let student: any = null;
+  const normQuery = await sql`
+    SELECT id, nombre_original, nombre_normalizado, estado
     FROM students_normalized
-    WHERE id = ${studentId}::uuid
-    UNION
-    SELECT id, nombre as nombre_original, nombre as nombre_normalizado, documento, 'ACTIVO' as estado
-    FROM students
     WHERE id = ${studentId}::uuid
     LIMIT 1
   `;
 
-  if (studentQuery.length === 0) {
-    notFound();
+  if (normQuery.length > 0) {
+    student = normQuery[0];
+  } else {
+    const legacyQuery = await sql`
+      SELECT id, nombre as nombre_original, nombre as nombre_normalizado, 'ACTIVO' as estado
+      FROM students
+      WHERE id = ${studentId}::uuid
+      LIMIT 1
+    `;
+    if (legacyQuery.length > 0) {
+      student = legacyQuery[0];
+    }
   }
 
-  const student = studentQuery[0];
+  if (!student) {
+    notFound();
+  }
 
   // Query enrollments / groups
   const enrollmentsQuery = await sql`
