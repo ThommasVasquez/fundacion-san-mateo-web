@@ -553,7 +553,7 @@ export default function AbsenceFollowupClient({
                       : 'text-fsm-blue hover:text-blue-900 font-semibold'
                   }`}
                 >
-                  ⚡ Salones en Clase Hoy ({activeCoursesScanned.length})
+                  ⚡ Salones en Clase Hoy
                 </button>
                 <button
                   type="button"
@@ -564,7 +564,7 @@ export default function AbsenceFollowupClient({
                       : 'text-fsm-blue hover:text-blue-900 font-semibold'
                   }`}
                 >
-                  🌐 Todos los Cursos BD
+                  🌐 Incluir Cursos Sin Clase Hoy
                 </button>
               </div>
             )}
