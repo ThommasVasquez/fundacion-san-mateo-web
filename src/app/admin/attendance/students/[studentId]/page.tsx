@@ -1,7 +1,8 @@
 import { neon } from '@neondatabase/serverless';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { User, Calendar, CheckCircle, XCircle, AlertCircle, ArrowLeft, Filter } from 'lucide-react';
+import { User, Calendar, ArrowLeft, Filter, XCircle, CheckCircle } from 'lucide-react';
+import StudentHistoryClient from './StudentHistoryClient';
 
 const sql = neon(process.env.DATABASE_URL || '');
 
@@ -17,10 +18,14 @@ export default async function StudentAttendanceHistoryPage({
   const { studentId } = await params;
   const { filter } = await searchParams;
 
-  // Query student details
+  // Query student details from students_normalized or legacy students
   const studentQuery = await sql`
     SELECT id, nombre_original, nombre_normalizado, documento, estado
     FROM students_normalized
+    WHERE id = ${studentId}::uuid
+    UNION
+    SELECT id, nombre as nombre_original, nombre as nombre_normalizado, documento, 'ACTIVO' as estado
+    FROM students
     WHERE id = ${studentId}::uuid
     LIMIT 1
   `;
@@ -39,28 +44,95 @@ export default async function StudentAttendanceHistoryPage({
     WHERE e.student_id = ${studentId}::uuid
   `;
 
-  // Query full attendance history records
-  const historyQuery = await sql`
+  // 1. Get class sessions for the student's group up to current date
+  const sessionsQuery = await sql`
     SELECT 
-      ar.id as record_id,
-      ar.estado,
-      ar.fuente,
-      ar.observaciones,
-      ar.sede,
+      cs.id as session_id,
       cs.fecha,
       cs.dia_semana_texto,
-      g.nombre as group_name
-    FROM attendance_records_normalized ar
-    JOIN class_sessions cs ON cs.id = ar.session_id
+      g.nombre as group_name,
+      g.id as group_id
+    FROM class_sessions cs
+    JOIN enrollments e ON e.group_id = cs.group_id
     JOIN groups g ON g.id = cs.group_id
-    WHERE ar.student_id = ${studentId}::uuid
+    WHERE e.student_id = ${studentId}::uuid
+      AND cs.fecha <= CURRENT_DATE
     ORDER BY cs.fecha DESC
   `;
 
+  // 2. Get RFID scan events for this student
+  const rfidEvents = await sql`
+    SELECT 
+      timestamp,
+      tipo_evento,
+      sede,
+      observaciones
+    FROM attendance_events
+    WHERE student_id = ${studentId}::uuid
+  `;
+
+  const rfidMap = new Map();
+  rfidEvents.forEach((ev: any) => {
+    const dStr = new Date(ev.timestamp).toISOString().split('T')[0];
+    if (!rfidMap.has(dStr)) {
+      rfidMap.set(dStr, ev);
+    }
+  });
+
+  // 3. Get custom excuse / status overrides from attendance_records_normalized
+  const recordOverrides = await sql`
+    SELECT session_id, estado, fuente, observaciones, sede
+    FROM attendance_records_normalized
+    WHERE student_id = ${studentId}::uuid
+  `;
+  const overrideMap = new Map();
+  recordOverrides.forEach((r: any) => {
+    overrideMap.set(r.session_id, r);
+  });
+
+  // 4. Synthesize complete history per class session
+  const historyRecords = sessionsQuery.map((sess: any) => {
+    const fStr = new Date(sess.fecha).toISOString().split('T')[0];
+    const rfidScan = rfidMap.get(fStr);
+    const override = overrideMap.get(sess.session_id);
+
+    let estado = 'AUSENTE';
+    let fuente = 'MANUAL';
+    let sede = 'Sede 1';
+    let observaciones = '';
+    let scanTime = undefined;
+
+    if (override) {
+      estado = override.estado;
+      fuente = override.fuente;
+      sede = override.sede || 'Sede 1';
+      observaciones = override.observaciones || '';
+    } else if (rfidScan) {
+      estado = 'PRESENTE';
+      fuente = 'RFID';
+      sede = rfidScan.sede || 'Sede 1';
+      observaciones = rfidScan.observaciones || '';
+      const dateObj = new Date(rfidScan.timestamp);
+      scanTime = dateObj.toLocaleTimeString('es-CO', { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit' });
+    }
+
+    return {
+      session_id: sess.session_id,
+      fecha: fStr,
+      dia_semana_texto: sess.dia_semana_texto,
+      group_name: sess.group_name,
+      estado,
+      fuente,
+      sede,
+      observaciones,
+      scan_time: scanTime
+    };
+  });
+
   // Statistics calculation
-  const totalRecords = historyQuery.length;
+  const totalRecords = historyRecords.length;
   const statusCounts: Record<string, number> = {};
-  historyQuery.forEach((r: any) => {
+  historyRecords.forEach((r: any) => {
     statusCounts[r.estado] = (statusCounts[r.estado] || 0) + 1;
   });
 
@@ -72,8 +144,8 @@ export default async function StudentAttendanceHistoryPage({
   // Filter records based on selected filter
   const currentFilter = filter ? filter.toUpperCase() : '';
   const filteredRecords = currentFilter
-    ? historyQuery.filter((r: any) => r.estado === currentFilter)
-    : historyQuery;
+    ? historyRecords.filter((r: any) => r.estado === currentFilter)
+    : historyRecords;
 
   return (
     <div className="min-h-screen bg-gray-50/50 p-6 md:p-10 space-y-8">
@@ -146,11 +218,11 @@ export default async function StudentAttendanceHistoryPage({
         </Link>
 
         <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-          <p className="text-xs font-bold text-gray-400 uppercase">Novedades / Observaciones</p>
+          <p className="text-xs font-bold text-gray-400 uppercase">Novedades / Excusa Medicas</p>
           <p className="text-3xl font-black text-purple-700 mt-1">
-            {historyQuery.filter((r: any) => r.observaciones).length}
+            {historyRecords.filter((r: any) => r.observaciones).length}
           </p>
-          <p className="text-[10px] text-purple-600 font-semibold mt-1">Notas de texto libre</p>
+          <p className="text-[10px] text-purple-600 font-semibold mt-1">Excusas y observaciones</p>
         </div>
       </div>
 
@@ -188,15 +260,15 @@ export default async function StudentAttendanceHistoryPage({
         </Link>
       </div>
 
-      {/* Attendance Record History Table */}
+      {/* Attendance Record History Table with Client Editor */}
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-4">
         <div className="flex items-center justify-between border-b border-gray-100 pb-3">
           <h2 className="text-xl font-black text-fsm-blue uppercase tracking-tight flex items-center gap-2">
             <Calendar size={20} className="text-fsm-blue" />
-            HISTORIAL DE ASISTENCIA {currentFilter ? `(${currentFilter})` : 'COMPLETO'}
+            HISTORIAL COMPLETO Y EXCUSAS {currentFilter ? `(${currentFilter})` : ''}
           </h2>
           <span className="text-xs font-bold text-gray-500">
-            {filteredRecords.length} registro(s) listado(s)
+            {filteredRecords.length} sesión(es) evaluada(s)
           </span>
         </div>
 
@@ -205,57 +277,7 @@ export default async function StudentAttendanceHistoryPage({
             <p className="font-bold text-gray-500 text-sm">No se encontraron registros con el filtro seleccionado.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="bg-gray-50 text-gray-400 font-black uppercase tracking-wider border-b border-gray-100">
-                  <th className="py-3 px-4">Fecha</th>
-                  <th className="py-3 px-4">Día</th>
-                  <th className="py-3 px-4">Grupo</th>
-                  <th className="py-3 px-4">Estado</th>
-                  <th className="py-3 px-4">Sede / Origen</th>
-                  <th className="py-3 px-4">Observaciones / Novedad</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 font-medium">
-                {filteredRecords.map((r: any) => {
-                  const dateObj = new Date(r.fecha);
-                  const fechaStr = dateObj.toISOString().split('T')[0];
-
-                  return (
-                    <tr key={r.record_id} className={`hover:bg-gray-50/50 transition-colors ${
-                      r.estado === 'AUSENTE' ? 'bg-red-50/20' : ''
-                    }`}>
-                      <td className="py-3 px-4 font-bold text-gray-800">{fechaStr}</td>
-                      <td className="py-3 px-4 font-semibold text-gray-500">{r.dia_semana_texto || '-'}</td>
-                      <td className="py-3 px-4 font-bold text-fsm-blue">{r.group_name}</td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2.5 py-1 rounded-lg font-black uppercase text-[10px] border ${
-                          r.estado === 'PRESENTE' ? 'bg-green-50 text-green-700 border-green-200' :
-                          r.estado === 'AUSENTE' ? 'bg-red-50 text-fsm-red border-red-200 shadow-sm' :
-                          'bg-blue-50 text-fsm-blue border-blue-200'
-                        }`}>
-                          {r.estado === 'AUSENTE' ? '❌ INASISTENCIA' : r.estado}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-gray-500 font-semibold">
-                        🏫 {r.sede || 'Sede 1'} ({r.fuente})
-                      </td>
-                      <td className="py-3 px-4">
-                        {r.observaciones ? (
-                          <span className="bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 rounded font-semibold text-[10px]">
-                            💬 {r.observaciones}
-                          </span>
-                        ) : (
-                          <span className="text-gray-300">-</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <StudentHistoryClient studentId={studentId} records={filteredRecords} />
         )}
       </div>
     </div>

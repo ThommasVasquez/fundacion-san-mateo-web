@@ -849,6 +849,33 @@ export async function recordManualAttendance(
   }
 }
 
+export async function updateStudentAbsenceExcuse(
+  studentId: string,
+  sessionId: string,
+  estado: string,
+  observaciones: string
+) {
+  try {
+    const cleanObs = observaciones.trim() || null;
+    const cleanEstado = estado.trim() || 'AUSENTE';
+
+    await sql`
+      INSERT INTO attendance_records_normalized (
+        student_id, session_id, estado, fuente, observaciones, sede
+      ) VALUES (
+        ${studentId}::uuid, ${sessionId}::uuid, ${cleanEstado}, 'MANUAL', ${cleanObs}, 'Sede 1'
+      )
+      ON CONFLICT (student_id, session_id) DO UPDATE 
+      SET estado = EXCLUDED.estado, observaciones = EXCLUDED.observaciones, updated_at = CURRENT_TIMESTAMP
+    `;
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error updating absence excuse:', error);
+    return { error: error.message || 'Error al guardar excusa u observación' };
+  }
+}
+
 export async function teacherLogin(formData: FormData) {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
