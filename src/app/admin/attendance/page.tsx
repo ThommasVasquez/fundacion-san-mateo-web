@@ -434,11 +434,11 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
       </div>
 
       {/* Advanced Filters Form */}
-      <form method="GET" className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-premium flex flex-col gap-4">
-        <div className="flex flex-wrap gap-4 items-center justify-between">
-          
+      <form method="GET" className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-premium space-y-4">
+        {/* Row 1: Main Search, Date Range & Refresh */}
+        <div className="flex flex-wrap gap-4 items-center justify-between border-b border-gray-100 pb-4">
           {/* Search Input */}
-          <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100 flex-1 min-w-[220px]">
+          <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100 flex-1 min-w-[280px]">
             <Search size={16} className="text-gray-400" />
             <input 
               type="text" 
@@ -473,78 +473,87 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             />
           </div>
 
-          {/* Sede Selector */}
-          <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100">
-            <span className="text-[10px] font-black uppercase text-gray-400">Sede:</span>
-            <select 
-              name="sede"
-              defaultValue={filterSede}
-              className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none"
-            >
-              <option value="">Todas las Sedes</option>
-              <option value="Sede 1">Sede 1</option>
-              <option value="Sede 2">Sede 2</option>
-            </select>
-          </div>
-
-          {/* Grade Selector */}
-          <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100">
-            <Filter size={16} className="text-gray-400" />
-            <select 
-              name="grado"
-              defaultValue={filterGrado}
-              className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none"
-            >
-              <option value="">Todos los Grados / Turnos</option>
-              {grades.map((g: string) => (
-                <option key={g} value={g}>{g}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Sort Order Selector */}
-          <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100">
-            <ArrowUpDown size={16} className="text-gray-400" />
-            <select 
-              name="sort"
-              defaultValue={filterSort}
-              className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none"
-            >
-              <option value="time_desc">Hora (Más reciente primero)</option>
-              <option value="time_asc">Hora (Más antiguo primero)</option>
-              <option value="name_asc">Nombre (A - Z)</option>
-              <option value="name_desc">Nombre (Z - A)</option>
-              <option value="grado_asc">Grado (A - Z)</option>
-            </select>
-          </div>
-
-          {/* Anomaly Checkbox */}
-          <label className="flex items-center gap-2 cursor-pointer font-bold text-xs uppercase text-gray-700 select-none">
-            <input 
-              type="checkbox" 
-              name="anomalyOnly"
-              value="true"
-              defaultChecked={filterAnomalyOnly}
-              className="w-4 h-4 rounded border-gray-300 text-fsm-red focus:ring-fsm-red" 
-            />
-            <span>Solo Sin Asignar</span>
-          </label>
-
-          {/* Absences Only Checkbox */}
-          <label className={`flex items-center gap-2 cursor-pointer font-bold text-xs uppercase select-none px-3 py-2 rounded-xl border transition-all ${
-            filterAbsencesOnly ? 'bg-red-100 text-fsm-red border-red-300 shadow-sm font-black' : 'bg-gray-50 text-gray-700 border-gray-100 hover:bg-gray-100'
-          }`}>
-            <input 
-              type="checkbox" 
-              name="absencesOnly"
-              value="true"
-              defaultChecked={filterAbsencesOnly}
-              className="w-4 h-4 rounded border-red-300 text-fsm-red focus:ring-fsm-red" 
-            />
-            <span>❌ Solo Inasistencias</span>
-          </label>
-
           <RefreshButton />
+        </div>
+
+        {/* Row 2: Selectors & Special Filters */}
+        <div className="flex flex-wrap gap-4 items-center justify-between">
+          <div className="flex flex-wrap gap-4 items-center">
+            {/* Sede Selector */}
+            <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100">
+              <span className="text-[10px] font-black uppercase text-gray-400">Sede:</span>
+              <select 
+                name="sede"
+                defaultValue={filterSede}
+                className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none cursor-pointer"
+              >
+                <option value="">Todas las Sedes</option>
+                <option value="Sede 1">Sede 1</option>
+                <option value="Sede 2">Sede 2</option>
+              </select>
+            </div>
+
+            {/* Grade Selector */}
+            <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100">
+              <Filter size={16} className="text-gray-400" />
+              <select 
+                name="grado"
+                defaultValue={filterGrado}
+                className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none cursor-pointer"
+              >
+                <option value="">Todos los Grados / Turnos</option>
+                {grades.map((g: string) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Sort Order Selector */}
+            <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100">
+              <ArrowUpDown size={16} className="text-gray-400" />
+              <select 
+                name="sort"
+                defaultValue={filterSort}
+                className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none cursor-pointer"
+              >
+                <option value="time_desc">Hora (Más reciente)</option>
+                <option value="time_asc">Hora (Más antiguo)</option>
+                <option value="name_asc">Nombre (A - Z)</option>
+                <option value="name_desc">Nombre (Z - A)</option>
+                <option value="grado_asc">Grado (A - Z)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Anomaly Checkbox */}
+            <label className={`flex items-center gap-2 cursor-pointer font-bold text-xs uppercase select-none px-3.5 py-2 rounded-xl border transition-all ${
+              filterAnomalyOnly ? 'bg-amber-100 text-amber-900 border-amber-300 shadow-sm font-black' : 'bg-gray-50 text-gray-700 border-gray-100 hover:bg-gray-100'
+            }`}>
+              <input 
+                type="checkbox" 
+                name="anomalyOnly"
+                value="true"
+                defaultChecked={filterAnomalyOnly}
+                className="w-4 h-4 rounded border-gray-300 text-fsm-red focus:ring-fsm-red" 
+              />
+              <span>Solo Sin Asignar</span>
+            </label>
+
+            {/* Absences Only Checkbox */}
+            <label className={`flex items-center gap-2 cursor-pointer font-bold text-xs uppercase select-none px-3.5 py-2 rounded-xl border transition-all ${
+              filterAbsencesOnly ? 'bg-red-100 text-fsm-red border-red-300 shadow-sm font-black' : 'bg-gray-50 text-gray-700 border-gray-100 hover:bg-gray-100'
+            }`}>
+              <input 
+                type="checkbox" 
+                name="absencesOnly"
+                value="true"
+                defaultChecked={filterAbsencesOnly}
+                className="w-4 h-4 rounded border-red-300 text-fsm-red focus:ring-fsm-red" 
+              />
+              <span>❌ Solo Inasistencias</span>
+            </label>
+          </div>
         </div>
       </form>
 
