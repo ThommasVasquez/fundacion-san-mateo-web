@@ -1062,14 +1062,7 @@ export async function getAbsentStudentsReport(targetDate?: string, targetShift?:
     const isSunday = dayOfWeek === 0;
 
     // Fetch active students without attendance events on targetDate
-    // ONLY for courses/grados that actually had attendance scans on targetDate
     const rows = await sql`
-      WITH active_courses_today AS (
-        SELECT DISTINCT s.grado
-        FROM attendance_events ae
-        JOIN students s ON ae.student_id = s.id
-        WHERE DATE(ae.timestamp AT TIME ZONE 'America/Bogota') = ${dateStr}::date
-      )
       SELECT 
         s.id as student_id,
         s.nombre,
@@ -1091,7 +1084,6 @@ export async function getAbsentStudentsReport(targetDate?: string, targetShift?:
         af.registrado_por,
         af.updated_at::text as fecha_seguimiento
       FROM students s
-      JOIN active_courses_today act ON s.grado = act.grado
       LEFT JOIN attendance_events ae ON s.id = ae.student_id AND DATE(ae.timestamp AT TIME ZONE 'America/Bogota') = ${dateStr}::date
       LEFT JOIN absence_followups af ON s.id = af.student_id AND af.fecha = ${dateStr}::date
       WHERE s.activo = TRUE
