@@ -164,22 +164,116 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
   const totalAnomalies = processedEvents.filter((ev: any) => ev.isAnomaly).length;
 
   // Student History overlay
-  let historyStudent = null;
-  let historyEvents = [];
+  let historyStudent: any = null;
+  let historyEvents: any[] = [];
   if (historyStudentId) {
     const studentsRes = await sql`
-      SELECT nombre, grado, rfid_tag_uid FROM students WHERE id = ${historyStudentId} LIMIT 1
+      SELECT s.id, s.nombre, s.grado, s.rfid_tag_uid, sn.id as norm_id
+      FROM students s
+      LEFT JOIN students_normalized sn ON sn.nombre_normalizado = UPPER(TRIM(s.nombre))
+      WHERE s.id = ${historyStudentId}::uuid
+      LIMIT 1
     `;
     if (studentsRes.length > 0) {
       historyStudent = studentsRes[0];
-      historyEvents = await sql`
+      const targetStudentId = historyStudent.norm_id || historyStudent.id;
+
+      // 1. Query class sessions for the student's group
+      const sessions = await sql`
+        SELECT 
+          cs.id as session_id,
+          cs.fecha,
+          cs.dia_semana_texto,
+          g.nombre as group_name
+        FROM class_sessions cs
+        JOIN enrollments e ON e.group_id = cs.group_id
+        JOIN groups g ON g.id = cs.group_id
+        WHERE e.student_id = ${targetStudentId}::uuid
+          AND cs.fecha <= CURRENT_DATE
+        ORDER BY cs.fecha DESC
+        LIMIT 60
+      `;
+
+      // 2. Query RFID events
+      const rfidScans = await sql`
         SELECT ae.*, r.ubicacion as reader_name
         FROM attendance_events ae
         LEFT JOIN readers r ON ae.reader_id = r.id
-        WHERE ae.student_id = ${historyStudentId}
+        WHERE ae.student_id = ${historyStudentId}::uuid OR ae.student_id = ${targetStudentId}::uuid
         ORDER BY ae.timestamp DESC
-        LIMIT 50
       `;
+
+      const rfidMap = new Map();
+      rfidScans.forEach((ev: any) => {
+        const dStr = new Date(ev.timestamp).toISOString().split('T')[0];
+        if (!rfidMap.has(dStr)) {
+          rfidMap.set(dStr, ev);
+        }
+      });
+
+      // 3. Query custom overrides
+      const overrides = await sql`
+        SELECT session_id, estado, fuente, observaciones, sede
+        FROM attendance_records_normalized
+        WHERE student_id = ${targetStudentId}::uuid
+      `;
+      const overrideMap = new Map();
+      overrides.forEach((o: any) => {
+        overrideMap.set(o.session_id, o);
+      });
+
+      // 4. Synthesize events list
+      if (sessions.length > 0) {
+        historyEvents = sessions.map((sess: any) => {
+          const fStr = new Date(sess.fecha).toISOString().split('T')[0];
+          const rfid = rfidMap.get(fStr);
+          const ov = overrideMap.get(sess.session_id);
+
+          let estado = 'AUSENTE';
+          let tipo_evento = 'inasistencia';
+          let reader_name = 'Sin marcación de entrada';
+          let origen = 'Sistema';
+          let timestamp = `${fStr}T00:00:00.000Z`;
+          let observaciones = '';
+          let sede = 'Sede 1';
+
+          if (ov) {
+            estado = ov.estado;
+            tipo_evento = ov.estado === 'PRESENTE' ? 'entrada' : ov.estado.toLowerCase();
+            observaciones = ov.observaciones || '';
+            sede = ov.sede || 'Sede 1';
+          } else if (rfid) {
+            estado = 'PRESENTE';
+            tipo_evento = rfid.tipo_evento;
+            reader_name = rfid.reader_name || rfid.reader_id;
+            origen = rfid.origen === 'movil_profesor' ? 'Dispositivo Móvil' : 'Lector Fijo';
+            timestamp = rfid.timestamp;
+            observaciones = rfid.observaciones || '';
+            sede = rfid.sede || 'Sede 1';
+          }
+
+          return {
+            id: sess.session_id,
+            fecha: fStr,
+            dia_semana_texto: sess.dia_semana_texto,
+            group_name: sess.group_name,
+            estado,
+            tipo_evento,
+            reader_name,
+            origen,
+            timestamp,
+            observaciones,
+            sede
+          };
+        });
+      } else {
+        // Fallback to RFID scans
+        historyEvents = rfidScans.map((hev: any) => ({
+          ...hev,
+          estado: 'PRESENTE',
+          fecha: new Date(hev.timestamp).toISOString().split('T')[0]
+        }));
+      }
     }
   }
 
@@ -529,7 +623,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
       {/* Student History Overlay Modal */}
       {historyStudent && (
         <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl overflow-hidden w-full max-w-2xl h-[70vh] flex flex-col relative animate-in zoom-in-95 duration-300">
+          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl overflow-hidden w-full max-w-2xl h-[75vh] flex flex-col relative animate-in zoom-in-95 duration-300">
             {/* Header */}
             <div className="flex justify-between items-center bg-fsm-blue text-white px-8 py-5">
               <div>
@@ -537,12 +631,20 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                 <h3 className="text-xl font-black uppercase mt-0.5">{historyStudent.nombre}</h3>
                 <p className="text-xs opacity-75 font-semibold">Grado: {historyStudent.grado} | Tag UID: {historyStudent.rfid_tag_uid || 'No vinculado'}</p>
               </div>
-              <Link 
-                href={`/admin/attendance?startDate=${filterStartDate}&endDate=${filterEndDate}&grado=${filterGrado}&anomalyOnly=${filterAnomalyOnly ? 'true' : ''}`}
-                className="text-white/70 hover:text-fsm-red transition-colors p-1"
-              >
-                <X size={20} />
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link 
+                  href={`/admin/attendance/students/${historyStudent.norm_id || historyStudent.id}`}
+                  className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-all border border-white/20"
+                >
+                  📝 Editor de Excusas →
+                </Link>
+                <Link 
+                  href={`/admin/attendance?startDate=${filterStartDate}&endDate=${filterEndDate}&grado=${filterGrado}&anomalyOnly=${filterAnomalyOnly ? 'true' : ''}`}
+                  className="text-white/70 hover:text-fsm-red transition-colors p-1"
+                >
+                  <X size={20} />
+                </Link>
+              </div>
             </div>
 
             {/* List */}
@@ -555,25 +657,42 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                     <div key={hev.id} className="relative">
                       {/* Timeline dot */}
                       <span className={`absolute -left-[31px] top-1.5 w-3 h-3 rounded-full border-2 border-white ${
-                        hev.tipo_evento === 'entrada' ? 'bg-green-500' : 'bg-orange-500'
+                        hev.estado === 'AUSENTE' ? 'bg-fsm-red' : hev.tipo_evento === 'entrada' ? 'bg-green-500' : 'bg-orange-500'
                       }`} />
                       
-                      <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-1">
+                      <div className={`p-4 rounded-2xl border space-y-1 ${
+                        hev.estado === 'AUSENTE' ? 'bg-red-50/40 border-red-100' : 'bg-gray-50 border-gray-100'
+                      }`}>
                         <div className="flex justify-between items-center">
-                          <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${
-                            hev.tipo_evento === 'entrada' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                          <span className={`px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${
+                            hev.estado === 'AUSENTE'
+                              ? 'bg-red-100 text-fsm-red border-red-200'
+                              : hev.tipo_evento === 'salida'
+                              ? 'bg-orange-100 text-orange-700 border-orange-200'
+                              : 'bg-green-100 text-green-700 border-green-200'
                           }`}>
-                            {hev.tipo_evento}
+                            {hev.estado === 'AUSENTE' ? '❌ INASISTENCIA' : hev.tipo_evento === 'salida' ? '📤 SALIDA' : '📥 ENTRADA'}
                           </span>
                           <span className="text-xs font-bold text-gray-500 flex items-center gap-1">
                             <Clock size={12} />
-                            {new Date(hev.timestamp).toLocaleString('es-CO', { timeZone: ZONA_HORARIA })}
+                            {hev.estado === 'AUSENTE'
+                              ? `Día Lectivo: ${hev.fecha}`
+                              : new Date(hev.timestamp).toLocaleString('es-CO', { timeZone: ZONA_HORARIA })}
                           </span>
                         </div>
-                        <p className="text-xs font-bold text-gray-800">Ubicación: {hev.reader_name || hev.reader_id}</p>
-                        <p className="text-[10px] text-gray-500 font-medium">
-                          Origen: {hev.origen === 'movil_profesor' ? 'Dispositivo Móvil' : 'Lector Fijo'}
+                        <p className="text-xs font-bold text-gray-800">
+                          {hev.estado === 'AUSENTE' ? `Grupo: ${hev.group_name || historyStudent.grado}` : `Ubicación: ${hev.reader_name || hev.reader_id}`}
                         </p>
+                        <p className="text-[10px] text-gray-500 font-medium">
+                          Origen: {hev.origen} {hev.sede ? `• Sede: ${hev.sede}` : ''}
+                        </p>
+                        {hev.observaciones && (
+                          <div className="mt-1.5 pt-1.5 border-t border-gray-200/50">
+                            <span className="bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 rounded font-semibold text-[10px]">
+                              💬 Excusa / Novedad: {hev.observaciones}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -582,7 +701,13 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             </div>
 
             {/* Footer */}
-            <div className="border-t border-gray-100 bg-gray-50 px-8 py-4 text-right">
+            <div className="border-t border-gray-100 bg-gray-50 px-8 py-4 flex items-center justify-between">
+              <Link 
+                href={`/admin/attendance/students/${historyStudent.norm_id || historyStudent.id}`}
+                className="text-xs font-bold text-fsm-blue hover:underline flex items-center gap-1"
+              >
+                📝 Abrir Administrador de Excusas Completo →
+              </Link>
               <Link 
                 href={`/admin/attendance?startDate=${filterStartDate}&endDate=${filterEndDate}&grado=${filterGrado}&anomalyOnly=${filterAnomalyOnly ? 'true' : ''}`}
                 className="px-6 py-2 bg-white text-fsm-blue border border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-100 transition-all"
