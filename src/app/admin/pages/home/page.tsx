@@ -5,6 +5,9 @@ import { ChevronRight, Home } from "lucide-react";
 import { getAllContent, getTestimonials, getDirectoryItems, getPrograms, getNewsEvents, getGallery, getCalendarEvents, getBlogPosts, getFAQs, getNormativityDocuments } from "@/lib/content";
 import { getFooterAddresses, getFooterSocials, getFooterCertifications } from "@/app/actions";
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export const metadata = {
   title: "Gestor Global de Contenido | FSM Admin",
 };
