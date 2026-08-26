@@ -45,7 +45,7 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
       const studentName = ev.student_name || 'Tarjeta no asignada';
       const grado = ev.student_grado || 'N/A';
       const tipoEvento = ev.tipo_evento === 'salida' ? 'Salida' : 'Entrada';
-      const sede = ev.sede || 'Sede Principal Soacha';
+      const sede = ev.sede || 'Sede 1';
       const reader = ev.reader_name || ev.reader_id;
       const origen = ev.origen === 'manual' ? 'Registro Manual Secretaría' : ev.origen === 'movil_profesor' ? 'Móvil Profesor' : 'Panel Fijo';
       const observaciones = ev.observaciones || '-';

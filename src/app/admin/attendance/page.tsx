@@ -123,14 +123,14 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
   const searchLower = filterSearch.toLowerCase();
   let filteredEvents = processedEvents.filter((ev: any) => {
     if (filterGrado && ev.student_grado !== filterGrado) return false;
-    if (filterSede && (ev.sede || 'Sede Principal Soacha') !== filterSede) return false;
+    if (filterSede && (ev.sede || 'Sede 1') !== filterSede) return false;
     if (filterAnomalyOnly && !ev.isAnomaly) return false;
     if (filterSearch) {
       const nameMatch = (ev.student_name || 'Tarjeta no asignada').toLowerCase().includes(searchLower);
       const gradoMatch = (ev.student_grado || '').toLowerCase().includes(searchLower);
       const uidMatch = (ev.rfid_tag_uid || '').toLowerCase().includes(searchLower);
       const readerMatch = (ev.reader_name || ev.reader_id || '').toLowerCase().includes(searchLower);
-      const sedeMatch = (ev.sede || 'Sede Principal Soacha').toLowerCase().includes(searchLower);
+      const sedeMatch = (ev.sede || 'Sede 1').toLowerCase().includes(searchLower);
       const obsMatch = (ev.observaciones || '').toLowerCase().includes(searchLower);
       return nameMatch || gradoMatch || uidMatch || readerMatch || sedeMatch || obsMatch;
     }
@@ -353,10 +353,8 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
               className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none"
             >
               <option value="">Todas las Sedes</option>
-              <option value="Sede B">Sede B</option>
-              <option value="Sede Centro">Sede Centro</option>
-              <option value="Sede Norte">Sede Norte</option>
-              <option value="Sede Principal Soacha">Sede Principal Soacha</option>
+              <option value="Sede 1">Sede 1</option>
+              <option value="Sede 2">Sede 2</option>
             </select>
           </div>
 
@@ -459,7 +457,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                     <td className="py-4 px-6">
                       <div className="space-y-1">
                         <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase bg-blue-50 text-fsm-blue px-2 py-0.5 rounded-md border border-blue-200">
-                          🏫 {ev.sede || 'Sede Principal Soacha'}
+                          🏫 {ev.sede || 'Sede 1'}
                         </span>
                         <p className="font-bold text-gray-800 text-xs">{ev.reader_name || 'Lector Entrada'}</p>
                       </div>

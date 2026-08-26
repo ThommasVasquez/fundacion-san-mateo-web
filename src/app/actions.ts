@@ -796,7 +796,7 @@ export async function deleteStudent(studentId: string) {
 export async function recordManualAttendance(
   studentId: string, 
   tipoEvento: 'entrada' | 'salida' = 'entrada',
-  sede: string = 'Sede Principal Soacha',
+  sede: string = 'Sede 1',
   observaciones: string = ''
 ) {
   try {
@@ -831,7 +831,7 @@ export async function recordManualAttendance(
     }
 
     const tagUid = student.rfid_tag_uid || 'MANUAL';
-    const cleanSede = sede.trim() || 'Sede Principal Soacha';
+    const cleanSede = sede.trim() || 'Sede 1';
     const cleanObs = observaciones.trim() || null;
 
     await sql`
