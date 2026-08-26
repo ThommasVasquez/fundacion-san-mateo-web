@@ -36,6 +36,7 @@ interface AbsenceFollowupClientProps {
   isWeekday?: boolean;
   isSaturday?: boolean;
   isSunday?: boolean;
+  activeCoursesScanned?: string[];
   absentStudents: AbsentStudent[];
 }
 
@@ -48,12 +49,14 @@ export default function AbsenceFollowupClient({
   isWeekday = true,
   isSaturday = false,
   isSunday = false,
+  activeCoursesScanned = [],
   absentStudents: initialStudents,
 }: AbsenceFollowupClientProps) {
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [selectedShift, setSelectedShift] = useState(initialShift);
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [onlyActiveCoursesToday, setOnlyActiveCoursesToday] = useState(activeCoursesScanned.length > 0);
   
   // Local state for edits
   const [followupData, setFollowupData] = useState<Record<string, {
@@ -213,6 +216,16 @@ export default function AbsenceFollowupClient({
 
   // Filter students based on UI filters
   const filteredStudents = initialStudents.filter(s => {
+    // Day of week schedule rules:
+    if (isWeekday && selectedShift === 'SABADO') return false;
+    if (isSaturday && (selectedShift === 'DIURNO' || selectedShift === 'NOCHE')) return false;
+    if (isSunday) return false;
+
+    // Filter by active courses today if enabled
+    if (onlyActiveCoursesToday && activeCoursesScanned.length > 0 && !filterGradoSpecific && !searchQuery) {
+      if (!activeCoursesScanned.includes(s.grado)) return false;
+    }
+
     const data = followupData[s.student_id];
     const matchesShift = selectedShift === 'ALL' || selectedShift === 'AUTO' || s.turno_calculado === selectedShift;
     const matchesGrado = !filterGradoSpecific || s.grado === filterGradoSpecific;
@@ -519,28 +532,60 @@ export default function AbsenceFollowupClient({
             ))}
           </div>
 
-          {/* View Mode Toggle Switch */}
-          <div className="flex items-center gap-1.5 bg-gray-100 p-1.5 rounded-2xl border border-gray-200 self-stretch lg:self-auto">
-            <button
-              onClick={() => setViewMode('FOLLOWUPS_ONLY')}
-              className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                viewMode === 'FOLLOWUPS_ONLY'
-                  ? 'bg-white text-fsm-blue shadow-sm font-black'
-                  : 'text-gray-600 hover:text-gray-900 font-semibold'
-              }`}
-            >
-              📋 Novedades Registradas ({totalWithFollowup})
-            </button>
-            <button
-              onClick={() => setViewMode('ALL_UNMARKED')}
-              className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                viewMode === 'ALL_UNMARKED'
-                  ? 'bg-white text-fsm-blue shadow-sm font-black'
-                  : 'text-gray-600 hover:text-gray-900 font-semibold'
-              }`}
-            >
-              🌐 Sin Marcación ({initialStudents.length})
-            </button>
+          {/* Active Courses vs All Courses Toggle Switch */}
+          <div className="flex flex-wrap items-center gap-2">
+            {activeCoursesScanned.length > 0 && (
+              <div className="flex items-center gap-1.5 bg-blue-50 p-1.5 rounded-2xl border border-blue-200">
+                <button
+                  type="button"
+                  onClick={() => setOnlyActiveCoursesToday(true)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    onlyActiveCoursesToday
+                      ? 'bg-fsm-blue text-white shadow-sm font-black'
+                      : 'text-fsm-blue hover:text-blue-900 font-semibold'
+                  }`}
+                >
+                  ⚡ Salones en Clase Hoy ({activeCoursesScanned.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOnlyActiveCoursesToday(false)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    !onlyActiveCoursesToday
+                      ? 'bg-fsm-blue text-white shadow-sm font-black'
+                      : 'text-fsm-blue hover:text-blue-900 font-semibold'
+                  }`}
+                >
+                  🌐 Todos los Cursos BD
+                </button>
+              </div>
+            )}
+
+            {/* View Mode Toggle Switch */}
+            <div className="flex items-center gap-1.5 bg-gray-100 p-1.5 rounded-2xl border border-gray-200 self-stretch lg:self-auto">
+              <button
+                type="button"
+                onClick={() => setViewMode('FOLLOWUPS_ONLY')}
+                className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  viewMode === 'FOLLOWUPS_ONLY'
+                    ? 'bg-white text-fsm-blue shadow-sm font-black'
+                    : 'text-gray-600 hover:text-gray-900 font-semibold'
+                }`}
+              >
+                📋 Novedades ({totalWithFollowup})
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('ALL_UNMARKED')}
+                className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  viewMode === 'ALL_UNMARKED'
+                    ? 'bg-white text-fsm-blue shadow-sm font-black'
+                    : 'text-gray-600 hover:text-gray-900 font-semibold'
+                }`}
+              >
+                🌐 Sin Marcación ({initialStudents.length})
+              </button>
+            </div>
           </div>
         </div>
       </div>

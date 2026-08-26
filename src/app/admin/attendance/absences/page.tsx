@@ -31,6 +31,7 @@ export default async function AbsencesPage({ searchParams }: AbsencesPageProps) 
       isWeekday={!!res.isWeekday}
       isSaturday={!!res.isSaturday}
       isSunday={!!res.isSunday}
+      activeCoursesScanned={res.activeCoursesScanned || []}
       absentStudents={absentStudents}
     />
   );

@@ -1119,6 +1119,15 @@ export async function getAbsentStudentsReport(targetDate?: string, targetShift?:
       }
     }
 
+    // Get list of courses that had at least 1 attendance scan on targetDate
+    const activeCoursesRes = await sql`
+      SELECT DISTINCT s.grado
+      FROM attendance_events ae
+      JOIN students s ON ae.student_id = s.id
+      WHERE DATE(ae.timestamp AT TIME ZONE 'America/Bogota') = ${dateStr}::date
+    `;
+    const activeCoursesScanned = activeCoursesRes.map((r: any) => r.grado);
+
     return { 
       success: true, 
       date: dateStr, 
@@ -1128,6 +1137,7 @@ export async function getAbsentStudentsReport(targetDate?: string, targetShift?:
       isSaturday,
       isSunday,
       isFutureOrZeroScan: totalScans === 0,
+      activeCoursesScanned,
       absentStudents: filtered 
     };
   } catch (error: any) {
