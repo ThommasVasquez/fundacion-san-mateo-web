@@ -45,6 +45,20 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
   const filterSort = params.sort || 'time_desc';
   const historyStudentId = params.studentHistoryId || '';
 
+  const buildFilterUrl = (studentHistId?: string) => {
+    const p = new URLSearchParams();
+    if (filterStartDate) p.set('startDate', filterStartDate);
+    if (filterEndDate) p.set('endDate', filterEndDate);
+    if (filterSearch) p.set('search', filterSearch);
+    if (filterGrado) p.set('grado', filterGrado);
+    if (filterSede) p.set('sede', filterSede);
+    if (filterAnomalyOnly) p.set('anomalyOnly', 'true');
+    if (filterAbsencesOnly) p.set('absencesOnly', 'true');
+    if (filterSort) p.set('sort', filterSort);
+    if (studentHistId) p.set('studentHistoryId', studentHistId);
+    return `/admin/attendance?${p.toString()}`;
+  };
+
   // 1. Fetch Stats for selected range
   const totalScansRes = await sql`
     SELECT count(*) FROM attendance_events 
@@ -664,7 +678,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                     <td className="py-4 px-8 text-right">
                       {ev.student_id ? (
                         <Link 
-                          href={`/admin/attendance?startDate=${filterStartDate}&endDate=${filterEndDate}&grado=${filterGrado}&anomalyOnly=${filterAnomalyOnly ? 'true' : ''}&studentHistoryId=${ev.student_id}`}
+                          href={buildFilterUrl(ev.student_id)}
                           className="px-3 py-1.5 bg-gray-50 text-fsm-blue border border-gray-100 hover:bg-fsm-blue hover:text-white transition-all text-xs font-bold rounded-lg"
                         >
                           Historial
@@ -705,7 +719,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                   📝 Editor de Excusas →
                 </Link>
                 <Link 
-                  href={`/admin/attendance?startDate=${filterStartDate}&endDate=${filterEndDate}&grado=${filterGrado}&anomalyOnly=${filterAnomalyOnly ? 'true' : ''}`}
+                  href={buildFilterUrl()}
                   className="text-white/70 hover:text-fsm-red transition-colors p-1"
                 >
                   <X size={20} />
@@ -775,7 +789,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                 📝 Abrir Administrador de Excusas Completo →
               </Link>
               <Link 
-                href={`/admin/attendance?startDate=${filterStartDate}&endDate=${filterEndDate}&grado=${filterGrado}&anomalyOnly=${filterAnomalyOnly ? 'true' : ''}`}
+                href={buildFilterUrl()}
                 className="px-6 py-2 bg-white text-fsm-blue border border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-100 transition-all"
               >
                 Cerrar
