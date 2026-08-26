@@ -216,15 +216,43 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
   let historyStudent: any = null;
   let historyEvents: any[] = [];
   if (historyStudentId) {
-    const studentsRes = await sql`
-      SELECT s.id, s.nombre, s.grado, s.rfid_tag_uid, sn.id as norm_id
-      FROM students s
-      LEFT JOIN students_normalized sn ON sn.nombre_normalizado = UPPER(TRIM(s.nombre))
-      WHERE s.id = ${historyStudentId}::uuid
+    // 1. Try querying students_normalized
+    const normRes = await sql`
+      SELECT 
+        sn.id as norm_id, 
+        sn.id, 
+        sn.nombre_original as nombre, 
+        sn.rfid_tag_uid, 
+        g.nombre as grado
+      FROM students_normalized sn
+      LEFT JOIN enrollments e ON e.student_id = sn.id
+      LEFT JOIN groups g ON g.id = e.group_id
+      WHERE sn.id = ${historyStudentId}::uuid
       LIMIT 1
     `;
-    if (studentsRes.length > 0) {
-      historyStudent = studentsRes[0];
+
+    if (normRes.length > 0) {
+      historyStudent = normRes[0];
+    } else {
+      // 2. Fallback to legacy students table
+      const legacyRes = await sql`
+        SELECT 
+          s.id, 
+          s.nombre, 
+          s.grado, 
+          s.rfid_tag_uid, 
+          sn.id as norm_id
+        FROM students s
+        LEFT JOIN students_normalized sn ON sn.nombre_normalizado = UPPER(TRIM(s.nombre))
+        WHERE s.id = ${historyStudentId}::uuid
+        LIMIT 1
+      `;
+      if (legacyRes.length > 0) {
+        historyStudent = legacyRes[0];
+      }
+    }
+
+    if (historyStudent) {
       const targetStudentId = historyStudent.norm_id || historyStudent.id;
 
       // 1. Query class sessions for the student's group
