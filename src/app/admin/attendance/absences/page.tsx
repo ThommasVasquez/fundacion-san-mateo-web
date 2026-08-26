@@ -27,6 +27,10 @@ export default async function AbsencesPage({ searchParams }: AbsencesPageProps) 
       initialShift={shift}
       totalScansOnDate={res.totalScansOnDate || 0}
       isFutureOrZeroScan={!!res.isFutureOrZeroScan}
+      dayOfWeek={res.dayOfWeek ?? 1}
+      isWeekday={!!res.isWeekday}
+      isSaturday={!!res.isSaturday}
+      isSunday={!!res.isSunday}
       absentStudents={absentStudents}
     />
   );

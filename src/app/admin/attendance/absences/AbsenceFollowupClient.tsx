@@ -32,6 +32,10 @@ interface AbsenceFollowupClientProps {
   initialShift: string;
   totalScansOnDate?: number;
   isFutureOrZeroScan?: boolean;
+  dayOfWeek?: number;
+  isWeekday?: boolean;
+  isSaturday?: boolean;
+  isSunday?: boolean;
   absentStudents: AbsentStudent[];
 }
 
@@ -40,6 +44,10 @@ export default function AbsenceFollowupClient({
   initialShift,
   totalScansOnDate = 0,
   isFutureOrZeroScan = false,
+  dayOfWeek = 1,
+  isWeekday = true,
+  isSaturday = false,
+  isSunday = false,
   absentStudents: initialStudents,
 }: AbsenceFollowupClientProps) {
   const router = useRouter();
@@ -268,8 +276,66 @@ export default function AbsenceFollowupClient({
         </Link>
       </div>
 
+      {/* Shift Schedule Applicability Banners */}
+      {isWeekday && selectedShift === 'SABADO' && (
+        <div className="bg-blue-50 border-2 border-blue-200 p-6 rounded-[2rem] shadow-sm flex items-start gap-4">
+          <div className="w-12 h-12 bg-fsm-blue text-white rounded-2xl flex items-center justify-center shrink-0 font-black shadow-md">
+            <Calendar size={24} />
+          </div>
+          <div>
+            <span className="text-[10px] font-black text-fsm-blue uppercase tracking-widest bg-white px-2.5 py-0.5 rounded border border-blue-200">
+              PROGRAMACIÓN ACADÉMICA DE JORNADA
+            </span>
+            <h3 className="text-base font-black text-fsm-blue uppercase mt-0.5">
+              Sin clases programadas para el Turno Sábado en días entre semana ({selectedDate})
+            </h3>
+            <p className="text-xs font-semibold text-gray-700 mt-0.5">
+              Las clases del Turno Sábado se dictan exclusivamente los sábados. Selecciona el Turno Diurno o Noche para ver las ausencias del día de hoy.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {isSaturday && (selectedShift === 'DIURNO' || selectedShift === 'NOCHE') && (
+        <div className="bg-blue-50 border-2 border-blue-200 p-6 rounded-[2rem] shadow-sm flex items-start gap-4">
+          <div className="w-12 h-12 bg-fsm-blue text-white rounded-2xl flex items-center justify-center shrink-0 font-black shadow-md">
+            <Calendar size={24} />
+          </div>
+          <div>
+            <span className="text-[10px] font-black text-fsm-blue uppercase tracking-widest bg-white px-2.5 py-0.5 rounded border border-blue-200">
+              PROGRAMACIÓN ACADÉMICA DE JORNADA
+            </span>
+            <h3 className="text-base font-black text-fsm-blue uppercase mt-0.5">
+              Sin clases programadas para Turnos Diurno / Noche los días sábados ({selectedDate})
+            </h3>
+            <p className="text-xs font-semibold text-gray-700 mt-0.5">
+              Las clases de los Turnos Diurno y Noche se dictan de Lunes a Viernes. Selecciona el Turno Sábado para ver las ausencias de hoy.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {isSunday && (
+        <div className="bg-amber-50 border-2 border-amber-200 p-6 rounded-[2rem] shadow-sm flex items-start gap-4">
+          <div className="w-12 h-12 bg-amber-500 text-white rounded-2xl flex items-center justify-center shrink-0 font-black shadow-md">
+            <Calendar size={24} />
+          </div>
+          <div>
+            <span className="text-[10px] font-black text-amber-800 uppercase tracking-widest bg-white px-2.5 py-0.5 rounded border border-amber-200">
+              DÍA DOMINGO DE DESCANSO
+            </span>
+            <h3 className="text-base font-black text-amber-900 uppercase mt-0.5">
+              Sin actividades académicas programadas para los días Domingo
+            </h3>
+            <p className="text-xs font-semibold text-amber-800 mt-0.5">
+              Los domingos no hay actividades académicas ni lecturas de asistencia programadas.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Zero Scans / Future Date Info Banner */}
-      {totalScansOnDate === 0 && (
+      {totalScansOnDate === 0 && !isSunday && (
         <div className="bg-amber-50 border-2 border-amber-200 p-6 rounded-[2rem] shadow-sm flex items-start gap-4">
           <div className="w-12 h-12 bg-amber-500 text-white rounded-2xl flex items-center justify-center shrink-0 font-black shadow-md">
             <Clock size={24} />

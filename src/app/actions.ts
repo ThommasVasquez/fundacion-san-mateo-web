@@ -1055,11 +1055,12 @@ export async function getAbsentStudentsReport(targetDate?: string, targetShift?:
     `;
     const totalScans = eventCountRes[0]?.count || 0;
 
-    // Determine day of week (0 = Sun, 6 = Sat)
+    // Determine day of week (0 = Sun, 1 = Mon, ..., 6 = Sat)
     const dateObj = new Date(`${dateStr}T12:00:00-05:00`);
     const dayOfWeek = dateObj.getDay();
     const isSaturday = dayOfWeek === 6;
     const isSunday = dayOfWeek === 0;
+    const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
 
     // Fetch active students without attendance events on targetDate
     const rows = await sql`
@@ -1091,18 +1092,30 @@ export async function getAbsentStudentsReport(targetDate?: string, targetShift?:
       ORDER BY turno_calculado, s.grado, s.nombre
     `;
 
-    // Smart shift filtering:
-    // If targetShift is specific ('NOCHE', 'DIURNO', 'SABADO'), use it.
-    // If targetShift is 'ALL', return all.
-    // If targetShift is undefined or 'AUTO', use smart day-of-week rule (exclude Sábado on weekdays).
-    let filtered = rows;
+    // Strict day-of-week shift applicability:
+    // 1. Weekdays (Mon-Fri): Only DIURNO and NOCHE students have class. SABADO students do NOT have class.
+    // 2. Saturdays: Only SABADO students have class. DIURNO and NOCHE students do NOT have class.
+    // 3. Sundays: No students have class.
+    const validRows = rows.filter((r: any) => {
+      if (isWeekday) {
+        return r.turno_calculado === 'DIURNO' || r.turno_calculado === 'NOCHE';
+      } else if (isSaturday) {
+        return r.turno_calculado === 'SABADO';
+      } else {
+        return false; // Sunday
+      }
+    });
+
+    let filtered = validRows;
     if (targetShift && targetShift !== 'ALL' && targetShift !== 'AUTO') {
-      filtered = rows.filter((r: any) => r.turno_calculado === targetShift);
+      filtered = validRows.filter((r: any) => r.turno_calculado === targetShift);
     } else if (!targetShift || targetShift === 'AUTO') {
       if (isSaturday) {
-        filtered = rows.filter((r: any) => r.turno_calculado === 'SABADO');
-      } else if (!isSunday) {
-        filtered = rows.filter((r: any) => r.turno_calculado !== 'SABADO');
+        filtered = validRows.filter((r: any) => r.turno_calculado === 'SABADO');
+      } else if (isWeekday) {
+        filtered = validRows;
+      } else {
+        filtered = [];
       }
     }
 
@@ -1111,6 +1124,9 @@ export async function getAbsentStudentsReport(targetDate?: string, targetShift?:
       date: dateStr, 
       totalScansOnDate: totalScans,
       dayOfWeek,
+      isWeekday,
+      isSaturday,
+      isSunday,
       isFutureOrZeroScan: totalScans === 0,
       absentStudents: filtered 
     };
