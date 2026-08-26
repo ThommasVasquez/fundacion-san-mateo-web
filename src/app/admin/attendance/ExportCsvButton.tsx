@@ -17,6 +17,8 @@ interface EventItem {
   rfid_tag_uid: string;
   isAnomaly: boolean;
   anomalyReason?: string;
+  sede?: string;
+  observaciones?: string;
 }
 
 interface ExportCsvButtonProps {
@@ -43,8 +45,10 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
       const studentName = ev.student_name || 'Tarjeta no asignada';
       const grado = ev.student_grado || 'N/A';
       const tipoEvento = ev.tipo_evento === 'salida' ? 'Salida' : 'Entrada';
+      const sede = ev.sede || 'Sede Principal Soacha';
       const reader = ev.reader_name || ev.reader_id;
       const origen = ev.origen === 'manual' ? 'Registro Manual Secretaría' : ev.origen === 'movil_profesor' ? 'Móvil Profesor' : 'Panel Fijo';
+      const observaciones = ev.observaciones || '-';
       const estado = ev.isAnomaly ? `Anomalía (${ev.anomalyReason || 'Revisión'})` : 'Correcto';
       const uid = ev.rfid_tag_uid;
 
@@ -54,8 +58,10 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
         tipoEvento,
         timeStr,
         dateStr,
+        sede,
         reader,
         origen,
+        observaciones,
         estado,
         uid
       };
@@ -63,15 +69,17 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
   };
 
   const exportExcel = (formatted: ReturnType<typeof formatData>) => {
-    const headers = ['Estudiante', 'Grado / Cargo', 'Tipo Evento', 'Hora', 'Fecha (Bogotá)', 'Lector / Ubicación', 'Origen', 'Estado / Anomalía', 'UID Tarjeta'];
+    const headers = ['Estudiante', 'Grado / Cargo', 'Tipo Evento', 'Hora', 'Fecha (Bogotá)', 'Sede', 'Lector / Ubicación', 'Origen', 'Observaciones', 'Estado / Anomalía', 'UID Tarjeta'];
     const rows = formatted.map(ev => [
       ev.studentName,
       ev.grado,
       ev.tipoEvento,
       ev.timeStr,
       ev.dateStr,
+      ev.sede,
       ev.reader,
       ev.origen,
+      ev.observaciones,
       ev.estado,
       ev.uid
     ]);
@@ -79,7 +87,7 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     ws['!cols'] = [
       { wch: 32 }, { wch: 22 }, { wch: 14 }, { wch: 14 },
-      { wch: 14 }, { wch: 28 }, { wch: 28 }, { wch: 20 }, { wch: 16 }
+      { wch: 14 }, { wch: 24 }, { wch: 28 }, { wch: 28 }, { wch: 30 }, { wch: 20 }, { wch: 16 }
     ];
 
     const wb = XLSX.utils.book_new();
@@ -115,7 +123,7 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
     // Auto Table
     autoTable(doc, {
       startY: 37,
-      head: [['#', 'Estudiante', 'Grado / Cargo', 'Tipo', 'Hora', 'Fecha', 'Lector / Ubicación', 'Origen', 'Estado']],
+      head: [['#', 'Estudiante', 'Grado', 'Tipo', 'Hora', 'Fecha', 'Sede', 'Lector', 'Origen', 'Observaciones', 'Estado']],
       body: formatted.map((ev, i) => [
         i + 1,
         ev.studentName,
@@ -123,8 +131,10 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
         ev.tipoEvento,
         ev.timeStr,
         ev.dateStr,
+        ev.sede,
         ev.reader,
         ev.origen,
+        ev.observaciones,
         ev.estado
       ]),
       headStyles: { 
@@ -166,8 +176,10 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
       'Tipo Evento',
       'Hora',
       'Fecha (Bogotá)',
+      'Sede',
       'Lector / Ubicación',
       'Origen',
+      'Observaciones',
       'Estado / Anomalía',
       'UID Tarjeta'
     ];
@@ -178,8 +190,10 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
       `"${ev.tipoEvento}"`,
       `"${ev.timeStr}"`,
       `"${ev.dateStr}"`,
+      `"${ev.sede.replace(/"/g, '""')}"`,
       `"${ev.reader.replace(/"/g, '""')}"`,
-      `"${ev.origen}"`,
+      `"${ev.origen.replace(/"/g, '""')}"`,
+      `"${ev.observaciones.replace(/"/g, '""')}"`,
       `"${ev.estado.replace(/"/g, '""')}"`,
       `"${ev.uid}"`
     ].join(';'));

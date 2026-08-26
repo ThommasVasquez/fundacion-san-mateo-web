@@ -22,6 +22,8 @@ export default function ManualAttendanceModal({ students }: ManualAttendanceModa
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [selectedSede, setSelectedSede] = useState('Sede Principal Soacha');
+  const [observaciones, setObservaciones] = useState('');
   const [filterGrado, setFilterGrado] = useState('');
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [statusMsg, setStatusMsg] = useState({ text: '', type: '' });
@@ -33,11 +35,11 @@ export default function ManualAttendanceModal({ students }: ManualAttendanceModa
 
   const handleMarkAttendance = async (student: StudentItem, tipoEvento: 'entrada' | 'salida') => {
     setLoading(prev => ({ ...prev, [student.id]: true }));
-    const res = await recordManualAttendance(student.id, tipoEvento);
+    const res = await recordManualAttendance(student.id, tipoEvento, selectedSede, observaciones);
     setLoading(prev => ({ ...prev, [student.id]: false }));
 
     if (res.success) {
-      showStatus(`✓ ${tipoEvento === 'salida' ? 'Salida' : 'Entrada'} marcada correctamente para ${student.nombre} (${student.grado}).`);
+      showStatus(`✓ ${tipoEvento === 'salida' ? 'Salida' : 'Entrada'} marcada correctamente para ${student.nombre} (${student.grado}) en ${selectedSede}.`);
       router.refresh();
     } else {
       showStatus(res.error || 'Error al registrar asistencia', 'error');
@@ -65,7 +67,7 @@ export default function ManualAttendanceModal({ students }: ManualAttendanceModa
 
       {isOpen && (
         <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl overflow-hidden w-full max-w-2xl p-8 space-y-6 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl overflow-hidden w-full max-w-2xl p-8 space-y-5 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
             
             {/* Modal Header */}
             <div className="flex justify-between items-center border-b border-gray-100 pb-4 shrink-0">
@@ -93,6 +95,35 @@ export default function ManualAttendanceModal({ students }: ManualAttendanceModa
                 {statusMsg.text}
               </div>
             )}
+
+            {/* Sede and Observaciones Configuration Bar */}
+            <div className="bg-blue-50/70 p-4 rounded-2xl border border-blue-200 space-y-3 shrink-0">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-blue-200">
+                  <span className="text-[10px] font-black text-fsm-blue uppercase tracking-wider">🏫 Sede:</span>
+                  <select
+                    value={selectedSede}
+                    onChange={e => setSelectedSede(e.target.value)}
+                    className="bg-transparent font-black text-xs uppercase text-fsm-blue outline-none cursor-pointer"
+                  >
+                    <option value="Sede Principal Soacha">Sede Principal Soacha</option>
+                    <option value="Sede B">Sede B</option>
+                    <option value="Sede Centro">Sede Centro</option>
+                    <option value="Sede Norte">Sede Norte</option>
+                  </select>
+                </div>
+
+                <div className="flex-1 bg-white px-3 py-2 rounded-xl border border-blue-200">
+                  <input
+                    type="text"
+                    placeholder="💬 Observación (ej. Sin carnet físico, permiso médico)..."
+                    value={observaciones}
+                    onChange={e => setObservaciones(e.target.value)}
+                    className="bg-transparent text-xs font-bold text-gray-800 placeholder-gray-400 outline-none w-full"
+                  />
+                </div>
+              </div>
+            </div>
 
             {/* Search and Filters */}
             <div className="flex flex-col sm:flex-row gap-3 shrink-0">

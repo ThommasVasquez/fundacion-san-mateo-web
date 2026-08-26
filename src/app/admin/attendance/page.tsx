@@ -21,6 +21,7 @@ interface AttendancePageProps {
     endDate?: string;
     search?: string;
     grado?: string;
+    sede?: string;
     anomalyOnly?: string;
     sort?: string;
     studentHistoryId?: string;
@@ -37,6 +38,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
   const filterEndDate = params.endDate || params.date || filterStartDate;
   const filterSearch = (params.search || '').trim();
   const filterGrado = params.grado || '';
+  const filterSede = params.sede || '';
   const filterAnomalyOnly = params.anomalyOnly === 'true';
   const filterSort = params.sort || 'time_desc';
   const historyStudentId = params.studentHistoryId || '';
@@ -89,6 +91,8 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
       ae.sincronizado,
       ae.geolocalizacion,
       ae.registrado_por,
+      ae.sede,
+      ae.observaciones,
       s.nombre as student_name, 
       s.grado as student_grado, 
       r.ubicacion as reader_name,
@@ -113,17 +117,20 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
     };
   });
 
-  // Filter in memory by search, degree, and anomaly
+  // Filter in memory by search, degree, sede, and anomaly
   const searchLower = filterSearch.toLowerCase();
   let filteredEvents = processedEvents.filter((ev: any) => {
     if (filterGrado && ev.student_grado !== filterGrado) return false;
+    if (filterSede && (ev.sede || 'Sede Principal Soacha') !== filterSede) return false;
     if (filterAnomalyOnly && !ev.isAnomaly) return false;
     if (filterSearch) {
       const nameMatch = (ev.student_name || 'Tarjeta no asignada').toLowerCase().includes(searchLower);
       const gradoMatch = (ev.student_grado || '').toLowerCase().includes(searchLower);
       const uidMatch = (ev.rfid_tag_uid || '').toLowerCase().includes(searchLower);
       const readerMatch = (ev.reader_name || ev.reader_id || '').toLowerCase().includes(searchLower);
-      return nameMatch || gradoMatch || uidMatch || readerMatch;
+      const sedeMatch = (ev.sede || 'Sede Principal Soacha').toLowerCase().includes(searchLower);
+      const obsMatch = (ev.observaciones || '').toLowerCase().includes(searchLower);
+      return nameMatch || gradoMatch || uidMatch || readerMatch || sedeMatch || obsMatch;
     }
     return true;
   });
@@ -335,6 +342,22 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             />
           </div>
 
+          {/* Sede Selector */}
+          <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100">
+            <span className="text-[10px] font-black uppercase text-gray-400">Sede:</span>
+            <select 
+              name="sede"
+              defaultValue={filterSede}
+              className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none"
+            >
+              <option value="">Todas las Sedes</option>
+              <option value="Sede Principal Soacha">Sede Principal Soacha</option>
+              <option value="Sede B">Sede B</option>
+              <option value="Sede Centro">Sede Centro</option>
+              <option value="Sede Norte">Sede Norte</option>
+            </select>
+          </div>
+
           {/* Grade Selector */}
           <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100">
             <Filter size={16} className="text-gray-400" />
@@ -412,20 +435,32 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                         <div>
                           <p className="font-bold text-fsm-blue">{ev.student_name}</p>
                           <p className="text-[10px] text-gray-500 font-medium">RFID: {ev.rfid_tag_uid}</p>
+                          {ev.observaciones && (
+                            <span className="inline-block mt-1 text-[10px] font-semibold bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 rounded-md">
+                              💬 {ev.observaciones}
+                            </span>
+                          )}
                         </div>
                       ) : (
                         <div>
                           <p className="font-bold text-yellow-600">Tarjeta no asignada</p>
                           <p className="text-[10px] text-gray-500 font-medium">UID: {ev.rfid_tag_uid}</p>
+                          {ev.observaciones && (
+                            <span className="inline-block mt-1 text-[10px] font-semibold bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 rounded-md">
+                              💬 {ev.observaciones}
+                            </span>
+                          )}
                         </div>
                       )}
                     </td>
                     <td className="py-4 px-6 font-bold text-gray-700">{ev.student_grado || 'N/A'}</td>
                     <td className="py-4 px-6">
-                      <p className="font-bold text-gray-800">{ev.reader_name || 'Desconocido'}</p>
-                      <p className="text-[10px] text-gray-500 font-medium flex items-center gap-1">
-                        ID: {ev.reader_id}
-                      </p>
+                      <div className="space-y-1">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase bg-blue-50 text-fsm-blue px-2 py-0.5 rounded-md border border-blue-200">
+                          🏫 {ev.sede || 'Sede Principal Soacha'}
+                        </span>
+                        <p className="font-bold text-gray-800 text-xs">{ev.reader_name || 'Lector Entrada'}</p>
+                      </div>
                     </td>
                     <td className="py-4 px-6">
                       <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase border ${

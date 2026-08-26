@@ -793,7 +793,12 @@ export async function deleteStudent(studentId: string) {
   }
 }
 
-export async function recordManualAttendance(studentId: string, tipoEvento: 'entrada' | 'salida' = 'entrada') {
+export async function recordManualAttendance(
+  studentId: string, 
+  tipoEvento: 'entrada' | 'salida' = 'entrada',
+  sede: string = 'Sede Principal Soacha',
+  observaciones: string = ''
+) {
   try {
     const studentQuery = await sql`
       SELECT id, nombre, grado, rfid_tag_uid, activo 
@@ -826,12 +831,14 @@ export async function recordManualAttendance(studentId: string, tipoEvento: 'ent
     }
 
     const tagUid = student.rfid_tag_uid || 'MANUAL';
+    const cleanSede = sede.trim() || 'Sede Principal Soacha';
+    const cleanObs = observaciones.trim() || null;
 
     await sql`
       INSERT INTO attendance_events (
-        student_id, rfid_tag_uid, reader_id, tipo_evento, timestamp, origen, sincronizado
+        student_id, rfid_tag_uid, reader_id, tipo_evento, timestamp, origen, sincronizado, sede, observaciones
       ) VALUES (
-        ${student.id}::uuid, ${tagUid}, 'manual-web', ${tipoEvento}, CURRENT_TIMESTAMP, 'manual', true
+        ${student.id}::uuid, ${tagUid}, 'manual-web', ${tipoEvento}, CURRENT_TIMESTAMP, 'manual', true, ${cleanSede}, ${cleanObs}
       )
     `;
 
