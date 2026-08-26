@@ -76,7 +76,9 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
   const gradesRes = await sql`
     SELECT DISTINCT grado FROM students WHERE grado IS NOT NULL ORDER BY grado
   `;
-  const grades = gradesRes.map((g: any) => g.grado);
+  const grades = gradesRes
+    .map((g: any) => g.grado)
+    .sort((a: string, b: string) => a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' }));
 
   // 3. Fetch Events for date range
   const events = await sql`
@@ -351,10 +353,10 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
               className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none"
             >
               <option value="">Todas las Sedes</option>
-              <option value="Sede Principal Soacha">Sede Principal Soacha</option>
               <option value="Sede B">Sede B</option>
               <option value="Sede Centro">Sede Centro</option>
               <option value="Sede Norte">Sede Norte</option>
+              <option value="Sede Principal Soacha">Sede Principal Soacha</option>
             </select>
           </div>
 

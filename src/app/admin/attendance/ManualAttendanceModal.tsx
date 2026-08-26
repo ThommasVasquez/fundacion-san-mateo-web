@@ -54,7 +54,9 @@ export default function ManualAttendanceModal({ students }: ManualAttendanceModa
     return matchesSearch && matchesGrado;
   });
 
-  const grades = Array.from(new Set(students.map(s => s.grado))).sort();
+  const grades = Array.from(new Set(students.map(s => s.grado))).sort((a, b) => 
+    a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' })
+  );
 
   return (
     <>
@@ -106,10 +108,10 @@ export default function ManualAttendanceModal({ students }: ManualAttendanceModa
                     onChange={e => setSelectedSede(e.target.value)}
                     className="bg-transparent font-black text-xs uppercase text-fsm-blue outline-none cursor-pointer"
                   >
-                    <option value="Sede Principal Soacha">Sede Principal Soacha</option>
                     <option value="Sede B">Sede B</option>
                     <option value="Sede Centro">Sede Centro</option>
                     <option value="Sede Norte">Sede Norte</option>
+                    <option value="Sede Principal Soacha">Sede Principal Soacha</option>
                   </select>
                 </div>
 

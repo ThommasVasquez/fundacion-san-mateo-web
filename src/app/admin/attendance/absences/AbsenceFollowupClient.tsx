@@ -208,7 +208,9 @@ export default function AbsenceFollowupClient({
     });
   }, [initialStudents]);
 
-  const distinctGrados = Array.from(new Set(initialStudents.map(s => s.grado))).sort();
+  const distinctGrados = Array.from(new Set(initialStudents.map(s => s.grado))).sort((a, b) => 
+    a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' })
+  );
 
   const totalWithFollowup = initialStudents.filter(s => 
     s.followup_id || followupData[s.student_id]?.seLlamo || followupData[s.student_id]?.comentarios || followupData[s.student_id]?.excusaUrl
