@@ -221,9 +221,17 @@ export default function AbsenceFollowupClient({
     if (isSaturday && (selectedShift === 'DIURNO' || selectedShift === 'NOCHE')) return false;
     if (isSunday) return false;
 
-    // Filter by active courses today if enabled
+    // Filter by active courses today if enabled (shift-aware)
     if (onlyActiveCoursesToday && activeCoursesScanned.length > 0 && !filterGradoSpecific && !searchQuery) {
-      if (!activeCoursesScanned.includes(s.grado)) return false;
+      const hasScannedCoursesForShift = activeCoursesScanned.some(g => {
+        if (s.turno_calculado === 'NOCHE') return g.toUpperCase().includes('NOCHE');
+        if (s.turno_calculado === 'SABADO') return g.toUpperCase().includes('SABADO') || g.toUpperCase().includes('SB');
+        return !g.toUpperCase().includes('NOCHE') && !g.toUpperCase().includes('SABADO') && !g.toUpperCase().includes('SB');
+      });
+
+      if (hasScannedCoursesForShift) {
+        if (!activeCoursesScanned.includes(s.grado)) return false;
+      }
     }
 
     const data = followupData[s.student_id];
