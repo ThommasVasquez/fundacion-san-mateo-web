@@ -36,6 +36,8 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
 
   const rangeName = startDate === endDate ? startDate : `${startDate}_a_${endDate}`;
 
+  const [excelLayout, setExcelLayout] = useState<'matrix' | 'list'>('matrix');
+
   const formatData = () => {
     return events.map(ev => {
       const dateObj = new Date(ev.timestamp);
@@ -68,7 +70,75 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
     });
   };
 
-  const exportExcel = (formatted: ReturnType<typeof formatData>) => {
+  const exportExcelMatrix = () => {
+    // 1. Extract distinct students (sorted alphabetically)
+    const studentsSet = new Map<string, string>();
+    events.forEach(ev => {
+      if (ev.student_name && ev.student_name !== 'Tarjeta no asignada') {
+        studentsSet.set(ev.student_name, ev.student_grado || '');
+      }
+    });
+
+    const sortedStudents = Array.from(studentsSet.keys()).sort((a, b) => 
+      a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' })
+    );
+
+    // 2. Extract distinct dates (sorted ascending)
+    const datesMap = new Map<string, Date>();
+    events.forEach(ev => {
+      const dateObj = new Date(ev.timestamp);
+      const dateStr = dateObj.toLocaleDateString('es-CO', { timeZone: 'America/Bogota' });
+      if (!datesMap.has(dateStr)) {
+        datesMap.set(dateStr, dateObj);
+      }
+    });
+
+    const sortedDates = Array.from(datesMap.entries()).sort((a, b) => a[1].getTime() - b[1].getTime());
+
+    // 3. Map event statuses by student and date
+    const eventGrid = new Map<string, string>();
+    events.forEach(ev => {
+      if (!ev.student_name || ev.student_name === 'Tarjeta no asignada') return;
+      const dateObj = new Date(ev.timestamp);
+      const dateStr = dateObj.toLocaleDateString('es-CO', { timeZone: 'America/Bogota' });
+      const timeStr = dateObj.toLocaleTimeString('es-CO', { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit' });
+      const key = `${ev.student_name}|${dateStr}`;
+
+      const cellText = ev.tipo_evento === 'salida' ? `Salida (${timeStr})` : timeStr;
+      eventGrid.set(key, cellText);
+    });
+
+    // 4. Construct Header Row
+    const SPANISH_DAYS = ['DOMINGO', 'LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
+    const headers = ['DÍA', 'FECHA', ...sortedStudents];
+
+    // 5. Construct Data Rows
+    const rows = sortedDates.map(([dateStr, dateObj]) => {
+      const dayName = SPANISH_DAYS[dateObj.getDay()];
+      const rowData = [dayName, dateStr];
+
+      sortedStudents.forEach(stName => {
+        const key = `${stName}|${dateStr}`;
+        const val = eventGrid.get(key) || 'AUSENTE';
+        rowData.push(val);
+      });
+
+      return rowData;
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    ws['!cols'] = [
+      { wch: 14 },
+      { wch: 14 },
+      ...sortedStudents.map(() => ({ wch: 30 }))
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Matriz Asistencia');
+    XLSX.writeFile(wb, `Matriz_Asistencia_${rangeName}.xlsx`);
+  };
+
+  const exportExcelList = (formatted: ReturnType<typeof formatData>) => {
     const headers = ['Estudiante', 'Grado / Cargo', 'Tipo Evento', 'Hora', 'Fecha (Bogotá)', 'Sede', 'Lector / Ubicación', 'Origen', 'Observaciones', 'Estado / Anomalía', 'UID Tarjeta'];
     const rows = formatted.map(ev => [
       ev.studentName,
@@ -98,10 +168,9 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
   const exportPdf = (formatted: ReturnType<typeof formatData>) => {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
-    // Document Header
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(11, 37, 69); // Navy Blue (#0B2545)
+    doc.setTextColor(11, 37, 69);
     doc.text('FUNDACIÓN SAN MATEO', 14, 15);
 
     doc.setFontSize(9);
@@ -120,7 +189,6 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
     const nowStr = new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' });
     doc.text(`Rango de Consulta: ${rangeName}  |  Total Registros: ${events.length}  |  Fecha de Generación: ${nowStr}`, 14, 33);
 
-    // Auto Table
     autoTable(doc, {
       startY: 37,
       head: [['#', 'Estudiante', 'Grado', 'Tipo', 'Hora', 'Fecha', 'Sede', 'Lector', 'Origen', 'Observaciones', 'Estado']],
@@ -223,7 +291,11 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
       try {
         const formatted = formatData();
         if (format === 'excel') {
-          exportExcel(formatted);
+          if (excelLayout === 'matrix') {
+            exportExcelMatrix();
+          } else {
+            exportExcelList(formatted);
+          }
         } else if (format === 'pdf') {
           exportPdf(formatted);
         } else if (format === 'csv') {
@@ -285,26 +357,57 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
               {/* Option 1: Excel (.xlsx) */}
               <div
                 onClick={() => setFormat('excel')}
-                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between gap-4 ${
+                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer space-y-3 ${
                   format === 'excel'
                     ? 'border-green-600 bg-green-50/50 shadow-sm'
                     : 'border-gray-200 hover:border-gray-300 bg-white'
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-green-100 text-green-700 flex items-center justify-center font-bold shrink-0">
-                    <FileSpreadsheet size={20} />
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-green-100 text-green-700 flex items-center justify-center font-bold shrink-0">
+                      <FileSpreadsheet size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-gray-900 uppercase">Excel (.xlsx)</h4>
+                      <p className="text-[11px] font-medium text-gray-500">Hoja de cálculo para análisis de asistencia.</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-black text-gray-900 uppercase">Excel (.xlsx)</h4>
-                    <p className="text-[11px] font-medium text-gray-500">Hoja de cálculo con columnas formateadas y celdas listas para filtros.</p>
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                    format === 'excel' ? 'border-green-600 bg-green-600 text-white' : 'border-gray-300'
+                  }`}>
+                    {format === 'excel' && <Check size={14} />}
                   </div>
                 </div>
-                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                  format === 'excel' ? 'border-green-600 bg-green-600 text-white' : 'border-gray-300'
-                }`}>
-                  {format === 'excel' && <Check size={14} />}
-                </div>
+
+                {/* Excel Layout Sub-options */}
+                {format === 'excel' && (
+                  <div className="pt-2 border-t border-green-200/60 grid grid-cols-2 gap-2" onClick={e => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => setExcelLayout('matrix')}
+                      className={`px-3 py-2 rounded-xl text-[11px] font-bold uppercase transition-all border ${
+                        excelLayout === 'matrix'
+                          ? 'bg-green-700 text-white border-green-800 shadow-sm'
+                          : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      📊 Matriz (Estudiantes en cols)
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setExcelLayout('list')}
+                      className={`px-3 py-2 rounded-xl text-[11px] font-bold uppercase transition-all border ${
+                        excelLayout === 'list'
+                          ? 'bg-green-700 text-white border-green-800 shadow-sm'
+                          : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      📋 Listado de Pases
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Option 2: PDF (.pdf) */}
