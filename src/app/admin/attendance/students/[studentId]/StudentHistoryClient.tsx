@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { updateStudentAbsenceExcuse } from '@/app/actions';
 import { Check, Edit3, Loader2, Save, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { formatDateDDMMYYYY } from '@/lib/dateUtils';
 
 interface HistoryRecord {
   record_id?: string;
@@ -77,7 +78,7 @@ export default function StudentHistoryClient({ studentId, records }: StudentHist
             {records.map((r) => {
               const isEditing = editingSessionId === r.session_id;
               const dateObj = new Date(r.fecha);
-              const fechaStr = dateObj.toISOString().split('T')[0];
+              const fechaStr = formatDateDDMMYYYY(r.fecha);
 
               return (
                 <tr

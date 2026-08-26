@@ -1,6 +1,7 @@
 import { getBlogPosts } from '@/lib/blog';
 import Link from 'next/link';
 import { Plus, Edit2, Trash2, Calendar, Eye } from 'lucide-react';
+import { formatDateDDMMYYYY } from '@/lib/dateUtils';
 import { deleteBlogPost } from '@/app/actions';
 import { revalidatePath } from 'next/cache';
 import DeletePostButton from '@/components/admin/DeletePostButton';
@@ -66,7 +67,7 @@ export default async function AdminBlogPage() {
                   </span>
                   <span className="text-xs text-gray-700 font-medium flex items-center gap-1">
                     <Calendar size={12} />
-                    {new Date(post.created_at).toLocaleDateString('es-CO')}
+                    {formatDateDDMMYYYY(post.created_at)}
                   </span>
                 </div>
                 <h3 className="text-xl font-bold text-fsm-blue truncate">{post.title}</h3>

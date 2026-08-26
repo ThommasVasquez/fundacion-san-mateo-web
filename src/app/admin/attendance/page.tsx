@@ -9,6 +9,7 @@ import RefreshButton from './RefreshButton';
 import ExportCsvButton from './ExportCsvButton';
 import ManualAttendanceModal from './ManualAttendanceModal';
 import { getPendingAbsenceAlertsCount } from '@/app/actions';
+import { formatDateDDMMYYYY } from '@/lib/dateUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -680,11 +681,11 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                         </span>
                         <p className="font-bold text-gray-800">
                           {ev.estado === 'AUSENTE'
-                            ? `Fecha: ${new Date(ev.timestamp).toISOString().split('T')[0]}`
+                            ? `Fecha: ${formatDateDDMMYYYY(ev.timestamp)}`
                             : new Date(ev.timestamp).toLocaleTimeString('es-CO', { timeZone: ZONA_HORARIA, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                         </p>
                         <p className="text-[10px] text-gray-400">
-                          {new Date(ev.timestamp).toLocaleDateString('es-CO', { timeZone: ZONA_HORARIA })}
+                          {formatDateDDMMYYYY(ev.timestamp)}
                         </p>
                       </div>
                     </td>
@@ -784,8 +785,8 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                           <span className="text-xs font-bold text-gray-500 flex items-center gap-1">
                             <Clock size={12} />
                             {hev.estado === 'AUSENTE'
-                              ? `Día Lectivo: ${hev.fecha}`
-                              : new Date(hev.timestamp).toLocaleString('es-CO', { timeZone: ZONA_HORARIA })}
+                              ? `Día Lectivo: ${formatDateDDMMYYYY(hev.fecha)}`
+                              : `${formatDateDDMMYYYY(hev.timestamp)} ${new Date(hev.timestamp).toLocaleTimeString('es-CO', { timeZone: ZONA_HORARIA, hour: '2-digit', minute: '2-digit' })}`}
                           </span>
                         </div>
                         <p className="text-xs font-bold text-gray-800">

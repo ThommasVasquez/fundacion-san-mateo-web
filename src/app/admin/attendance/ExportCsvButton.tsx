@@ -5,6 +5,7 @@ import { Download, FileSpreadsheet, FileText, FileCode, X, Check, Loader2 } from
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { formatDateDDMMYYYY } from '@/lib/dateUtils';
 
 interface EventItem {
   student_name?: string;
@@ -41,7 +42,7 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
   const formatData = () => {
     return events.map(ev => {
       const dateObj = new Date(ev.timestamp);
-      const dateStr = dateObj.toLocaleDateString('es-CO', { timeZone: 'America/Bogota' });
+      const dateStr = formatDateDDMMYYYY(ev.timestamp);
       const timeStr = dateObj.toLocaleTimeString('es-CO', { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit', second: '2-digit' });
       
       const studentName = ev.student_name || 'Tarjeta no asignada';
@@ -87,7 +88,7 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
     const datesMap = new Map<string, Date>();
     events.forEach(ev => {
       const dateObj = new Date(ev.timestamp);
-      const dateStr = dateObj.toLocaleDateString('es-CO', { timeZone: 'America/Bogota' });
+      const dateStr = formatDateDDMMYYYY(ev.timestamp);
       if (!datesMap.has(dateStr)) {
         datesMap.set(dateStr, dateObj);
       }
@@ -100,7 +101,7 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
     events.forEach(ev => {
       if (!ev.student_name || ev.student_name === 'Tarjeta no asignada') return;
       const dateObj = new Date(ev.timestamp);
-      const dateStr = dateObj.toLocaleDateString('es-CO', { timeZone: 'America/Bogota' });
+      const dateStr = formatDateDDMMYYYY(ev.timestamp);
       const timeStr = dateObj.toLocaleTimeString('es-CO', { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit' });
       const key = `${ev.student_name}|${dateStr}`;
 

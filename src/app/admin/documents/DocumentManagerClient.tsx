@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { formatDateDDMMYYYY } from '@/lib/dateUtils';
 import { 
   createIssuedDocument, updateIssuedDocument, toggleDocumentStatus, deleteIssuedDocument 
 } from '@/app/actions';
@@ -364,7 +365,7 @@ export default function DocumentManagerClient({ documents, nextConsecutivo }: Do
                         {doc.programa_curso}
                       </td>
                       <td className="py-4 px-6 text-gray-500 font-medium">
-                        {doc.fecha_expedicion}
+                        {formatDateDDMMYYYY(doc.fecha_expedicion)}
                         {(doc.folio || doc.libro) && (
                           <div className="text-[9px] text-gray-400 uppercase">
                             {doc.folio ? `Folio: ${doc.folio}` : ''} {doc.libro ? `| Libro: ${doc.libro}` : ''}

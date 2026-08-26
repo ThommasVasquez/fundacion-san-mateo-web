@@ -4,6 +4,7 @@ import Footer from '@/components/layout/Footer';
 import { getBlogPosts } from '@/lib/blog';
 import Link from 'next/link';
 import { Calendar, ArrowRight } from 'lucide-react';
+import { formatDateDDMMYYYY } from '@/lib/dateUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,7 +55,7 @@ export default async function BlogListingPage() {
                     <div className="absolute top-6 left-6">
                        <span className="bg-white/90  text-fsm-blue text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest flex items-center gap-2">
                           <Calendar size={12} className="text-fsm-red" />
-                          {new Date(post.created_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}
+                          {formatDateDDMMYYYY(post.created_at)}
                        </span>
                     </div>
                   </div>

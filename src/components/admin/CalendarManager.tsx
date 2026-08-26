@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Plus, Trash2, Edit2, Save, X, Calendar, Tag, Info, CalendarDays } from "lucide-react";
+import { formatDateDDMMYYYY } from "@/lib/dateUtils";
 import { addCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from "@/app/actions";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -316,11 +317,11 @@ const CalendarManager = ({ events: initialEvents, blogPosts = [] }: CalendarMana
                     <td className="px-6 py-4">
                     <div className="flex items-center gap-2 text-xs font-bold text-gray-700">
                         <Calendar size={14} className="text-fsm-red" />
-                        {new Date(item.start_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        {formatDateDDMMYYYY(item.start_date)}
                         {item.end_date && (
                             <>
                                 <span className="text-gray-300">→</span>
-                                {new Date(item.end_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                {formatDateDDMMYYYY(item.end_date)}
                             </>
                         )}
                     </div>

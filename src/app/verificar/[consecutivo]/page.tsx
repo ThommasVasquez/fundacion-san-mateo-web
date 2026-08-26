@@ -6,6 +6,7 @@ import {
   ShieldCheck, CheckCircle2, XCircle, AlertTriangle, 
   ArrowLeft, FileText, Calendar, User, BookOpen, Award, Hash, Printer, Download
 } from 'lucide-react';
+import { formatDateDDMMYYYY } from '@/lib/dateUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -168,7 +169,7 @@ export default async function VerifyConsecutivoPage({ params }: VerifyConsecutiv
                 <div className="text-right">
                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Fecha de Expedición</span>
                   <div className="text-sm font-bold text-gray-800 mt-0.5 flex items-center gap-1.5 justify-end">
-                    <Calendar size={14} className="text-fsm-blue" /> {doc.fecha_expedicion}
+                    <Calendar size={14} className="text-fsm-blue" /> {formatDateDDMMYYYY(doc.fecha_expedicion)}
                   </div>
                 </div>
               </div>

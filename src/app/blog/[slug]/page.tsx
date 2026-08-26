@@ -5,6 +5,7 @@ import { getBlogPostBySlug } from '@/lib/blog';
 import { notFound } from 'next/navigation';
 import { Calendar, User, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { formatDateDDMMYYYY } from '@/lib/dateUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +40,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             <div className="flex flex-wrap items-center gap-8 text-xs font-black tracking-widest uppercase text-gray-700">
               <div className="flex items-center gap-2">
                 <Calendar size={16} className="text-fsm-red" />
-                {new Date(post.created_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })}
+                {formatDateDDMMYYYY(post.created_at)}
               </div>
               <div className="flex items-center gap-2">
                 <User size={16} className="text-fsm-red" />

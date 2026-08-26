@@ -2,6 +2,7 @@ import { neon } from '@neondatabase/serverless';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { BookOpen, Users, Calendar, ArrowLeft, CheckCircle2, XCircle } from 'lucide-react';
+import { formatDateDDMMYYYY } from '@/lib/dateUtils';
 
 const sql = neon(process.env.DATABASE_URL || '');
 
@@ -95,7 +96,7 @@ export default async function GroupAttendancePage({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {sessionsQuery.map((s: any) => {
             const dateObj = new Date(s.fecha);
-            const fechaStr = dateObj.toISOString().split('T')[0];
+            const fechaStr = formatDateDDMMYYYY(s.fecha);
 
             return (
               <div key={s.session_id} className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-2">
