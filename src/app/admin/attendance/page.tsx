@@ -60,65 +60,52 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
     return `/admin/attendance?${p.toString()}`;
   };
 
-  // 1. Fetch Stats for selected range
-  const totalScansRes = await sql`
-    SELECT count(*) FROM attendance_events 
-    WHERE (timestamp AT TIME ZONE 'America/Bogota')::date >= ${filterStartDate}::date
-      AND (timestamp AT TIME ZONE 'America/Bogota')::date <= ${filterEndDate}::date
-  `;
-  const totalScans = parseInt(totalScansRes[0].count);
-
-  const unassignedRes = await sql`
-    SELECT count(*) FROM attendance_events 
-    WHERE student_id IS NULL 
-      AND (timestamp AT TIME ZONE 'America/Bogota')::date >= ${filterStartDate}::date
-      AND (timestamp AT TIME ZONE 'America/Bogota')::date <= ${filterEndDate}::date
-  `;
-  const unassignedScans = parseInt(unassignedRes[0].count);
-
-  // Unique students who attended during selected date range
-  const uniqueStudentsRes = await sql`
-    SELECT count(DISTINCT student_id) FROM attendance_events
-    WHERE student_id IS NOT NULL 
-      AND (timestamp AT TIME ZONE 'America/Bogota')::date >= ${filterStartDate}::date
-      AND (timestamp AT TIME ZONE 'America/Bogota')::date <= ${filterEndDate}::date
-  `;
-  const uniqueStudents = parseInt(uniqueStudentsRes[0].count);
-
-  // Total active students in DB
-  const totalStudentsRes = await sql`SELECT count(*) FROM students WHERE activo = TRUE`;
-  const totalStudentsInDB = parseInt(totalStudentsRes[0].count);
-
-  // 2. Fetch Grades for Filter
-  const gradesRes = await sql`
-    SELECT DISTINCT grado FROM students WHERE grado IS NOT NULL ORDER BY grado
-  `;
-  const grades = gradesRes
-    .map((g: any) => g.grado)
-    .sort((a: string, b: string) => a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' }));
-
-  // 3. Query total count of real absences for selected date range & filters
-  const absencesCountRes = await sql`
-    SELECT count(*) as count
-    FROM attendance_records_normalized ar
-    JOIN class_sessions cs ON cs.id = ar.session_id
-    JOIN students_normalized s ON s.id = ar.student_id
-    LEFT JOIN enrollments e ON e.student_id = s.id
-    LEFT JOIN groups g ON g.id = e.group_id
-    WHERE ar.estado = 'AUSENTE'
-      AND cs.fecha >= ${filterStartDate}::date
-      AND cs.fecha <= ${filterEndDate}::date
-      ${filterGrado ? sql`AND g.nombre = ${filterGrado}` : sql``}
-      ${filterSede ? sql`AND ar.sede = ${filterSede}` : sql``}
-  `;
-  const totalRealAbsencesCount = parseInt(absencesCountRes[0]?.count || '0', 10);
-
-  // 4. Fetch Events / Absences for date range
-  let rawEvents: any[] = [];
-
-  if (filterAbsencesOnly) {
-    // Fetch real absence records from attendance_records_normalized
-    const absencesRes = await sql`
+  // Parallel execution of all primary queries
+  const [
+    totalScansRes,
+    unassignedRes,
+    uniqueStudentsRes,
+    totalStudentsRes,
+    gradesRes,
+    absencesCountRes,
+    eventsOrAbsencesRes,
+    studentsRes,
+    groupsRes,
+    alertsRes
+  ] = await Promise.all([
+    sql`
+      SELECT count(*) FROM attendance_events 
+      WHERE (timestamp AT TIME ZONE 'America/Bogota')::date >= ${filterStartDate}::date
+        AND (timestamp AT TIME ZONE 'America/Bogota')::date <= ${filterEndDate}::date
+    `,
+    sql`
+      SELECT count(*) FROM attendance_events 
+      WHERE student_id IS NULL 
+        AND (timestamp AT TIME ZONE 'America/Bogota')::date >= ${filterStartDate}::date
+        AND (timestamp AT TIME ZONE 'America/Bogota')::date <= ${filterEndDate}::date
+    `,
+    sql`
+      SELECT count(DISTINCT student_id) FROM attendance_events
+      WHERE student_id IS NOT NULL 
+        AND (timestamp AT TIME ZONE 'America/Bogota')::date >= ${filterStartDate}::date
+        AND (timestamp AT TIME ZONE 'America/Bogota')::date <= ${filterEndDate}::date
+    `,
+    sql`SELECT count(*) FROM students WHERE activo = TRUE`,
+    sql`SELECT DISTINCT grado FROM students WHERE grado IS NOT NULL ORDER BY grado`,
+    sql`
+      SELECT count(*) as count
+      FROM attendance_records_normalized ar
+      JOIN class_sessions cs ON cs.id = ar.session_id
+      JOIN students_normalized s ON s.id = ar.student_id
+      LEFT JOIN enrollments e ON e.student_id = s.id
+      LEFT JOIN groups g ON g.id = e.group_id
+      WHERE ar.estado = 'AUSENTE'
+        AND cs.fecha >= ${filterStartDate}::date
+        AND cs.fecha <= ${filterEndDate}::date
+        ${filterGrado ? sql`AND g.nombre = ${filterGrado}` : sql``}
+        ${filterSede ? sql`AND ar.sede = ${filterSede}` : sql``}
+    `,
+    filterAbsencesOnly ? sql`
       SELECT 
         ar.id,
         ar.student_id,
@@ -139,17 +126,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         AND cs.fecha >= ${filterStartDate}::date
         AND cs.fecha <= ${filterEndDate}::date
       ORDER BY cs.fecha DESC, s.nombre_original ASC
-    `;
-
-    rawEvents = absencesRes.map((a: any) => ({
-      ...a,
-      isAnomaly: false,
-      anomalyReason: '',
-      rfid_tag_uid: 'N/A'
-    }));
-  } else {
-    // Fetch RFID attendance events
-    const events = await sql`
+    ` : sql`
       SELECT 
         ae.id,
         ae.student_id,
@@ -173,9 +150,33 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
       WHERE (ae.timestamp AT TIME ZONE 'America/Bogota')::date >= ${filterStartDate}::date
         AND (ae.timestamp AT TIME ZONE 'America/Bogota')::date <= ${filterEndDate}::date
       ORDER BY ae.timestamp DESC
-    `;
+    `,
+    sql`SELECT id, nombre, grado FROM students WHERE activo = TRUE ORDER BY nombre`,
+    sql`SELECT id, nombre, jornada FROM groups ORDER BY nombre`,
+    getPendingAbsenceAlertsCount()
+  ]);
 
-    rawEvents = events.map((ev: any) => {
+  const totalScans = parseInt(totalScansRes[0].count);
+  const unassignedScans = parseInt(unassignedRes[0].count);
+  const uniqueStudents = parseInt(uniqueStudentsRes[0].count);
+  const totalStudentsInDB = parseInt(totalStudentsRes[0].count);
+
+  const grades = gradesRes
+    .map((g: any) => g.grado)
+    .sort((a: string, b: string) => a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' }));
+
+  const totalRealAbsencesCount = parseInt(absencesCountRes[0]?.count || '0', 10);
+
+  let rawEvents: any[] = [];
+  if (filterAbsencesOnly) {
+    rawEvents = eventsOrAbsencesRes.map((a: any) => ({
+      ...a,
+      isAnomaly: false,
+      anomalyReason: '',
+      rfid_tag_uid: 'N/A'
+    }));
+  } else {
+    rawEvents = eventsOrAbsencesRes.map((ev: any) => {
       const isAnomaly = !ev.student_id;
       return {
         ...ev,
@@ -371,13 +372,8 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
     }
   }
 
-  const allStudentsForManual = await sql`
-    SELECT id, nombre, grado, activo
-    FROM students
-    ORDER BY grado, nombre
-  `;
-
-  const pendingAlerts = await getPendingAbsenceAlertsCount();
+  const allStudentsForManual = studentsRes;
+  const pendingAlerts = alertsRes;
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 relative">

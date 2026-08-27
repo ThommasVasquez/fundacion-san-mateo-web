@@ -2,9 +2,6 @@
 
 import React, { useState } from 'react';
 import { Download, FileSpreadsheet, FileText, FileCode, X, Check, Loader2 } from 'lucide-react';
-import * as XLSX from 'xlsx';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { formatDateDDMMYYYY } from '@/lib/dateUtils';
 
 interface EventItem {
@@ -71,7 +68,8 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
     });
   };
 
-  const exportExcelMatrix = () => {
+  const exportExcelMatrix = async () => {
+    const XLSX = await import('xlsx');
     // 1. Extract distinct students (sorted alphabetically)
     const studentsSet = new Map<string, string>();
     events.forEach(ev => {
@@ -139,7 +137,8 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
     XLSX.writeFile(wb, `Matriz_Asistencia_${rangeName}.xlsx`);
   };
 
-  const exportExcelList = (formatted: ReturnType<typeof formatData>) => {
+  const exportExcelList = async (formatted: ReturnType<typeof formatData>) => {
+    const XLSX = await import('xlsx');
     const headers = ['Estudiante', 'Grado / Cargo', 'Tipo Evento', 'Hora', 'Fecha (Bogotá)', 'Sede', 'Lector / Ubicación', 'Origen', 'Observaciones', 'Estado / Anomalía', 'UID Tarjeta'];
     const rows = formatted.map(ev => [
       ev.studentName,
@@ -166,7 +165,10 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
     XLSX.writeFile(wb, `Reporte_Asistencia_${rangeName}.xlsx`);
   };
 
-  const exportPdf = (formatted: ReturnType<typeof formatData>) => {
+  const exportPdf = async (formatted: ReturnType<typeof formatData>) => {
+    const { jsPDF } = await import('jspdf');
+    const autoTable = (await import('jspdf-autotable')).default;
+
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
     doc.setFontSize(16);
@@ -280,7 +282,7 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
     URL.revokeObjectURL(url);
   };
 
-  const handleConfirmExport = () => {
+  const handleConfirmExport = async () => {
     if (!events || events.length === 0) {
       alert('No hay registros para exportar con los filtros seleccionados.');
       return;
@@ -288,28 +290,26 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
 
     setIsExporting(true);
 
-    setTimeout(() => {
-      try {
-        const formatted = formatData();
-        if (format === 'excel') {
-          if (excelLayout === 'matrix') {
-            exportExcelMatrix();
-          } else {
-            exportExcelList(formatted);
-          }
-        } else if (format === 'pdf') {
-          exportPdf(formatted);
-        } else if (format === 'csv') {
-          exportCsv(formatted);
+    try {
+      const formatted = formatData();
+      if (format === 'excel') {
+        if (excelLayout === 'matrix') {
+          await exportExcelMatrix();
+        } else {
+          await exportExcelList(formatted);
         }
-        setIsOpen(false);
-      } catch (err: any) {
-        console.error('Error exporting file:', err);
-        alert('Error al generar el reporte: ' + (err?.message || 'Error desconocido'));
-      } finally {
-        setIsExporting(false);
+      } else if (format === 'pdf') {
+        await exportPdf(formatted);
+      } else if (format === 'csv') {
+        exportCsv(formatted);
       }
-    }, 150);
+      setIsOpen(false);
+    } catch (err: any) {
+      console.error('Error exporting file:', err);
+      alert('Error al generar el reporte: ' + (err?.message || 'Error desconocido'));
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
