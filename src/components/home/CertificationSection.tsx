@@ -2,7 +2,8 @@
 
 import React, { useEffect, useRef } from "react";
 import Image from "next/image";
-import { ChevronRight, Award, ShieldCheck, CheckCircle2 } from "lucide-react";
+import Link from "next/link";
+import { ChevronRight, ShieldCheck } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -46,12 +47,12 @@ const CertificationSection = ({ content = {} }: { content?: Record<string, strin
             </p>
             
             <div className="flex flex-wrap gap-4">
-              <a 
+              <Link 
                 href="/institucion/normatividad"
                 className="group flex items-center gap-3 bg-fsm-blue text-white px-8 py-4 rounded-full font-black text-xs tracking-widest hover:bg-fsm-red transition-all duration-500"
               >
                 VER RESOLUCIONES <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
-              </a>
+              </Link>
               <div className="flex items-center gap-3 px-6 py-4 bg-white rounded-full border border-gray-100 shadow-sm">
                 <ShieldCheck size={20} className="text-fsm-red" />
                 <span className="text-[10px] font-black tracking-widest text-fsm-blue uppercase">Vigilado por Secretaría de Educación de Soacha</span>

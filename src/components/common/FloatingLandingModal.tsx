@@ -16,20 +16,7 @@ export default function FloatingLandingModal({
   image,
   buttonText = "¡Inscríbete Ahora!",
 }: FloatingLandingModalProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
-
-  useEffect(() => {
-    if (showModal && link) {
-      setIsOpen(true);
-      setIsMinimized(false);
-    }
-  }, [showModal, link]);
-
-  const handleClose = () => {
-    setIsOpen(false);
-    setIsMinimized(true);
-  };
+  const [isOpen, setIsOpen] = useState(true);
 
   if (!showModal || !link) return null;
 
@@ -38,13 +25,17 @@ export default function FloatingLandingModal({
     return /\.(jpg|jpeg|png|webp|avif|gif|svg)(\?.*)?$/i.test(url) || url.startsWith("data:image/");
   };
 
+  const handleClose = () => {
+    setIsOpen(false);
+  };
+
   // Determine if we have an image to display (either explicitly passed as image prop or if link is an image URL)
   const modalImageSrc = image || (isImageUrl(link) ? link : null);
 
   return (
     <>
       {/* Floating Minimized Badge */}
-      {isMinimized && !isOpen && (
+      {!isOpen && (
         <div className="fixed bottom-6 left-6 z-[120] flex items-center gap-2">
           <a
             href={link}

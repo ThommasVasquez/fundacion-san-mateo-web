@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Share2, Facebook, MessageCircle, Link2, Instagram, Twitter } from "lucide-react";
+import { Facebook, MessageCircle, Link2, Twitter } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface ShareButtonsProps {
