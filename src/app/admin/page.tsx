@@ -8,13 +8,15 @@ export const dynamic = 'force-dynamic';
 
 export default async function AdminDashboard() {
   const session = (await cookies()).get('session')?.value;
+  let parsed = null;
   if (session) {
     try {
-      const parsed = await decrypt(session);
-      if (parsed?.role === 'academic' || parsed?.email === 'sacademica@fundacionsanmateosoacha.edu.co') {
-        redirect('/admin/attendance');
-      }
+      parsed = await decrypt(session);
     } catch {}
+  }
+
+  if (parsed?.role === 'academic' || parsed?.email === 'sacademica@fundacionsanmateosoacha.edu.co') {
+    redirect('/admin/attendance');
   }
   return (
     <div className="max-w-6xl mx-auto space-y-12">
