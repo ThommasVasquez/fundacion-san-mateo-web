@@ -98,24 +98,6 @@ const Footer = () => {
   return (
     <footer className="bg-fsm-blue-light text-white pt-16 pb-8">
       <div className="container mx-auto px-4">
-        {/* Front Page Header Logo & Brand Section */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-10 mb-12 border-b border-white/10">
-          <Link href="/" className="flex items-center gap-4 group">
-            <div className="relative w-16 h-16 md:w-20 md:h-20 bg-white p-2.5 rounded-2xl border border-white/20 shadow-xl group-hover:scale-105 transition-transform shrink-0">
-              <Image src="/FSM.png" alt="Escudo Fundación San Mateo" fill className="object-contain p-1" />
-            </div>
-            <div>
-              <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight leading-none">Fundación San Mateo</h3>
-              <p className="text-xs md:text-sm font-bold text-white/70 tracking-widest uppercase mt-1.5">Educación Superior e Institucional de Alta Calidad</p>
-            </div>
-          </Link>
-          <div className="flex items-center gap-3">
-            <span className="text-[11px] font-black tracking-widest uppercase text-white bg-white/10 px-4 py-2 rounded-full border border-white/15 backdrop-blur-xs">
-              Vigilado Secretaría de Educación de Soacha
-            </span>
-          </div>
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           {/* Column 1 */}
           <div>
