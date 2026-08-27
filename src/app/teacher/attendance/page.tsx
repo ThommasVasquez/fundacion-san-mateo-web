@@ -10,44 +10,40 @@ export const dynamic = 'force-dynamic';
 export default async function TeacherAttendancePage() {
   const session = (await cookies()).get('session')?.value;
 
-  if (!session) {
+  let parsed = null;
+  if (session) {
+    try {
+      parsed = await decrypt(session);
+    } catch {
+      parsed = null;
+    }
+  }
+
+  let teacherId = parsed?.teacherId || parsed?.adminId || '';
+  let teacherName = '';
+  if (!teacherId) {
     redirect('/auth/teacher-login');
   }
 
-  let teacherId = '';
-  let teacherName = '';
-
-  try {
-    const parsed = await decrypt(session);
-    teacherId = parsed?.teacherId || parsed?.adminId || '';
-    if (!teacherId) {
-      redirect('/auth/teacher-login');
-    }
-
-    // Fetch teacher details from teachers table or admin_users table
-    let teachers = await sql`
+  // Fetch teacher details from teachers table or admin_users table
+  let teachers = await sql`
+    SELECT id, nombre 
+    FROM teachers 
+    WHERE id = ${teacherId}::uuid 
+    LIMIT 1
+  `;
+  if (teachers.length === 0) {
+    teachers = await sql`
       SELECT id, nombre 
-      FROM teachers 
+      FROM admin_users 
       WHERE id = ${teacherId}::uuid 
       LIMIT 1
     `;
-    if (teachers.length === 0) {
-      teachers = await sql`
-        SELECT id, nombre 
-        FROM admin_users 
-        WHERE id = ${teacherId}::uuid 
-        LIMIT 1
-      `;
-    }
-    if (teachers.length === 0) {
-      redirect('/auth/teacher-login');
-    }
-    teacherName = teachers[0].nombre || parsed?.email || 'Profesor';
-
-  } catch (error) {
-    console.error('Teacher auth error:', error);
+  }
+  if (teachers.length === 0) {
     redirect('/auth/teacher-login');
   }
+  teacherName = teachers[0].nombre || parsed?.email || 'Profesor';
 
   // Fetch teacher's assigned mobile reader
   const mobileReaders = await sql`

@@ -10,20 +10,20 @@ import Footer from '@/components/layout/Footer';
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = (await cookies()).get('session')?.value;
 
-  if (!session) {
+  let parsed = null;
+  if (session) {
+    try {
+      parsed = await decrypt(session);
+    } catch {
+      parsed = null;
+    }
+  }
+
+  if (!parsed || !parsed.adminId) {
     redirect('/auth/login');
   }
 
-  let isAcademicRole = false;
-  try {
-    const parsed = await decrypt(session);
-    if (!parsed || !parsed.adminId) {
-      redirect('/auth/login');
-    }
-    isAcademicRole = parsed.role === 'academic' || parsed.email === 'sacademica@fundacionsanmateosoacha.edu.co';
-  } catch (error) {
-    redirect('/auth/login');
-  }
+  const isAcademicRole = parsed.role === 'academic' || parsed.email === 'sacademica@fundacionsanmateosoacha.edu.co';
 
   const defaultHomeLink = isAcademicRole ? '/admin/attendance' : '/admin';
 

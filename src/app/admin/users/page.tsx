@@ -15,10 +15,12 @@ export default async function AdminUsersPage() {
     try {
       const payload = await decrypt(sessionToken);
       currentUserId = payload?.adminId || '';
-    } catch {
-      redirect('/auth/login');
+    } catch (err) {
+      currentUserId = '';
     }
-  } else {
+  }
+
+  if (!currentUserId) {
     redirect('/auth/login');
   }
 
