@@ -47,9 +47,11 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/FSM.png",
-        width: 800,
-        height: 800,
+        url: "https://fundacionsanmateosoacha.edu.co/og-image.png",
+        secureUrl: "https://fundacionsanmateosoacha.edu.co/og-image.png",
+        width: 600,
+        height: 600,
+        type: "image/png",
         alt: "Escudo Institucional Fundación San Mateo Soacha"
       }
     ]
@@ -58,7 +60,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Fundación San Mateo - Formación Técnica en Soacha",
     description: "Educación de calidad para el desarrollo humano y laboral en Soacha. Enfermería, Primera Infancia y Cursos Especializados.",
-    images: ["/FSM.png"]
+    images: ["https://fundacionsanmateosoacha.edu.co/og-image.png"]
   },
   robots: {
     index: true,
@@ -80,6 +82,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className={`${montserrat.variable} h-full antialiased`}>
+      <head>
+        <meta property="og:title" content="Fundación San Mateo | Educación con Excelencia en Soacha" />
+        <meta property="og:description" content="Programas Técnicos Laborales por competencias en Enfermería y Primera Infancia con certificaciones ISO 9001 y NTC en Soacha, Cundinamarca." />
+        <meta property="og:image" content="https://fundacionsanmateosoacha.edu.co/og-image.png" />
+        <meta property="og:image:secure_url" content="https://fundacionsanmateosoacha.edu.co/og-image.png" />
+        <meta property="og:image:type" content="image/png" />
+        <meta property="og:image:width" content="600" />
+        <meta property="og:image:height" content="600" />
+        <meta property="og:url" content="https://fundacionsanmateosoacha.edu.co" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Fundación San Mateo" />
+      </head>
       <body className="font-sans min-h-full flex flex-col overflow-x-hidden">
         {children}
         <Toaster position="bottom-right" />
