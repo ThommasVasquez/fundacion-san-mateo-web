@@ -35,7 +35,8 @@ export async function login(formData: FormData) {
     const userRole = user.role || (user.email === 'sacademica@fundacionsanmateosoacha.edu.co' ? 'academic' : 'admin');
     const permissions = user.permissions || ['attendance_view', 'attendance_edit', 'students_manage'];
     const sessionToken = await encrypt({ 
-      adminId: user.id, 
+      adminId: user.id,
+      teacherId: (userRole === 'teacher' || permissions.includes('mobile_attendance')) ? user.id : undefined,
       nombre: user.nombre || user.email,
       email: user.email, 
       role: userRole,
@@ -50,9 +51,13 @@ export async function login(formData: FormData) {
       maxAge: 60 * 60 * 24 // 24 hours
     });
 
+    const redirectUrl = userRole === 'teacher' 
+      ? '/teacher/attendance' 
+      : (userRole === 'academic' ? '/admin/attendance' : '/admin');
+
     return { 
       success: true, 
-      redirectUrl: userRole === 'academic' ? '/admin/attendance' : '/admin' 
+      redirectUrl 
     };
   } catch (error) {
     console.error('Login error:', error);
@@ -1277,10 +1282,27 @@ export async function createAdminUserAction(formData: FormData) {
     const passwordHash = await bcrypt.hash(password, 10);
     const permissions = permissionsJson ? JSON.parse(permissionsJson) : ['attendance_view'];
 
-    await sql`
+    const newUsers = await sql`
       INSERT INTO admin_users (nombre, email, password_hash, role, permissions, activo)
       VALUES (${nombre}, ${email}, ${passwordHash}, ${role}, ${JSON.stringify(permissions)}::jsonb, true)
+      RETURNING id
     `;
+    const newUserId = newUsers[0].id;
+
+    // If teacher role or mobile_attendance permission, sync to teachers & readers tables
+    if (role === 'teacher' || permissions.includes('mobile_attendance')) {
+      await sql`
+        INSERT INTO teachers (id, nombre, email, password_hash)
+        VALUES (${newUserId}::uuid, ${nombre}, ${email}, ${passwordHash})
+        ON CONFLICT (id) DO UPDATE SET nombre = ${nombre}, email = ${email}, password_hash = ${passwordHash}
+      `;
+      const readerId = `movil-${newUserId.slice(0, 8)}`;
+      await sql`
+        INSERT INTO readers (id, ubicacion, tipo, teacher_id, sede)
+        VALUES (${readerId}, ${`Lector Móvil - ${nombre}`}, 'mobile_nfc', ${newUserId}::uuid, 'Sede 1')
+        ON CONFLICT (id) DO UPDATE SET teacher_id = ${newUserId}::uuid, ubicacion = ${`Lector Móvil - ${nombre}`}
+      `;
+    }
 
     revalidatePath('/admin/users');
     return { success: true };
@@ -1319,6 +1341,13 @@ export async function updateAdminUserAction(formData: FormData) {
           activo = ${activo}
         WHERE id = ${userId}::uuid
       `;
+      if (role === 'teacher' || permissions.includes('mobile_attendance')) {
+        await sql`
+          INSERT INTO teachers (id, nombre, email, password_hash)
+          VALUES (${userId}::uuid, ${nombre}, ${email}, ${passwordHash})
+          ON CONFLICT (id) DO UPDATE SET nombre = ${nombre}, email = ${email}, password_hash = ${passwordHash}
+        `;
+      }
     } else {
       await sql`
         UPDATE admin_users
@@ -1329,6 +1358,22 @@ export async function updateAdminUserAction(formData: FormData) {
           permissions = ${JSON.stringify(permissions)}::jsonb,
           activo = ${activo}
         WHERE id = ${userId}::uuid
+      `;
+      if (role === 'teacher' || permissions.includes('mobile_attendance')) {
+        await sql`
+          UPDATE teachers
+          SET nombre = ${nombre}, email = ${email}
+          WHERE id = ${userId}::uuid
+        `;
+      }
+    }
+
+    if (role === 'teacher' || permissions.includes('mobile_attendance')) {
+      const readerId = `movil-${userId.slice(0, 8)}`;
+      await sql`
+        INSERT INTO readers (id, ubicacion, tipo, teacher_id, sede)
+        VALUES (${readerId}, ${`Lector Móvil - ${nombre}`}, 'mobile_nfc', ${userId}::uuid, 'Sede 1')
+        ON CONFLICT (id) DO UPDATE SET teacher_id = ${userId}::uuid, ubicacion = ${`Lector Móvil - ${nombre}`}
       `;
     }
 
@@ -1347,6 +1392,11 @@ export async function toggleAdminUserStatusAction(userId: string, newStatus: boo
       SET activo = ${newStatus}
       WHERE id = ${userId}::uuid
     `;
+    await sql`
+      UPDATE teachers
+      SET activo = ${newStatus}
+      WHERE id = ${userId}::uuid
+    `;
     revalidatePath('/admin/users');
     return { success: true };
   } catch (error: any) {
@@ -1362,6 +1412,8 @@ export async function deleteAdminUserAction(userId: string) {
       return { error: 'No se puede eliminar el único usuario administrador del sistema.' };
     }
 
+    await sql`DELETE FROM readers WHERE teacher_id = ${userId}::uuid`;
+    await sql`DELETE FROM teachers WHERE id = ${userId}::uuid`;
     await sql`DELETE FROM admin_users WHERE id = ${userId}::uuid`;
     revalidatePath('/admin/users');
     return { success: true };

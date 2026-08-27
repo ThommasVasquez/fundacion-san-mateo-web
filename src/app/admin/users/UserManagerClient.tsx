@@ -22,6 +22,7 @@ export interface AdminUserItem {
 }
 
 const AVAILABLE_PERMISSIONS = [
+  { key: 'mobile_attendance', label: '📱 Asistencia Móvil / App Profesor', desc: 'Permite registrar entradas, salidas y escaneo desde la App Móvil del Celular' },
   { key: 'attendance_view', label: 'Ver Control de Asistencia', desc: 'Permite consultar escaneos, listas de asistencia e historiales' },
   { key: 'attendance_edit', label: 'Editar Excusas y Asistencia', desc: 'Permite registrar excusas médicas, novedades y asistencias manuales' },
   { key: 'students_manage', label: 'Matrícula y Alumnos (RFID)', desc: 'Permite matricular estudiantes, gestionar grupos y vincular tarjetas RFID' },
@@ -35,6 +36,11 @@ const PRESET_ROLES = [
     id: 'admin', 
     name: '👑 Administrador Total', 
     permissions: AVAILABLE_PERMISSIONS.map(p => p.key) 
+  },
+  { 
+    id: 'teacher', 
+    name: '👨‍🏫 Profesor / Asistencia Móvil', 
+    permissions: ['mobile_attendance', 'attendance_view', 'attendance_edit'] 
   },
   { 
     id: 'academic', 
@@ -298,7 +304,7 @@ export default function UserManagerClient({ users = [], currentUserId }: { users
                       <td className="py-4 px-6">
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-fsm-blue/5 text-fsm-blue border border-fsm-blue/10">
                           <Shield size={12} />
-                          {user.role === 'admin' ? 'Administrador Total' : user.role === 'academic' ? 'Secretaría Académica' : user.role}
+                          {user.role === 'admin' ? 'Administrador Total' : user.role === 'teacher' ? 'Profesor / Asistencia Móvil' : user.role === 'academic' ? 'Secretaría Académica' : user.role}
                         </span>
                       </td>
 
@@ -332,6 +338,17 @@ export default function UserManagerClient({ users = [], currentUserId }: { users
                       </td>
 
                       <td className="py-4 px-6 text-right space-x-2">
+                        {(user.role === 'teacher' || perms.includes('mobile_attendance')) && (
+                          <a
+                            href="/teacher/attendance"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2.5 py-1.5 bg-green-50 text-green-700 border border-green-200 hover:bg-green-600 hover:text-white transition-all text-xs font-bold rounded-lg inline-flex items-center gap-1"
+                            title="Abrir aplicación móvil del profesor"
+                          >
+                            📱 App Móvil
+                          </a>
+                        )}
                         <button
                           onClick={() => openEditModal(user)}
                           className="px-3 py-1.5 bg-gray-50 text-fsm-blue border border-gray-200 hover:bg-fsm-blue hover:text-white transition-all text-xs font-bold rounded-lg"
