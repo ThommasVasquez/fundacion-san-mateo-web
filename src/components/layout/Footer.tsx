@@ -98,19 +98,28 @@ const Footer = () => {
   return (
     <footer className="bg-fsm-blue-light text-white pt-16 pb-8">
       <div className="container mx-auto px-4">
+        {/* Front Page Header Logo & Brand Section */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-10 mb-12 border-b border-white/10">
+          <Link href="/" className="flex items-center gap-4 group">
+            <div className="relative w-16 h-16 md:w-20 md:h-20 bg-white p-2.5 rounded-2xl border border-white/20 shadow-xl group-hover:scale-105 transition-transform shrink-0">
+              <Image src="/FSM.png" alt="Escudo Fundación San Mateo" fill className="object-contain p-1" />
+            </div>
+            <div>
+              <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight leading-none">Fundación San Mateo</h3>
+              <p className="text-xs md:text-sm font-bold text-white/70 tracking-widest uppercase mt-1.5">Educación Superior e Institucional de Alta Calidad</p>
+            </div>
+          </Link>
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] font-black tracking-widest uppercase text-white bg-white/10 px-4 py-2 rounded-full border border-white/15 backdrop-blur-xs">
+              Vigilado Secretaría de Educación de Soacha
+            </span>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           {/* Column 1 */}
           <div>
-            <Link href="/" className="inline-flex items-center gap-3 mb-6 group">
-              <div className="relative w-12 h-12 bg-white/10 p-1.5 rounded-2xl border border-white/10 group-hover:scale-105 transition-transform backdrop-blur-xs shadow-md shrink-0">
-                <Image src="/FSM.png" alt="Fundación San Mateo" fill className="object-contain p-0.5" />
-              </div>
-              <div>
-                <span className="block text-base font-black tracking-tight text-white uppercase leading-tight">Fundación San Mateo</span>
-                <span className="text-[9px] font-bold text-white/60 tracking-wider uppercase">Educación para el Futuro</span>
-              </div>
-            </Link>
-            <h4 className="text-sm font-bold mb-4 border-b-2 border-fsm-red w-fit pb-1 uppercase tracking-wider text-white/90">Institución</h4>
+            <h4 className="text-xl font-bold mb-6 border-b-2 border-fsm-red w-fit pb-1">Institución</h4>
             <ul className="flex flex-col gap-3">
               {footerLinks.institucion.map((link) => (
                 <li key={link.name}>
