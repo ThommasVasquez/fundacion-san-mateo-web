@@ -1139,11 +1139,16 @@ export async function getAbsentStudentsReport(targetDate?: string, targetShift?:
       ORDER BY turno_calculado, s.grado, s.nombre
     `;
 
-    // Strict day-of-week shift applicability:
-    // 1. Weekdays (Mon-Fri): Only DIURNO and NOCHE students have class. SABADO students do NOT have class.
-    // 2. Saturdays: Only SABADO students have class. DIURNO and NOCHE students do NOT have class.
-    // 3. Sundays: No students have class.
+    // Strict day-of-week shift applicability & Calendario B exclusion:
+    // 1. Calendario B (CB) students do NOT start classes until September.
+    // 2. Weekdays (Mon-Fri): Only DIURNO and NOCHE students have class. SABADO students do NOT have class.
+    // 3. Saturdays: Only SABADO students have class. DIURNO and NOCHE students do NOT have class.
+    // 4. Sundays: No students have class.
+    const isBeforeSept = dateStr < '2026-09-01';
     const validRows = rows.filter((r: any) => {
+      if (isBeforeSept && r.grado && r.grado.toUpperCase().includes('CB')) {
+        return false; // Calendario B starts in September
+      }
       if (isWeekday) {
         return r.turno_calculado === 'DIURNO' || r.turno_calculado === 'NOCHE';
       } else if (isSaturday) {

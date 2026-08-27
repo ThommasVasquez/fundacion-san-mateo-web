@@ -107,6 +107,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
       WHERE ar.estado = 'AUSENTE'
         AND (s.estado IS NULL OR UPPER(s.estado) = 'ACTIVO')
         AND (e.activo IS NULL OR e.activo = TRUE)
+        AND (cs.fecha >= '2026-09-01'::date OR g.nombre IS NULL OR UPPER(g.nombre) NOT LIKE '%CB%')
         AND cs.fecha >= ${filterStartDate}::date
         AND cs.fecha <= ${filterEndDate}::date
         AND (
@@ -135,6 +136,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
       JOIN groups g ON g.id = cs.group_id
       WHERE ar.estado = 'AUSENTE'
         AND (s.estado IS NULL OR UPPER(s.estado) = 'ACTIVO')
+        AND (cs.fecha >= '2026-09-01'::date OR g.nombre IS NULL OR UPPER(g.nombre) NOT LIKE '%CB%')
         AND cs.fecha >= ${filterStartDate}::date
         AND cs.fecha <= ${filterEndDate}::date
         AND (
