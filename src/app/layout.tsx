@@ -49,10 +49,10 @@ export const metadata: Metadata = {
       {
         url: "https://fundacionsanmateosoacha.edu.co/og-image.png",
         secureUrl: "https://fundacionsanmateosoacha.edu.co/og-image.png",
-        width: 1200,
-        height: 630,
+        width: 600,
+        height: 600,
         type: "image/png",
-        alt: "Fundación San Mateo Soacha - Matrículas Abiertas 2026"
+        alt: "Escudo Oficial Fundación San Mateo Soacha"
       }
     ]
   },
@@ -88,9 +88,9 @@ export default function RootLayout({
         <meta property="og:image" content="https://fundacionsanmateosoacha.edu.co/og-image.png" />
         <meta property="og:image:secure_url" content="https://fundacionsanmateosoacha.edu.co/og-image.png" />
         <meta property="og:image:type" content="image/png" />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content="Fundación San Mateo Soacha - Matrículas Abiertas 2026" />
+        <meta property="og:image:width" content="600" />
+        <meta property="og:image:height" content="600" />
+        <meta property="og:image:alt" content="Escudo Oficial Fundación San Mateo Soacha" />
         <meta property="og:url" content="https://fundacionsanmateosoacha.edu.co" />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Fundación San Mateo Soacha" />
