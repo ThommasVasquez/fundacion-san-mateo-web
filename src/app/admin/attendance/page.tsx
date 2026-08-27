@@ -169,7 +169,17 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         AND (ae.timestamp AT TIME ZONE 'America/Bogota')::date <= ${filterEndDate}::date
       ORDER BY ae.timestamp DESC
     `,
-    sql`SELECT id, nombre, grado FROM students WHERE activo = TRUE ORDER BY nombre`,
+    sql`
+      SELECT 
+        sn.id, 
+        sn.nombre_original as nombre, 
+        COALESCE(g.nombre, 'Sin Grado') as grado,
+        (CASE WHEN sn.estado IS NULL OR UPPER(sn.estado) = 'ACTIVO' THEN TRUE ELSE FALSE END) as activo
+      FROM students_normalized sn
+      LEFT JOIN enrollments e ON e.student_id = sn.id
+      LEFT JOIN groups g ON g.id = e.group_id
+      ORDER BY sn.nombre_original ASC
+    `,
     sql`SELECT id, nombre, jornada FROM groups ORDER BY nombre`,
     getPendingAbsenceAlertsCount()
   ]);
@@ -449,7 +459,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
               id: s.id,
               nombre: s.nombre,
               grado: s.grado,
-              activo: s.activo
+              activo: Boolean(s.activo)
             }))} 
           />
           <ExportCsvButton events={filteredEvents} startDate={filterStartDate} endDate={filterEndDate} />
