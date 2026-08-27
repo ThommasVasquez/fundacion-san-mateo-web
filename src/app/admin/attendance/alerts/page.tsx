@@ -44,6 +44,12 @@ export default async function AttendanceAlertsPage() {
     JOIN groups g ON g.id = e.group_id
     JOIN class_sessions cs ON cs.group_id = g.id
     JOIN attendance_records_normalized ar ON ar.session_id = cs.id AND ar.student_id = s.id
+    WHERE (s.estado IS NULL OR s.estado = 'ACTIVO')
+      AND (e.activo IS NULL OR e.activo = TRUE)
+      AND NOT EXISTS (
+        SELECT 1 FROM students st 
+        WHERE st.nombre = s.nombre_original AND st.activo = FALSE
+      )
     GROUP BY s.id, s.nombre_original, g.nombre, g.id
     HAVING (COUNT(ar.id) FILTER (WHERE ar.estado = 'AUSENTE')::numeric / NULLIF(COUNT(ar.id), 0)) * 100 > 15
     ORDER BY absence_rate DESC

@@ -100,6 +100,8 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
       LEFT JOIN enrollments e ON e.student_id = s.id
       LEFT JOIN groups g ON g.id = e.group_id
       WHERE ar.estado = 'AUSENTE'
+        AND (s.estado IS NULL OR UPPER(s.estado) = 'ACTIVO')
+        AND (e.activo IS NULL OR e.activo = TRUE)
         AND cs.fecha >= ${filterStartDate}::date
         AND cs.fecha <= ${filterEndDate}::date
         ${filterGrado ? sql`AND g.nombre = ${filterGrado}` : sql``}
@@ -123,6 +125,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
       JOIN students_normalized s ON s.id = ar.student_id
       JOIN groups g ON g.id = cs.group_id
       WHERE ar.estado = 'AUSENTE'
+        AND (s.estado IS NULL OR UPPER(s.estado) = 'ACTIVO')
         AND cs.fecha >= ${filterStartDate}::date
         AND cs.fecha <= ${filterEndDate}::date
       ORDER BY cs.fecha DESC, s.nombre_original ASC
@@ -241,6 +244,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         sn.id, 
         sn.nombre_original as nombre, 
         sn.rfid_tag_uid, 
+        sn.estado as norm_estado,
         g.nombre as grado
       FROM students_normalized sn
       LEFT JOIN enrollments e ON e.student_id = sn.id
@@ -258,8 +262,10 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
           s.id, 
           s.nombre, 
           s.grado, 
+          s.activo,
           s.rfid_tag_uid, 
-          sn.id as norm_id
+          sn.id as norm_id,
+          sn.estado as norm_estado
         FROM students s
         LEFT JOIN students_normalized sn ON sn.nombre_normalizado = UPPER(TRIM(s.nombre))
         WHERE s.id = ${historyStudentId}::uuid
@@ -272,6 +278,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
 
     if (historyStudent) {
       const targetStudentId = historyStudent.norm_id || historyStudent.id;
+      const isStudentFrozen = (historyStudent.norm_estado && historyStudent.norm_estado !== 'ACTIVO') || historyStudent.activo === false;
 
       // 1. Query class sessions for the student's group
       const sessions = await sql`
@@ -325,12 +332,12 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
           const rfid = rfidMap.get(fStr);
           const ov = overrideMap.get(sess.session_id);
 
-          let estado = 'AUSENTE';
-          let tipo_evento = 'inasistencia';
-          let reader_name = 'Sin marcación de entrada';
+          let estado = isStudentFrozen ? 'CONGELADO' : 'AUSENTE';
+          let tipo_evento = isStudentFrozen ? 'congelado' : 'inasistencia';
+          let reader_name = isStudentFrozen ? 'Estudiante en congelamiento' : 'Sin marcación de entrada';
           let origen = 'Sistema';
           let timestamp = fStr;
-          let observaciones = '';
+          let observaciones = isStudentFrozen ? 'Estudiante congelado/inactivo' : '';
           let sede = 'Sede 1';
 
           if (ov) {
@@ -779,25 +786,27 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                     <div key={hev.id} className="relative">
                       {/* Timeline dot */}
                       <span className={`absolute -left-[31px] top-1.5 w-3 h-3 rounded-full border-2 border-white ${
-                        hev.estado === 'AUSENTE' ? 'bg-fsm-red' : hev.tipo_evento === 'entrada' ? 'bg-green-500' : 'bg-orange-500'
+                        hev.estado === 'CONGELADO' ? 'bg-blue-400' : hev.estado === 'AUSENTE' ? 'bg-fsm-red' : hev.tipo_evento === 'salida' ? 'bg-orange-500' : 'bg-green-500'
                       }`} />
                       
                       <div className={`p-4 rounded-2xl border space-y-1 ${
-                        hev.estado === 'AUSENTE' ? 'bg-red-50/40 border-red-100' : 'bg-gray-50 border-gray-100'
+                        hev.estado === 'CONGELADO' ? 'bg-blue-50/40 border-blue-100' : hev.estado === 'AUSENTE' ? 'bg-red-50/40 border-red-100' : 'bg-gray-50 border-gray-100'
                       }`}>
                         <div className="flex justify-between items-center">
                           <span className={`px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${
-                            hev.estado === 'AUSENTE'
+                            hev.estado === 'CONGELADO'
+                              ? 'bg-blue-100 text-blue-800 border-blue-200'
+                              : hev.estado === 'AUSENTE'
                               ? 'bg-red-100 text-fsm-red border-red-200'
                               : hev.tipo_evento === 'salida'
                               ? 'bg-orange-100 text-orange-700 border-orange-200'
                               : 'bg-green-100 text-green-700 border-green-200'
                           }`}>
-                            {hev.estado === 'AUSENTE' ? '❌ INASISTENCIA' : hev.tipo_evento === 'salida' ? '📤 SALIDA' : '📥 ENTRADA'}
+                            {hev.estado === 'CONGELADO' ? '🧊 CONGELADO / INACTIVO' : hev.estado === 'AUSENTE' ? '❌ INASISTENCIA' : hev.tipo_evento === 'salida' ? '📤 SALIDA' : '📥 ENTRADA'}
                           </span>
                           <span className="text-xs font-bold text-gray-500 flex items-center gap-1">
                             <Clock size={12} />
-                            {hev.estado === 'AUSENTE'
+                            {hev.estado === 'AUSENTE' || hev.estado === 'CONGELADO'
                               ? `Día Lectivo: ${formatDateDDMMYYYY(hev.fecha)}`
                               : `${formatDateDDMMYYYY(hev.timestamp)} ${new Date(hev.timestamp).toLocaleTimeString('es-CO', { timeZone: ZONA_HORARIA, hour: '2-digit', minute: '2-digit' })}`}
                           </span>
