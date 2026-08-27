@@ -46,16 +46,25 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
   const filterSort = params.sort || 'time_desc';
   const historyStudentId = params.studentHistoryId || '';
 
-  const buildFilterUrl = (studentHistId?: string) => {
+  const buildFilterUrl = (input?: string | Record<string, string>) => {
+    const overrides: Record<string, string> = typeof input === 'string' ? { studentHistoryId: input } : (input || {});
     const p = new URLSearchParams();
-    if (filterStartDate) p.set('startDate', filterStartDate);
-    if (filterEndDate) p.set('endDate', filterEndDate);
-    if (filterSearch) p.set('search', filterSearch);
-    if (filterGrado) p.set('grado', filterGrado);
-    if (filterSede) p.set('sede', filterSede);
-    if (filterAnomalyOnly) p.set('anomalyOnly', 'true');
-    if (filterAbsencesOnly) p.set('absencesOnly', 'true');
-    if (filterSort) p.set('sort', filterSort);
+    const sDate = overrides.startDate !== undefined ? overrides.startDate : filterStartDate;
+    const eDate = overrides.endDate !== undefined ? overrides.endDate : filterEndDate;
+    const searchVal = overrides.search !== undefined ? overrides.search : filterSearch;
+    const gradoVal = overrides.grado !== undefined ? overrides.grado : filterGrado;
+    const sedeVal = overrides.sede !== undefined ? overrides.sede : filterSede;
+    const sortVal = overrides.sort !== undefined ? overrides.sort : filterSort;
+    const studentHistId = overrides.studentHistoryId !== undefined ? overrides.studentHistoryId : (typeof input === 'string' ? input : historyStudentId);
+
+    if (sDate) p.set('startDate', sDate);
+    if (eDate) p.set('endDate', eDate);
+    if (searchVal) p.set('search', searchVal);
+    if (gradoVal) p.set('grado', gradoVal);
+    if (sedeVal) p.set('sede', sedeVal);
+    if (overrides.anomalyOnly === 'true' || (overrides.anomalyOnly === undefined && filterAnomalyOnly)) p.set('anomalyOnly', 'true');
+    if (overrides.absencesOnly === 'true' || (overrides.absencesOnly === undefined && filterAbsencesOnly)) p.set('absencesOnly', 'true');
+    if (sortVal) p.set('sort', sortVal);
     if (studentHistId) p.set('studentHistoryId', studentHistId);
     return `/admin/attendance?${p.toString()}`;
   };
@@ -560,6 +569,19 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
               className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none" 
             />
           </div>
+
+          {/* Quick Filter: Solo Hoy */}
+          <Link
+            href={buildFilterUrl({ startDate: todayStr, endDate: todayStr })}
+            className={`px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider border transition-all flex items-center gap-1.5 shrink-0 ${
+              filterStartDate === todayStr && filterEndDate === todayStr
+                ? 'bg-fsm-blue text-white border-fsm-blue shadow-sm'
+                : 'bg-blue-50/60 text-fsm-blue border-blue-200 hover:bg-fsm-blue hover:text-white'
+            }`}
+          >
+            <Calendar size={14} />
+            <span>📅 Solo Hoy</span>
+          </Link>
 
           <RefreshButton />
         </div>
