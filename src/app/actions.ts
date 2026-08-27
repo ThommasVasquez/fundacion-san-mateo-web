@@ -813,27 +813,52 @@ export async function recordManualAttendance(
   observaciones: string = ''
 ) {
   try {
-    const studentQuery = await sql`
-      SELECT id, nombre, grado, rfid_tag_uid, activo 
-      FROM students 
-      WHERE id = ${studentId}::uuid 
+    let student: any = null;
+
+    const normRes = await sql`
+      SELECT sn.id, sn.nombre_original as nombre, sn.rfid_tag_uid, sn.estado as norm_estado, s.id as legacy_id
+      FROM students_normalized sn
+      LEFT JOIN students s ON UPPER(TRIM(s.nombre)) = UPPER(TRIM(sn.nombre_original)) OR s.id = sn.id
+      WHERE sn.id = ${studentId}::uuid OR s.id = ${studentId}::uuid
       LIMIT 1
     `;
 
-    if (studentQuery.length === 0) {
-      return { error: 'Usuario no encontrado' };
+    if (normRes.length > 0) {
+      const row = normRes[0];
+      student = {
+        id: row.legacy_id || row.id,
+        student_id: row.id,
+        nombre: row.nombre,
+        rfid_tag_uid: row.rfid_tag_uid,
+        activo: row.norm_estado === 'ACTIVO' || row.norm_estado == null
+      };
+    } else {
+      const legacyRes = await sql`
+        SELECT id, nombre, rfid_tag_uid, activo 
+        FROM students 
+        WHERE id = ${studentId}::uuid 
+        LIMIT 1
+      `;
+      if (legacyRes.length > 0) {
+        const row = legacyRes[0];
+        student = {
+          id: row.id,
+          student_id: row.id,
+          nombre: row.nombre,
+          rfid_tag_uid: row.rfid_tag_uid,
+          activo: Boolean(row.activo)
+        };
+      }
     }
 
-    const student = studentQuery[0];
-
-    if (!student.activo) {
-      return { error: `No se puede registrar ${tipoEvento}. El usuario ${student.nombre} está CONGELADO / APLAZADO.` };
+    if (!student) {
+      return { error: 'Usuario no encontrado' };
     }
 
     // Check duplicate manual entry within 5 seconds
     const recent = await sql`
       SELECT id FROM attendance_events
-      WHERE student_id = ${student.id}::uuid
+      WHERE (student_id = ${student.id}::uuid OR student_id = ${student.student_id}::uuid)
         AND tipo_evento = ${tipoEvento}
         AND timestamp > NOW() - INTERVAL '5 seconds'
       LIMIT 1
