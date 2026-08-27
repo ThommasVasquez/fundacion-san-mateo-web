@@ -97,7 +97,23 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
     .map((g: any) => g.grado)
     .sort((a: string, b: string) => a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' }));
 
-  // 3. Fetch Events / Absences for date range
+  // 3. Query total count of real absences for selected date range & filters
+  const absencesCountRes = await sql`
+    SELECT count(*) as count
+    FROM attendance_records_normalized ar
+    JOIN class_sessions cs ON cs.id = ar.session_id
+    JOIN students_normalized s ON s.id = ar.student_id
+    LEFT JOIN enrollments e ON e.student_id = s.id
+    LEFT JOIN groups g ON g.id = e.group_id
+    WHERE ar.estado = 'AUSENTE'
+      AND cs.fecha >= ${filterStartDate}::date
+      AND cs.fecha <= ${filterEndDate}::date
+      ${filterGrado ? sql`AND g.nombre = ${filterGrado}` : sql``}
+      ${filterSede ? sql`AND ar.sede = ${filterSede}` : sql``}
+  `;
+  const totalRealAbsencesCount = parseInt(absencesCountRes[0]?.count || '0', 10);
+
+  // 4. Fetch Events / Absences for date range
   let rawEvents: any[] = [];
 
   if (filterAbsencesOnly) {
@@ -580,7 +596,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                 defaultChecked={filterAnomalyOnly}
                 className="w-4 h-4 rounded border-gray-300 text-fsm-red focus:ring-fsm-red" 
               />
-              <span>Solo Sin Asignar</span>
+              <span>Solo Sin Asignar ({totalAnomalies})</span>
             </label>
 
             {/* Absences Only Checkbox */}
@@ -594,7 +610,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                 defaultChecked={filterAbsencesOnly}
                 className="w-4 h-4 rounded border-red-300 text-fsm-red focus:ring-fsm-red" 
               />
-              <span>❌ Solo Inasistencias</span>
+              <span>❌ Solo Inasistencias ({filterAbsencesOnly ? filteredEvents.length : totalRealAbsencesCount})</span>
             </label>
           </div>
         </div>
