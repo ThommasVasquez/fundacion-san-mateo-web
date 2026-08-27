@@ -3,6 +3,12 @@ import { sql } from './db';
 // Simple cache to prevent hitting Neon constantly during a single page render
 const cache = new Map<string, string>();
 
+function sanitizeImageUrl(url: string | null | undefined, fallback: string = '/img/banner6.jpg'): string {
+  if (!url) return fallback;
+  if (url.startsWith('data:image/')) return fallback;
+  return url;
+}
+
 export async function getContentMap(path: string): Promise<Record<string, string>> {
   try {
     const results = await sql`
@@ -11,7 +17,11 @@ export async function getContentMap(path: string): Promise<Record<string, string
     
     const map: Record<string, string> = {};
     for (const row of results) {
-      map[row.content_key] = row.value;
+      let val = row.value;
+      if (val && val.startsWith('data:image/')) {
+        val = '/img/banner6.jpg';
+      }
+      map[row.content_key] = val;
     }
     return map;
   } catch (e) {
@@ -47,7 +57,15 @@ export async function getDirectoryItems() {
 }
 export async function getPrograms() {
   try {
-    return await sql`SELECT * FROM academic_programs ORDER BY is_featured DESC, order_index ASC`;
+    const results = await sql`
+      SELECT id, title, subtitle, description, image_url, href, category, is_featured, order_index 
+      FROM academic_programs 
+      ORDER BY is_featured DESC, order_index ASC
+    `;
+    return results.map((p: any) => ({
+      ...p,
+      image_url: sanitizeImageUrl(p.image_url, '/img/banner1.jpg')
+    }));
   } catch (e) {
     console.error("Error fetching programs:", e);
     return [];
@@ -56,7 +74,13 @@ export async function getPrograms() {
 export async function getProgramByHref(href: string) {
   try {
     const results = await sql`SELECT * FROM academic_programs WHERE href = ${href} LIMIT 1`;
-    return results[0] || null;
+    if (results[0]) {
+      return {
+        ...results[0],
+        image_url: sanitizeImageUrl(results[0].image_url, '/img/banner6.jpg')
+      };
+    }
+    return null;
   } catch (e) {
     console.error(`Error fetching program by href ${href}:`, e);
     return null;
