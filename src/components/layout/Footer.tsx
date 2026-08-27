@@ -179,11 +179,20 @@ const Footer = () => {
                   ))
                 ) : (
                   <>
-                    <a href={settings['footer_facebook_url'] || "https://www.facebook.com/profile.php?id=100064034556004"} target="_blank" className="hover:text-fsm-red transition-colors">
+                    <a href={settings['footer_facebook_url'] || "https://facebook.com/fundacionsanmateosoacha"} target="_blank" rel="noopener noreferrer" className="hover:text-fsm-red transition-colors" aria-label="Facebook">
                       <FacebookIcon size={24} />
                     </a>
-                    <a href={settings['footer_instagram_url'] || "https://www.instagram.com/fundacionsanmateosoacha"} target="_blank" className="hover:text-fsm-red transition-colors">
+                    <a href={settings['footer_instagram_url'] || "https://instagram.com/fundacionsanmateosoacha"} target="_blank" rel="noopener noreferrer" className="hover:text-fsm-red transition-colors" aria-label="Instagram">
                       <InstagramIcon size={24} />
+                    </a>
+                    <a href={settings['footer_youtube_url'] || "https://youtube.com/channel/UCYjqvqqCoWdNI_pL-6Z37jg"} target="_blank" rel="noopener noreferrer" className="hover:text-fsm-red transition-colors" aria-label="YouTube">
+                      <Youtube size={24} />
+                    </a>
+                    <a href={settings['footer_linkedin_url'] || "https://www.linkedin.com/company/fundacionsanmateosoacha"} target="_blank" rel="noopener noreferrer" className="hover:text-fsm-red transition-colors" aria-label="LinkedIn">
+                      <Linkedin size={24} />
+                    </a>
+                    <a href={settings['footer_twitter_url'] || "https://x.com/SanMateoSoacha"} target="_blank" rel="noopener noreferrer" className="hover:text-fsm-red transition-colors" aria-label="X Twitter">
+                      <Twitter size={24} />
                     </a>
                   </>
                 )}

@@ -12,10 +12,10 @@ const montserrat = Montserrat({
 export const metadata: Metadata = {
   metadataBase: new URL("https://fundacionsanmateosoacha.edu.co"),
   title: {
-    default: "Fundación San Mateo | Institución de Educación y Formación Técnica en Soacha",
+    default: "Fundación San Mateo | Educación Técnica en Soacha",
     template: "%s | Fundación San Mateo Soacha"
   },
-  description: "Institución de Educación para el Trabajo y Desarrollo Humano en Soacha. Programas Técnicos Laborales en Auxiliar de Enfermería, Primera Infancia y Cursos Certificados de Salud.",
+  description: "Institución de Educación Técnica en Soacha certificada ISO 9001. Formación en Auxiliar de Enfermería, Primera Infancia y Cursos de Salud.",
   keywords: [
     "Fundación San Mateo",
     "Fundación San Mateo Soacha",

@@ -32,23 +32,39 @@ export default async function Home() {
 
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "EducationalOrganization",
+    "@type": ["EducationalOrganization", "LocalBusiness"],
     "name": "Fundación San Mateo",
-    "alternateName": "Institución de Educación para el Trabajo y Desarrollo Humano San Mateo",
+    "alternateName": "Institución de Educación para el Trabajo y Desarrollo Humano San Mateo Soacha",
     "url": "https://fundacionsanmateosoacha.edu.co",
     "logo": "https://fundacionsanmateosoacha.edu.co/FSM.png",
-    "image": "https://fundacionsanmateosoacha.edu.co/FSM.png",
+    "image": "https://fundacionsanmateosoacha.edu.co/og-image.png",
     "description": "Institución de Educación para el Trabajo y Desarrollo Humano en Soacha certificada en Calidad ISO 9001 y NTC. Programas Técnicos en Auxiliar de Enfermería y Primera Infancia.",
     "telephone": "+576017812345",
+    "priceRange": "$$",
+    "currenciesAccepted": "COP",
     "address": {
       "@type": "PostalAddress",
       "addressLocality": "Soacha",
       "addressRegion": "Cundinamarca",
       "addressCountry": "CO"
     },
+    "geo": {
+      "@type": "GeoCoordinates",
+      "latitude": 4.5794,
+      "longitude": -74.2169
+    },
+    "openingHoursSpecification": [
+      {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+        "opens": "07:00",
+        "closes": "18:00"
+      }
+    ],
     "sameAs": [
       "https://www.facebook.com/fundacionsanmateosoacha",
-      "https://www.instagram.com/fundacionsanmateosoacha"
+      "https://www.instagram.com/fundacionsanmateosoacha",
+      "https://www.youtube.com/channel/UCYjqvqqCoWdNI_pL-6Z37jg"
     ],
     "hasOfferCatalog": {
       "@type": "OfferCatalog",
