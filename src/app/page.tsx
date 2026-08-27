@@ -30,8 +30,54 @@ export default async function Home() {
       details: p.details || {}
     }));
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "EducationalOrganization",
+    "name": "Fundación San Mateo",
+    "alternateName": "Institución de Educación para el Trabajo y Desarrollo Humano San Mateo",
+    "url": "https://fundacionsanmateosoacha.edu.co",
+    "logo": "https://fundacionsanmateosoacha.edu.co/FSM.png",
+    "image": "https://fundacionsanmateosoacha.edu.co/FSM.png",
+    "description": "Institución de Educación para el Trabajo y Desarrollo Humano en Soacha certificada en Calidad ISO 9001 y NTC. Programas Técnicos en Auxiliar de Enfermería y Primera Infancia.",
+    "telephone": "+576017812345",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Soacha",
+      "addressRegion": "Cundinamarca",
+      "addressCountry": "CO"
+    },
+    "sameAs": [
+      "https://www.facebook.com/fundacionsanmateosoacha",
+      "https://www.instagram.com/fundacionsanmateosoacha"
+    ],
+    "hasOfferCatalog": {
+      "@type": "OfferCatalog",
+      "name": "Programas Técnicos Laborales",
+      "itemListElement": [
+        {
+          "@type": "EducationalOccupationalProgram",
+          "name": "Técnico Laboral Auxiliar de Enfermería",
+          "educationalProgramMode": "Presencial",
+          "occupationalCategory": "Salud",
+          "url": "https://fundacionsanmateosoacha.edu.co/programa-enfermeria"
+        },
+        {
+          "@type": "EducationalOccupationalProgram",
+          "name": "Técnico Laboral en Atención a la Primera Infancia",
+          "educationalProgramMode": "Presencial",
+          "occupationalCategory": "Educación",
+          "url": "https://fundacionsanmateosoacha.edu.co/programa-primera-infancia"
+        }
+      ]
+    }
+  };
+
   return (
     <main className="min-h-screen bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Navbar />
       
       {/* Hero Section */}
@@ -59,7 +105,7 @@ export default async function Home() {
         showModal={content['home_landing_modal_show'] !== 'false'}
         link={content['home_landing_modal_link'] || 'https://fundacionsanmateosoacha.escalapages.com/empoderamiento-formulario-con-1-campo'}
         image={content['home_landing_modal_image']}
-        buttonText={content['home_landing_modal_btn_text'] || '¡Inscríbete Ahora!'}
+        buttonText={content['home_landing_modal_text'] || '¡Inscríbete Hoy Mismo!'}
       />
     </main>
   );

@@ -3,8 +3,8 @@ import { getPrograms, getContentMap } from "@/lib/content";
 import AcademicOfferContent from "./AcademicOfferContent";
 
 export const metadata = {
-  title: "Oferta Académica | Fundación San Mateo",
-  description: "Descubre nuestros programas técnicos y cursos de educación continua.",
+  title: "Oferta Académica y Programas Técnicos en Soacha | Fundación San Mateo",
+  description: "Conoce nuestra oferta académica en Soacha: Técnico en Auxiliar de Enfermería, Primera Infancia y Cursos Certificados en Salud (Inyectología, PAI, Soporte Vital Básico).",
 };
 
 export const dynamic = "force-dynamic";
