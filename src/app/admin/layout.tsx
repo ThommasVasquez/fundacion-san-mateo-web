@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { decrypt } from '@/lib/auth';
@@ -29,9 +30,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <header className="bg-white border-b border-gray-200 py-4 px-8 shadow-sm flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link href={defaultHomeLink} className="font-black text-xl text-fsm-blue flex items-center gap-2">
-            <span className="w-8 h-8 bg-fsm-red text-white flex items-center justify-center rounded-lg text-sm">F</span>
-            Panel {isAcademicRole ? 'Académico' : 'de Control'}
+          <Link href={defaultHomeLink} className="font-black text-xl text-fsm-blue flex items-center gap-2.5 group">
+            <Image src="/FSM.png" alt="Escudo Fundación San Mateo" width={36} height={36} className="w-9 h-9 object-contain group-hover:scale-105 transition-transform" />
+            <span>Panel {isAcademicRole ? 'Académico' : 'de Control'}</span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-1 bg-gray-100 p-1 rounded-xl">
