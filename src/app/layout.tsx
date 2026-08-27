@@ -39,27 +39,27 @@ export const metadata: Metadata = {
     canonical: "/"
   },
   openGraph: {
-    title: "Fundación San Mateo | Educación con Excelencia en Soacha",
-    description: "Programas Técnicos Laborales por competencias en Enfermería y Primera Infancia con certificaciones ISO 9001 y NTC en Soacha, Cundinamarca.",
+    title: "Fundación San Mateo | ¡Matrículas Abiertas! Educación Técnica en Soacha",
+    description: "Institución de Educación para el Trabajo y Desarrollo Humano certificada en Calidad ISO 9001 y NTC. Formación en Auxiliar de Enfermería, Primera Infancia y Cursos Certificados de Salud.",
     url: "https://fundacionsanmateosoacha.edu.co",
-    siteName: "Fundación San Mateo",
+    siteName: "Fundación San Mateo Soacha",
     locale: "es_CO",
     type: "website",
     images: [
       {
         url: "https://fundacionsanmateosoacha.edu.co/og-image.png",
         secureUrl: "https://fundacionsanmateosoacha.edu.co/og-image.png",
-        width: 600,
-        height: 600,
+        width: 1200,
+        height: 630,
         type: "image/png",
-        alt: "Escudo Institucional Fundación San Mateo Soacha"
+        alt: "Fundación San Mateo Soacha - Matrículas Abiertas 2026"
       }
     ]
   },
   twitter: {
     card: "summary_large_image",
-    title: "Fundación San Mateo - Formación Técnica en Soacha",
-    description: "Educación de calidad para el desarrollo humano y laboral en Soacha. Enfermería, Primera Infancia y Cursos Especializados.",
+    title: "Fundación San Mateo | ¡Matrículas Abiertas! Educación Técnica en Soacha",
+    description: "Institución para el Trabajo y Desarrollo Humano certificada en Calidad ISO 9001 y NTC. Enfermería, Primera Infancia y Cursos Especializados.",
     images: ["https://fundacionsanmateosoacha.edu.co/og-image.png"]
   },
   robots: {
@@ -83,16 +83,26 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${montserrat.variable} h-full antialiased`}>
       <head>
-        <meta property="og:title" content="Fundación San Mateo | Educación con Excelencia en Soacha" />
-        <meta property="og:description" content="Programas Técnicos Laborales por competencias en Enfermería y Primera Infancia con certificaciones ISO 9001 y NTC en Soacha, Cundinamarca." />
+        <meta property="og:title" content="Fundación San Mateo | ¡Matrículas Abiertas! Educación Técnica en Soacha" />
+        <meta property="og:description" content="Institución de Educación para el Trabajo y Desarrollo Humano certificada en Calidad ISO 9001 y NTC. Formación en Auxiliar de Enfermería, Primera Infancia y Cursos de Salud en Soacha." />
         <meta property="og:image" content="https://fundacionsanmateosoacha.edu.co/og-image.png" />
         <meta property="og:image:secure_url" content="https://fundacionsanmateosoacha.edu.co/og-image.png" />
         <meta property="og:image:type" content="image/png" />
-        <meta property="og:image:width" content="600" />
-        <meta property="og:image:height" content="600" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="Fundación San Mateo Soacha - Matrículas Abiertas 2026" />
         <meta property="og:url" content="https://fundacionsanmateosoacha.edu.co" />
         <meta property="og:type" content="website" />
-        <meta property="og:site_name" content="Fundación San Mateo" />
+        <meta property="og:site_name" content="Fundación San Mateo Soacha" />
+        <meta property="og:locale" content="es_CO" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Fundación San Mateo | ¡Matrículas Abiertas! Educación Técnica en Soacha" />
+        <meta name="twitter:description" content="Institución de Educación para el Trabajo y Desarrollo Humano certificada en Calidad ISO 9001 y NTC en Soacha." />
+        <meta name="twitter:image" content="https://fundacionsanmateosoacha.edu.co/og-image.png" />
+        <meta name="geo.region" content="CO-CUN" />
+        <meta name="geo.placename" content="Soacha, Cundinamarca" />
+        <meta name="geo.position" content="4.5794;-74.2169" />
+        <meta name="ICBM" content="4.5794, -74.2169" />
       </head>
       <body className="font-sans min-h-full flex flex-col overflow-x-hidden">
         {children}
