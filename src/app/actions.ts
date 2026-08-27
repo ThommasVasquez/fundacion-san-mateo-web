@@ -1,6 +1,7 @@
 'use server';
 
 import { cookies } from 'next/headers';
+import { revalidatePath } from 'next/cache';
 import { sql } from '@/lib/db';
 import { encrypt } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
@@ -14,24 +15,31 @@ export async function login(formData: FormData) {
   }
 
   try {
-    const users = await sql`SELECT id, email, password_hash, role FROM admin_users WHERE email = ${email} LIMIT 1`;
+    const users = await sql`SELECT id, nombre, email, password_hash, role, activo, permissions FROM admin_users WHERE email = ${email} LIMIT 1`;
     if (users.length === 0) {
       return { error: 'Credenciales inválidas' };
     }
 
     const user = users[0];
+    if (user.activo === false) {
+      return { error: 'Su usuario se encuentra inactivo. Por favor contacte a la administración.' };
+    }
+
     const passwordMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!passwordMatch) {
       return { error: 'Credenciales inválidas' };
     }
 
-    // Create session payload with user role
+    // Create session payload with user role & permissions
     const userRole = user.role || (user.email === 'sacademica@fundacionsanmateosoacha.edu.co' ? 'academic' : 'admin');
+    const permissions = user.permissions || ['attendance_view', 'attendance_edit', 'students_manage'];
     const sessionToken = await encrypt({ 
       adminId: user.id, 
+      nombre: user.nombre || user.email,
       email: user.email, 
-      role: userRole 
+      role: userRole,
+      permissions
     });
     
     (await cookies()).set('session', sessionToken, {
@@ -1232,6 +1240,134 @@ export async function getPendingAbsenceAlertsCount() {
   } catch (error: any) {
     console.error('Error counting pending absence alerts:', error);
     return { success: false, pendingCount: 0 };
+  }
+}
+
+export async function getAdminUsersAction() {
+  try {
+    const users = await sql`
+      SELECT id, nombre, email, role, activo, permissions, created_at 
+      FROM admin_users 
+      ORDER BY created_at DESC, email ASC
+    `;
+    return users;
+  } catch (error) {
+    console.error('Error fetching admin users:', error);
+    return [];
+  }
+}
+
+export async function createAdminUserAction(formData: FormData) {
+  const nombre = (formData.get('nombre') as string)?.trim();
+  const email = (formData.get('email') as string)?.trim().toLowerCase();
+  const password = formData.get('password') as string;
+  const role = (formData.get('role') as string) || 'admin';
+  const permissionsJson = formData.get('permissions') as string;
+
+  if (!email || !password || !nombre) {
+    return { error: 'El nombre, correo electrónico y contraseña son obligatorios.' };
+  }
+
+  try {
+    const existing = await sql`SELECT id FROM admin_users WHERE email = ${email} LIMIT 1`;
+    if (existing.length > 0) {
+      return { error: 'Ya existe un usuario registrado con este correo electrónico.' };
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const permissions = permissionsJson ? JSON.parse(permissionsJson) : ['attendance_view'];
+
+    await sql`
+      INSERT INTO admin_users (nombre, email, password_hash, role, permissions, activo)
+      VALUES (${nombre}, ${email}, ${passwordHash}, ${role}, ${JSON.stringify(permissions)}::jsonb, true)
+    `;
+
+    revalidatePath('/admin/users');
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error creating admin user:', error);
+    return { error: 'Error al crear el usuario: ' + (error?.message || 'Error de base de datos') };
+  }
+}
+
+export async function updateAdminUserAction(formData: FormData) {
+  const userId = formData.get('userId') as string;
+  const nombre = (formData.get('nombre') as string)?.trim();
+  const email = (formData.get('email') as string)?.trim().toLowerCase();
+  const password = formData.get('password') as string;
+  const role = (formData.get('role') as string) || 'admin';
+  const permissionsJson = formData.get('permissions') as string;
+  const activo = formData.get('activo') === 'true';
+
+  if (!userId || !email || !nombre) {
+    return { error: 'ID de usuario, nombre y correo son obligatorios.' };
+  }
+
+  try {
+    const permissions = permissionsJson ? JSON.parse(permissionsJson) : ['attendance_view'];
+
+    if (password && password.trim().length > 0) {
+      const passwordHash = await bcrypt.hash(password.trim(), 10);
+      await sql`
+        UPDATE admin_users
+        SET 
+          nombre = ${nombre},
+          email = ${email},
+          password_hash = ${passwordHash},
+          role = ${role},
+          permissions = ${JSON.stringify(permissions)}::jsonb,
+          activo = ${activo}
+        WHERE id = ${userId}::uuid
+      `;
+    } else {
+      await sql`
+        UPDATE admin_users
+        SET 
+          nombre = ${nombre},
+          email = ${email},
+          role = ${role},
+          permissions = ${JSON.stringify(permissions)}::jsonb,
+          activo = ${activo}
+        WHERE id = ${userId}::uuid
+      `;
+    }
+
+    revalidatePath('/admin/users');
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error updating admin user:', error);
+    return { error: 'Error al actualizar usuario: ' + (error?.message || 'Error inesperado') };
+  }
+}
+
+export async function toggleAdminUserStatusAction(userId: string, newStatus: boolean) {
+  try {
+    await sql`
+      UPDATE admin_users
+      SET activo = ${newStatus}
+      WHERE id = ${userId}::uuid
+    `;
+    revalidatePath('/admin/users');
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error toggling user status:', error);
+    return { error: error?.message || 'Error al cambiar estado de usuario' };
+  }
+}
+
+export async function deleteAdminUserAction(userId: string) {
+  try {
+    const totalUsers = await sql`SELECT count(*) FROM admin_users`;
+    if (parseInt(totalUsers[0].count, 10) <= 1) {
+      return { error: 'No se puede eliminar el único usuario administrador del sistema.' };
+    }
+
+    await sql`DELETE FROM admin_users WHERE id = ${userId}::uuid`;
+    revalidatePath('/admin/users');
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error deleting admin user:', error);
+    return { error: error?.message || 'Error al eliminar usuario' };
   }
 }
 
