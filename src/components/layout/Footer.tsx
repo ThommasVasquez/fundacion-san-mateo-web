@@ -101,7 +101,16 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           {/* Column 1 */}
           <div>
-            <h4 className="text-xl font-bold mb-6 border-b-2 border-fsm-red w-fit pb-1">Institución</h4>
+            <Link href="/" className="inline-flex items-center gap-3 mb-6 group">
+              <div className="relative w-12 h-12 bg-white/10 p-1.5 rounded-2xl border border-white/10 group-hover:scale-105 transition-transform backdrop-blur-xs shadow-md shrink-0">
+                <Image src="/FSM.png" alt="Fundación San Mateo" fill className="object-contain p-0.5" />
+              </div>
+              <div>
+                <span className="block text-base font-black tracking-tight text-white uppercase leading-tight">Fundación San Mateo</span>
+                <span className="text-[9px] font-bold text-white/60 tracking-wider uppercase">Educación para el Futuro</span>
+              </div>
+            </Link>
+            <h4 className="text-sm font-bold mb-4 border-b-2 border-fsm-red w-fit pb-1 uppercase tracking-wider text-white/90">Institución</h4>
             <ul className="flex flex-col gap-3">
               {footerLinks.institucion.map((link) => (
                 <li key={link.name}>

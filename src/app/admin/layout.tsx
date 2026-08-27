@@ -82,6 +82,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <main className="flex-1 p-8">
         {children}
       </main>
+      <footer className="bg-white border-t border-gray-200 py-4 px-8 text-xs font-medium text-gray-500 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <Image src="/FSM.png" alt="Fundación San Mateo" width={22} height={22} className="w-5 h-5 object-contain" />
+          <span className="font-bold text-gray-700">&copy; {new Date().getFullYear()} Fundación San Mateo • Soacha</span>
+        </div>
+        <div className="flex items-center gap-2 text-[11px] font-semibold text-gray-400">
+          <span>Sistema de Control de Asistencia y Gestión Académica</span>
+        </div>
+      </footer>
     </div>
   );
 }
