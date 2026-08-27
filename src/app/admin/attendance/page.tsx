@@ -60,6 +60,11 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
     return `/admin/attendance?${p.toString()}`;
   };
 
+  const currentHourBogota = parseInt(new Intl.DateTimeFormat('en-US', {
+    timeZone: ZONA_HORARIA, hour: 'numeric', hour12: false
+  }).format(new Date()), 10);
+  const isBeforeNightShift = currentHourBogota < 18;
+
   // Parallel execution of all primary queries
   const [
     totalScansRes,
@@ -104,6 +109,10 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         AND (e.activo IS NULL OR e.activo = TRUE)
         AND cs.fecha >= ${filterStartDate}::date
         AND cs.fecha <= ${filterEndDate}::date
+        AND (
+          cs.fecha < ${todayStr}::date 
+          OR (g.jornada != 'SABADO' AND (g.jornada != 'NOCHE' OR ${!isBeforeNightShift}))
+        )
         ${filterGrado ? sql`AND g.nombre = ${filterGrado}` : sql``}
         ${filterSede ? sql`AND ar.sede = ${filterSede}` : sql``}
     `,
@@ -128,6 +137,10 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         AND (s.estado IS NULL OR UPPER(s.estado) = 'ACTIVO')
         AND cs.fecha >= ${filterStartDate}::date
         AND cs.fecha <= ${filterEndDate}::date
+        AND (
+          cs.fecha < ${todayStr}::date 
+          OR (g.jornada != 'SABADO' AND (g.jornada != 'NOCHE' OR ${!isBeforeNightShift}))
+        )
       ORDER BY cs.fecha DESC, s.nombre_original ASC
     ` : sql`
       SELECT 
