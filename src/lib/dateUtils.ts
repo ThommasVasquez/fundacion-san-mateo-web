@@ -5,14 +5,18 @@
 export function formatDateDDMMYYYY(dateInput: string | Date | null | undefined): string {
   if (!dateInput) return '-';
   try {
-    // Handling YYYY-MM-DD strings without time component to avoid timezone shifting
-    if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
-      const [year, month, day] = dateInput.split('-');
+    const str = dateInput instanceof Date ? dateInput.toISOString() : String(dateInput);
+
+    // 1. Handling YYYY-MM-DD or YYYY-MM-DDT00:00:00... (Pure Calendar Dates)
+    const dateOnlyMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})(?:T00:00:00|\s+00:00:00)?/);
+    if (dateOnlyMatch) {
+      const [, year, month, day] = dateOnlyMatch;
       return `${day}/${month}/${year}`;
     }
 
-    const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
-    if (isNaN(d.getTime())) return String(dateInput);
+    // 2. Handling Timestamps with actual time component
+    const d = new Date(str);
+    if (isNaN(d.getTime())) return str;
 
     const parts = new Intl.DateTimeFormat('es-CO', {
       timeZone: 'America/Bogota',

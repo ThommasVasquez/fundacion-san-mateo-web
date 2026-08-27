@@ -113,7 +113,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         g.nombre as student_grado,
         'manual' as origen,
         'inasistencia' as tipo_evento,
-        cs.fecha as timestamp,
+        cs.fecha::text as timestamp,
         ar.sede,
         ar.observaciones,
         ar.estado,
@@ -278,6 +278,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         SELECT 
           cs.id as session_id,
           cs.fecha,
+          cs.fecha::text as fecha_text,
           cs.dia_semana_texto,
           g.nombre as group_name
         FROM class_sessions cs
@@ -300,7 +301,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
 
       const rfidMap = new Map();
       rfidScans.forEach((ev: any) => {
-        const dStr = new Date(ev.timestamp).toISOString().split('T')[0];
+        const dStr = new Date(ev.timestamp).toLocaleDateString('sv-SE', { timeZone: ZONA_HORARIA });
         if (!rfidMap.has(dStr)) {
           rfidMap.set(dStr, ev);
         }
@@ -320,7 +321,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
       // 4. Synthesize events list
       if (sessions.length > 0) {
         historyEvents = sessions.map((sess: any) => {
-          const fStr = new Date(sess.fecha).toISOString().split('T')[0];
+          const fStr = sess.fecha_text || (typeof sess.fecha === 'string' ? sess.fecha.split('T')[0] : new Date(sess.fecha).toISOString().split('T')[0]);
           const rfid = rfidMap.get(fStr);
           const ov = overrideMap.get(sess.session_id);
 
@@ -328,7 +329,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
           let tipo_evento = 'inasistencia';
           let reader_name = 'Sin marcación de entrada';
           let origen = 'Sistema';
-          let timestamp = `${fStr}T00:00:00.000Z`;
+          let timestamp = fStr;
           let observaciones = '';
           let sede = 'Sede 1';
 
@@ -366,7 +367,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         historyEvents = rfidScans.map((hev: any) => ({
           ...hev,
           estado: 'PRESENTE',
-          fecha: new Date(hev.timestamp).toISOString().split('T')[0]
+          fecha: new Date(hev.timestamp).toLocaleDateString('sv-SE', { timeZone: ZONA_HORARIA })
         }));
       }
     }
