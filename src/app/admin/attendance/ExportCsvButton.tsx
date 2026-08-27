@@ -47,7 +47,14 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
       const tipoEvento = ev.tipo_evento === 'salida' ? 'Salida' : 'Entrada';
       const sede = ev.sede || 'Sede 1';
       const reader = ev.reader_name || ev.reader_id;
-      const origen = ev.origen === 'manual' ? 'Registro Manual Secretaría' : ev.origen === 'movil_profesor' ? 'Móvil Profesor' : 'Panel Fijo';
+      const isAbsence = (ev as any).estado === 'AUSENTE' || ev.tipo_evento === 'inasistencia' || ev.origen === 'sin_marcacion';
+      const origen = isAbsence
+        ? '🚫 Sin marcación'
+        : ev.origen === 'manual'
+        ? 'Registro Manual Secretaría'
+        : ev.origen === 'movil_profesor'
+        ? 'Móvil Profesor'
+        : 'Panel Fijo';
       const observaciones = ev.observaciones || '-';
       const estado = ev.isAnomaly ? `Anomalía (${ev.anomalyReason || 'Revisión'})` : 'Correcto';
       const uid = ev.rfid_tag_uid;

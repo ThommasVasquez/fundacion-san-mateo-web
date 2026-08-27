@@ -123,7 +123,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         ar.student_id,
         s.nombre_original as student_name,
         g.nombre as student_grado,
-        'manual' as origen,
+        'sin_marcacion' as origen,
         'inasistencia' as tipo_evento,
         cs.fecha::text as timestamp,
         ar.sede,
@@ -694,13 +694,21 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                     </td>
                     <td className="py-4 px-6">
                       <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase border ${
-                        ev.origen === 'manual'
+                        ev.estado === 'AUSENTE' || ev.origen === 'sin_marcacion'
+                          ? 'bg-red-50 text-red-700 border-red-200 font-black'
+                          : ev.origen === 'manual'
                           ? 'bg-purple-50 text-purple-700 border-purple-200'
                           : ev.origen === 'movil_profesor'
                           ? 'bg-blue-50 text-blue-700 border-blue-200'
                           : 'bg-gray-50 text-gray-700 border-gray-200'
                       }`}>
-                        {ev.origen === 'manual' ? '✏️ Manual' : ev.origen === 'movil_profesor' ? '📱 Móvil' : '🖥️ Panel Fijo'}
+                        {ev.estado === 'AUSENTE' || ev.origen === 'sin_marcacion'
+                          ? '🚫 Sin Marcación'
+                          : ev.origen === 'manual'
+                          ? '✏️ Manual'
+                          : ev.origen === 'movil_profesor'
+                          ? '📱 Móvil'
+                          : '🖥️ Panel Fijo'}
                       </span>
                     </td>
                     <td className="py-4 px-6 font-medium text-gray-600">
