@@ -35,14 +35,19 @@ export default function ManualAttendanceModal({ students }: ManualAttendanceModa
 
   const handleMarkAttendance = async (student: StudentItem, tipoEvento: 'entrada' | 'salida') => {
     setLoading(prev => ({ ...prev, [student.id]: true }));
-    const res = await recordManualAttendance(student.id, tipoEvento, selectedSede, observaciones);
-    setLoading(prev => ({ ...prev, [student.id]: false }));
-
-    if (res.success) {
-      showStatus(`✓ ${tipoEvento === 'salida' ? 'Salida' : 'Entrada'} marcada correctamente para ${student.nombre} (${student.grado}) en ${selectedSede}.`);
-      router.refresh();
-    } else {
-      showStatus(res.error || 'Error al registrar asistencia', 'error');
+    try {
+      const res = await recordManualAttendance(student.id, tipoEvento, selectedSede, observaciones);
+      if (res && res.success) {
+        showStatus(`✓ ${tipoEvento === 'salida' ? 'Salida' : 'Entrada'} marcada correctamente para ${student.nombre} (${student.grado}) en ${selectedSede}.`);
+        router.refresh();
+      } else {
+        showStatus(res?.error || 'Error al registrar asistencia', 'error');
+      }
+    } catch (err: any) {
+      console.error('Manual attendance error:', err);
+      showStatus('Error de comunicación con el servidor. Por favor intenta de nuevo.', 'error');
+    } finally {
+      setLoading(prev => ({ ...prev, [student.id]: false }));
     }
   };
 

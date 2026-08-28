@@ -813,6 +813,10 @@ export async function recordManualAttendance(
   observaciones: string = ''
 ) {
   try {
+    if (!studentId) {
+      return { error: 'ID de estudiante no proporcionado' };
+    }
+
     let student: any = null;
 
     const normRes = await sql`
@@ -852,13 +856,18 @@ export async function recordManualAttendance(
     }
 
     if (!student) {
-      return { error: 'Usuario no encontrado' };
+      return { error: 'Usuario no encontrado en la base de datos' };
+    }
+
+    const targetUuid = student.id || student.student_id;
+    if (!targetUuid) {
+      return { error: 'ID de estudiante no válido' };
     }
 
     // Check duplicate manual entry within 5 seconds
     const recent = await sql`
       SELECT id FROM attendance_events
-      WHERE (student_id = ${student.id}::uuid OR student_id = ${student.student_id}::uuid)
+      WHERE student_id = ${targetUuid}::uuid
         AND tipo_evento = ${tipoEvento}
         AND timestamp > NOW() - INTERVAL '5 seconds'
       LIMIT 1
@@ -876,7 +885,7 @@ export async function recordManualAttendance(
       INSERT INTO attendance_events (
         student_id, rfid_tag_uid, reader_id, tipo_evento, timestamp, origen, sincronizado, sede, observaciones
       ) VALUES (
-        ${student.id}::uuid, ${tagUid}, 'manual-web', ${tipoEvento}, CURRENT_TIMESTAMP, 'manual', true, ${cleanSede}, ${cleanObs}
+        ${targetUuid}::uuid, ${tagUid}, 'manual-web', ${tipoEvento}, CURRENT_TIMESTAMP, 'manual', true, ${cleanSede}, ${cleanObs}
       )
     `;
 
