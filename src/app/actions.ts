@@ -1462,3 +1462,153 @@ export async function deleteAdminUserAction(userId: string) {
   }
 }
 
+/**
+ * Updates or creates a single student attendance record in a class session
+ */
+export async function updateCellAttendanceAction(
+  studentId: string,
+  sessionId: string,
+  estado: string,
+  observaciones: string = ''
+) {
+  try {
+    if (!studentId || !sessionId || !estado) {
+      return { error: 'Parámetros incompletos' };
+    }
+
+    const cleanObs = observaciones?.trim() || null;
+    const cleanEstado = estado.trim().toUpperCase();
+
+    await sql`
+      INSERT INTO attendance_records_normalized (
+        student_id, session_id, estado, fuente, observaciones, sede
+      ) VALUES (
+        ${studentId}::uuid, ${sessionId}::uuid, ${cleanEstado}, 'MANUAL', ${cleanObs}, 'Sede 1'
+      )
+      ON CONFLICT (student_id, session_id) DO UPDATE 
+      SET estado = EXCLUDED.estado, observaciones = EXCLUDED.observaciones, updated_at = CURRENT_TIMESTAMP
+    `;
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error updating cell attendance:', error);
+    return { error: error?.message || 'Error al actualizar registro de asistencia' };
+  }
+}
+
+/**
+ * Bulk updates an entire group session on a given date (or creates session if missing)
+ */
+export async function bulkUpdateGroupSessionStateAction(
+  groupId: string,
+  fechaStr: string,
+  estado: string,
+  observaciones: string = ''
+) {
+  try {
+    if (!groupId || !fechaStr || !estado) {
+      return { error: 'Parámetros incompletos' };
+    }
+
+    const cleanEstado = estado.trim().toUpperCase();
+    const cleanObs = observaciones?.trim() || null;
+
+    // 1. Ensure class session exists
+    let sessionId: string | null = null;
+    const existingSession = await sql`
+      SELECT id FROM class_sessions 
+      WHERE group_id = ${groupId}::uuid AND fecha = ${fechaStr}::date 
+      LIMIT 1
+    `;
+
+    if (existingSession.length > 0) {
+      sessionId = existingSession[0].id;
+    } else {
+      const dateObj = new Date(fechaStr + 'T12:00:00Z');
+      const dias = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
+      const diaTexto = dias[dateObj.getUTCDay()];
+
+      const newSession = await sql`
+        INSERT INTO class_sessions (group_id, fecha, dia_semana_texto, dia_semana_calculado, activa)
+        VALUES (${groupId}::uuid, ${fechaStr}::date, ${diaTexto}, ${diaTexto}, TRUE)
+        RETURNING id
+      `;
+      sessionId = newSession[0].id;
+    }
+
+    // 2. Fetch all active enrolled students in this group
+    const enrolledStudents = await sql`
+      SELECT s.id 
+      FROM students_normalized s
+      JOIN enrollments e ON e.student_id = s.id
+      WHERE e.group_id = ${groupId}::uuid
+        AND (e.activo IS NULL OR e.activo = TRUE)
+        AND (s.estado IS NULL OR UPPER(s.estado) = 'ACTIVO')
+    `;
+
+    if (enrolledStudents.length === 0) {
+      return { success: true, count: 0, message: 'No hay estudiantes matriculados en este grupo.' };
+    }
+
+    // 3. Update / Insert attendance record for each student
+    for (const st of enrolledStudents) {
+      await sql`
+        INSERT INTO attendance_records_normalized (
+          student_id, session_id, estado, fuente, observaciones, sede
+        ) VALUES (
+          ${st.id}::uuid, ${sessionId}::uuid, ${cleanEstado}, 'MASIVO', ${cleanObs}, 'Sede 1'
+        )
+        ON CONFLICT (student_id, session_id) DO UPDATE 
+        SET estado = EXCLUDED.estado, observaciones = EXCLUDED.observaciones, updated_at = CURRENT_TIMESTAMP
+      `;
+    }
+
+    revalidatePath(`/admin/attendance/group/${groupId}`);
+    return { success: true, count: enrolledStudents.length };
+  } catch (error: any) {
+    console.error('Error bulk updating group session state:', error);
+    return { error: error?.message || 'Error al aplicar cambio masivo al grupo' };
+  }
+}
+
+/**
+ * Bulk updates an entire group across a range of dates (e.g. Practicas, Vacaciones, etc.)
+ */
+export async function bulkUpdateDateRangeGroupStateAction(
+  groupId: string,
+  startDateStr: string,
+  endDateStr: string,
+  estado: string,
+  observaciones: string = ''
+) {
+  try {
+    if (!groupId || !startDateStr || !endDateStr || !estado) {
+      return { error: 'Fechas o parámetros incompletos' };
+    }
+
+    const start = new Date(startDateStr + 'T00:00:00Z');
+    const end = new Date(endDateStr + 'T00:00:00Z');
+
+    if (start > end) {
+      return { error: 'La fecha inicial no puede ser posterior a la fecha final' };
+    }
+
+    let processedDays = 0;
+    const current = new Date(start);
+
+    while (current <= end) {
+      const curDateStr = current.toISOString().split('T')[0];
+      await bulkUpdateGroupSessionStateAction(groupId, curDateStr, estado, observaciones);
+      processedDays++;
+      current.setUTCDate(current.getUTCDate() + 1);
+    }
+
+    revalidatePath(`/admin/attendance/group/${groupId}`);
+    return { success: true, daysCount: processedDays };
+  } catch (error: any) {
+    console.error('Error in bulk date range update:', error);
+    return { error: error?.message || 'Error al procesar rango de fechas' };
+  }
+}
+
+
