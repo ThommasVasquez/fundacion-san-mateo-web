@@ -8,6 +8,7 @@ import {
 import RefreshButton from './RefreshButton';
 import ExportCsvButton from './ExportCsvButton';
 import ManualAttendanceModal from './ManualAttendanceModal';
+import AttendanceFilters from './AttendanceFilters';
 import { getPendingAbsenceAlertsCount } from '@/app/actions';
 import { formatDateDDMMYYYY } from '@/lib/dateUtils';
 
@@ -530,142 +531,22 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         </div>
       </div>
 
-      {/* Advanced Filters Form */}
-      <form method="GET" className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-premium space-y-4">
-        {/* Row 1: Main Search, Date Range & Refresh */}
-        <div className="flex flex-wrap gap-4 items-center justify-between border-b border-gray-100 pb-4">
-          {/* Search Input */}
-          <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100 flex-1 min-w-[280px]">
-            <Search size={16} className="text-gray-400" />
-            <input 
-              type="text" 
-              name="search"
-              placeholder="Buscar estudiante, UID o lector..."
-              defaultValue={filterSearch}
-              className="bg-transparent font-bold text-xs text-gray-700 outline-none w-full" 
-            />
-          </div>
-
-          {/* Date Range: Start Date */}
-          <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100">
-            <Calendar size={16} className="text-gray-400" />
-            <span className="text-[10px] font-black uppercase text-gray-400">Desde:</span>
-            <input 
-              type="date" 
-              name="startDate"
-              defaultValue={filterStartDate}
-              className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none" 
-            />
-          </div>
-
-          {/* Date Range: End Date */}
-          <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100">
-            <Calendar size={16} className="text-gray-400" />
-            <span className="text-[10px] font-black uppercase text-gray-400">Hasta:</span>
-            <input 
-              type="date" 
-              name="endDate"
-              defaultValue={filterEndDate}
-              className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none" 
-            />
-          </div>
-
-          {/* Quick Filter: Solo Hoy */}
-          <Link
-            href={buildFilterUrl({ startDate: todayStr, endDate: todayStr })}
-            className={`px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider border transition-all flex items-center gap-1.5 shrink-0 ${
-              filterStartDate === todayStr && filterEndDate === todayStr
-                ? 'bg-fsm-blue text-white border-fsm-blue shadow-sm'
-                : 'bg-blue-50/60 text-fsm-blue border-blue-200 hover:bg-fsm-blue hover:text-white'
-            }`}
-          >
-            <Calendar size={14} />
-            <span>📅 Solo Hoy</span>
-          </Link>
-
-          <RefreshButton />
-        </div>
-
-        {/* Row 2: Selectors & Special Filters */}
-        <div className="flex flex-wrap gap-4 items-center justify-between">
-          <div className="flex flex-wrap gap-4 items-center">
-            {/* Sede Selector */}
-            <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100">
-              <span className="text-[10px] font-black uppercase text-gray-400">Sede:</span>
-              <select 
-                name="sede"
-                defaultValue={filterSede}
-                className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none cursor-pointer"
-              >
-                <option value="">Todas las Sedes</option>
-                <option value="Sede 1">Sede 1</option>
-                <option value="Sede 2">Sede 2</option>
-              </select>
-            </div>
-
-            {/* Grade Selector */}
-            <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100">
-              <Filter size={16} className="text-gray-400" />
-              <select 
-                name="grado"
-                defaultValue={filterGrado}
-                className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none cursor-pointer"
-              >
-                <option value="">Todos los Grados / Turnos</option>
-                {grades.map((g: string) => (
-                  <option key={g} value={g}>{g}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Sort Order Selector */}
-            <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100">
-              <ArrowUpDown size={16} className="text-gray-400" />
-              <select 
-                name="sort"
-                defaultValue={filterSort}
-                className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none cursor-pointer"
-              >
-                <option value="time_desc">Hora (Más reciente)</option>
-                <option value="time_asc">Hora (Más antiguo)</option>
-                <option value="name_asc">Nombre (A - Z)</option>
-                <option value="name_desc">Nombre (Z - A)</option>
-                <option value="grado_asc">Grado (A - Z)</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Anomaly Checkbox */}
-            <label className={`flex items-center gap-2 cursor-pointer font-bold text-xs uppercase select-none px-3.5 py-2 rounded-xl border transition-all ${
-              filterAnomalyOnly ? 'bg-amber-100 text-amber-900 border-amber-300 shadow-sm font-black' : 'bg-gray-50 text-gray-700 border-gray-100 hover:bg-gray-100'
-            }`}>
-              <input 
-                type="checkbox" 
-                name="anomalyOnly"
-                value="true"
-                defaultChecked={filterAnomalyOnly}
-                className="w-4 h-4 rounded border-gray-300 text-fsm-red focus:ring-fsm-red" 
-              />
-              <span>Solo Sin Asignar ({totalAnomalies})</span>
-            </label>
-
-            {/* Absences Only Checkbox */}
-            <label className={`flex items-center gap-2 cursor-pointer font-bold text-xs uppercase select-none px-3.5 py-2 rounded-xl border transition-all ${
-              filterAbsencesOnly ? 'bg-red-100 text-fsm-red border-red-300 shadow-sm font-black' : 'bg-gray-50 text-gray-700 border-gray-100 hover:bg-gray-100'
-            }`}>
-              <input 
-                type="checkbox" 
-                name="absencesOnly"
-                value="true"
-                defaultChecked={filterAbsencesOnly}
-                className="w-4 h-4 rounded border-red-300 text-fsm-red focus:ring-fsm-red" 
-              />
-              <span>❌ Solo Inasistencias ({filterAbsencesOnly ? filteredEvents.length : totalRealAbsencesCount})</span>
-            </label>
-          </div>
-        </div>
-      </form>
+      {/* Interactive Filters with Instant Auto-Apply */}
+      <AttendanceFilters 
+        filterSearch={filterSearch}
+        filterStartDate={filterStartDate}
+        filterEndDate={filterEndDate}
+        filterSede={filterSede}
+        filterGrado={filterGrado}
+        filterSort={filterSort}
+        filterAnomalyOnly={filterAnomalyOnly}
+        filterAbsencesOnly={filterAbsencesOnly}
+        todayStr={todayStr}
+        grades={grades}
+        totalAnomalies={totalAnomalies}
+        totalRealAbsencesCount={totalRealAbsencesCount}
+        absencesListLength={filteredEvents.length}
+      />
 
       {/* Attendance Grid */}
       <div className="bg-white rounded-[2rem] border border-gray-100 shadow-premium overflow-hidden">
