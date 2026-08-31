@@ -3,7 +3,7 @@
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { sql } from '@/lib/db';
-import { encrypt } from '@/lib/auth';
+import { encrypt, decrypt } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
 export async function login(formData: FormData) {
@@ -1462,6 +1462,24 @@ export async function deleteAdminUserAction(userId: string) {
   }
 }
 
+async function checkIsAdminFull(): Promise<{ isAdmin: boolean; email: string }> {
+  try {
+    const cookieStore = await cookies();
+    const session = cookieStore.get('session')?.value;
+    if (!session) return { isAdmin: false, email: '' };
+    const payload = await decrypt(session);
+    const email = (payload?.email || '').toLowerCase().trim();
+    const isAdmin = (
+      email === 'admin@fundacionsanmateo.edu.co' || 
+      email === 'admin@fundacionsanmateosoacha.edu.co' ||
+      payload?.role === 'admin'
+    );
+    return { isAdmin, email };
+  } catch {
+    return { isAdmin: false, email: '' };
+  }
+}
+
 /**
  * Updates or creates a single student attendance record in a class session
  */
@@ -1476,8 +1494,16 @@ export async function updateCellAttendanceAction(
       return { error: 'Parámetros incompletos' };
     }
 
-    const cleanObs = observaciones?.trim() || null;
+    const { isAdmin } = await checkIsAdminFull();
     const cleanEstado = estado.trim().toUpperCase();
+    const cleanObs = observaciones?.trim() || null;
+
+    // Permissions: Non-admins can only submit EXCUSA_MEDICA
+    if (!isAdmin && cleanEstado !== 'EXCUSA_MEDICA') {
+      return { 
+        error: 'Permiso denegado: Solo el Administrador General (admin@fundacionsanmateo.edu.co) puede modificar la asistencia general. Tú puedes registrar excusas médicas.' 
+      };
+    }
 
     await sql`
       INSERT INTO attendance_records_normalized (
@@ -1508,6 +1534,13 @@ export async function bulkUpdateGroupSessionStateAction(
   try {
     if (!groupId || !fechaStr || !estado) {
       return { error: 'Parámetros incompletos' };
+    }
+
+    const { isAdmin } = await checkIsAdminFull();
+    if (!isAdmin) {
+      return { 
+        error: 'Permiso denegado: El marcado masivo está reservado exclusivamente para el Administrador General (admin@fundacionsanmateo.edu.co).' 
+      };
     }
 
     const cleanEstado = estado.trim().toUpperCase();
@@ -1586,6 +1619,13 @@ export async function bulkUpdateDateRangeGroupStateAction(
       return { error: 'Fechas o parámetros incompletos' };
     }
 
+    const { isAdmin } = await checkIsAdminFull();
+    if (!isAdmin) {
+      return { 
+        error: 'Permiso denegado: El marcado masivo está reservado exclusivamente para el Administrador General (admin@fundacionsanmateo.edu.co).' 
+      };
+    }
+
     const start = new Date(startDateStr + 'T00:00:00Z');
     const end = new Date(endDateStr + 'T00:00:00Z');
 
@@ -1610,5 +1650,6 @@ export async function bulkUpdateDateRangeGroupStateAction(
     return { error: error?.message || 'Error al procesar rango de fechas' };
   }
 }
+
 
 

@@ -4,7 +4,7 @@ import React, { useState, useTransition } from 'react';
 import { 
   Calendar, Users, Download, Plus, CheckCircle2, XCircle, 
   Sparkles, Layers, Filter, Clock, Check, AlertCircle, RefreshCw,
-  FileSpreadsheet
+  FileSpreadsheet, ShieldCheck, Lock, FileText
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { 
@@ -44,6 +44,8 @@ interface GroupAttendanceMatrixProps {
   students: StudentData[];
   sessions: SessionData[];
   records: MatrixRecord[];
+  canModifyAll: boolean;
+  currentUserEmail?: string;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; short: string; bg: string; text: string; border: string }> = {
@@ -65,6 +67,8 @@ export default function GroupAttendanceMatrix({
   students,
   sessions,
   records: initialRecords,
+  canModifyAll,
+  currentUserEmail = '',
 }: GroupAttendanceMatrixProps) {
   const [records, setRecords] = useState<Record<string, { estado: string; observaciones?: string }>>(() => {
     const map: Record<string, { estado: string; observaciones?: string }> = {};
@@ -75,7 +79,16 @@ export default function GroupAttendanceMatrix({
   });
 
   const [isPending, startTransition] = useTransition();
-  const [selectedCell, setSelectedCell] = useState<{ studentId: string; sessionId: string; currentEstado: string; studentName: string; fechaStr: string } | null>(null);
+  const [selectedCell, setSelectedCell] = useState<{ 
+    studentId: string; 
+    sessionId: string; 
+    currentEstado: string; 
+    studentName: string; 
+    fechaStr: string;
+    observaciones?: string;
+  } | null>(null);
+
+  const [excuseObs, setExcuseObs] = useState('');
   
   // Bulk modal state
   const [showBulkModal, setShowBulkModal] = useState(false);
@@ -89,14 +102,29 @@ export default function GroupAttendanceMatrix({
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setNotification({ msg, type });
-    setTimeout(() => setNotification(null), 4000);
+    setTimeout(() => setNotification(null), 4500);
   };
 
-  // Quick cycle state on click
+  // Cell click handler
   const handleCellClick = async (studentId: string, sessionId: string, studentName: string, fechaStr: string) => {
     const current = records[`${studentId}_${sessionId}`]?.estado || 'PRESENTE';
-    
-    // Cycle: PRESENTE -> AUSENTE -> EXCUSA_MEDICA -> PRESENTE
+    const currentObs = records[`${studentId}_${sessionId}`]?.observaciones || '';
+
+    if (!canModifyAll) {
+      // Non-admins open the Excusa Médica modal
+      setExcuseObs(currentObs);
+      setSelectedCell({
+        studentId,
+        sessionId,
+        currentEstado: current,
+        studentName,
+        fechaStr,
+        observaciones: currentObs,
+      });
+      return;
+    }
+
+    // Admin cycle: PRESENTE -> AUSENTE -> EXCUSA_MEDICA -> PRESENTE
     let nextState = 'AUSENTE';
     if (current === 'AUSENTE') nextState = 'EXCUSA_MEDICA';
     else if (current === 'EXCUSA_MEDICA') nextState = 'PRESENTE';
@@ -118,29 +146,34 @@ export default function GroupAttendanceMatrix({
   };
 
   // Handle direct state selection from cell popover
-  const handleSelectState = async (newState: string) => {
+  const handleSelectState = async (newState: string, customObs: string = '') => {
     if (!selectedCell) return;
     const { studentId, sessionId } = selectedCell;
 
     setRecords(prev => ({
       ...prev,
-      [`${studentId}_${sessionId}`]: { estado: newState }
+      [`${studentId}_${sessionId}`]: { estado: newState, observaciones: customObs }
     }));
     setSelectedCell(null);
 
     startTransition(async () => {
-      const res = await updateCellAttendanceAction(studentId, sessionId, newState);
+      const res = await updateCellAttendanceAction(studentId, sessionId, newState, customObs);
       if (res.success) {
-        showToast('✓ Registro actualizado');
+        showToast('✓ Registro actualizado correctamente');
       } else {
         showToast(res.error || 'Error al actualizar', 'error');
       }
     });
   };
 
-  // Apply bulk update
+  // Apply bulk update (Admin only)
   const handleApplyBulk = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canModifyAll) {
+      showToast('Permiso denegado: Acción reservada para admin@fundacionsanmateo.edu.co', 'error');
+      return;
+    }
+
     setShowBulkModal(false);
 
     startTransition(async () => {
@@ -166,14 +199,12 @@ export default function GroupAttendanceMatrix({
 
   // Export Matrix to Excel (XLSX) in official institutional layout
   const handleExportXLSX = () => {
-    // 1. Headers: Dates
     const headerRow1 = ['#', 'DOCUMENTO', 'ESTUDIANTE / ALUMNO'];
     sessions.forEach(s => {
       headerRow1.push(formatDateDDMMYYYY(s.fecha));
     });
     headerRow1.push('TOTAL FALLAS', '% ASISTENCIA');
 
-    // 2. Data rows
     const dataRows = students.map((st, idx) => {
       let totalAbsents = 0;
       let totalLectivos = 0;
@@ -225,33 +256,73 @@ export default function GroupAttendanceMatrix({
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Matriz_Asistencia');
     XLSX.writeFile(workbook, `Matriz_Asistencia_${groupName.replace(/\s+/g, '_')}.xlsx`);
-    showToast('✓ Archivo Excel generado y descargado');
+    showToast('✓ Archivo Excel generado y descargado con éxito');
   };
 
   return (
     <div className="space-y-6">
+      {/* Role & Permissions Banner */}
+      <div className={`p-4 rounded-3xl border text-xs flex items-center justify-between gap-3 ${
+        canModifyAll 
+          ? 'bg-amber-50/80 border-amber-200 text-amber-950'
+          : 'bg-blue-50/80 border-blue-200 text-blue-950'
+      }`}>
+        <div className="flex items-center gap-2.5 font-bold">
+          {canModifyAll ? (
+            <ShieldCheck size={20} className="text-amber-700 shrink-0" />
+          ) : (
+            <Lock size={20} className="text-blue-700 shrink-0" />
+          )}
+          <div>
+            <p className="font-black text-xs uppercase tracking-wide">
+              {canModifyAll 
+                ? 'Perfil Administrador General Activo' 
+                : 'Perfil Funcionario / Docente (Solo Excusas Médicas)'}
+            </p>
+            <p className="text-[11px] opacity-80 font-normal">
+              {canModifyAll 
+                ? 'Tienes autorización total para modificar asistencias, inasistencias y ejecutar marcado masivo en este grupo.'
+                : 'La modificación directa de asistencias está reservada para admin@fundacionsanmateo.edu.co. Tú puedes cargar y justificar excusas médicas.'}
+            </p>
+          </div>
+        </div>
+        <div className="text-[10px] font-black uppercase tracking-wider bg-white/80 px-3 py-1.5 rounded-xl border border-gray-200/60 shrink-0">
+          {currentUserEmail || 'Usuario Actual'}
+        </div>
+      </div>
+
       {/* Action Bar */}
       <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-black text-fsm-blue uppercase tracking-tight flex items-center gap-2">
             <Layers size={22} className="text-fsm-blue" />
-            Planilla de Asistencia Semestral
+            Planilla Semestral Cotejada
           </h2>
           <p className="text-xs text-gray-500 font-medium mt-0.5">
-            Haz clic en cualquier celda para alternar el estado (Presente ➔ Ausente ➔ Excusa) o utiliza el marcado masivo.
+            Cotejada con los registros físicos en tiempo real de torniquetes y paneles de acceso.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {/* Bulk Update Button */}
-          <button
-            type="button"
-            onClick={() => setShowBulkModal(true)}
-            className="px-4 py-2.5 bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-600 hover:text-white rounded-2xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm"
-          >
-            <Sparkles size={16} />
-            Marcado Masivo (Festivo / Prácticas)
-          </button>
+          {/* Bulk Update Button (Admin Only) */}
+          {canModifyAll ? (
+            <button
+              type="button"
+              onClick={() => setShowBulkModal(true)}
+              className="px-4 py-2.5 bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-600 hover:text-white rounded-2xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm"
+            >
+              <Sparkles size={16} />
+              Marcado Masivo (Festivo / Prácticas)
+            </button>
+          ) : (
+            <div 
+              title="El marcado masivo está reservado para admin@fundacionsanmateo.edu.co"
+              className="px-4 py-2.5 bg-gray-100 text-gray-400 border border-gray-200 rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center gap-2 cursor-not-allowed select-none"
+            >
+              <Lock size={14} />
+              Marcado Masivo (Restringido)
+            </div>
+          )}
 
           {/* Export to Excel */}
           <button
@@ -365,15 +436,17 @@ export default function GroupAttendanceMatrix({
                           onClick={() => handleCellClick(st.id, s.id, st.nombre_original, s.fecha)}
                           onContextMenu={(e) => {
                             e.preventDefault();
+                            setExcuseObs(record?.observaciones || '');
                             setSelectedCell({
                               studentId: st.id,
                               sessionId: s.id,
                               currentEstado: estado,
                               studentName: st.nombre_original,
-                              fechaStr: s.fecha
+                              fechaStr: s.fecha,
+                              observaciones: record?.observaciones,
                             });
                           }}
-                          title={`${st.nombre_original} - ${formatDateDDMMYYYY(s.fecha)}: ${cfg.label} (Clic para alternar, Clic derecho para selector)`}
+                          title={`${st.nombre_original} - ${formatDateDDMMYYYY(s.fecha)}: ${cfg.label} ${record?.observaciones ? `(${record.observaciones})` : ''} ${!canModifyAll ? '• Clic para agregar excusa médica' : '• Clic para alternar'}`}
                         >
                           <div className={`w-full py-2 rounded-lg border font-black text-xs transition-all ${cfg.bg} ${cfg.text} ${cfg.border} shadow-2xs hover:scale-105 active:scale-95`}>
                             {cfg.short}
@@ -399,43 +472,87 @@ export default function GroupAttendanceMatrix({
         </div>
       </div>
 
-      {/* Cell Detail / Direct Selector Modal */}
+      {/* Cell Detail / Selector Modal */}
       {selectedCell && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-gray-100 space-y-4 animate-scale-up">
             <div className="border-b border-gray-100 pb-3">
-              <h3 className="text-sm font-black text-fsm-blue uppercase">Cambiar Estado de Asistencia</h3>
-              <p className="text-xs text-gray-500 font-bold mt-0.5">{selectedCell.studentName}</p>
+              <h3 className="text-sm font-black text-fsm-blue uppercase">
+                {canModifyAll ? 'Modificar Asistencia' : 'Registrar Excusa Médica'}
+              </h3>
+              <p className="text-xs text-gray-800 font-bold mt-0.5">{selectedCell.studentName}</p>
               <p className="text-[11px] text-gray-400">Fecha: {formatDateDDMMYYYY(selectedCell.fechaStr)}</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => handleSelectState(key)}
-                  className={`p-3 rounded-xl border text-xs font-bold text-left transition-all ${cfg.bg} ${cfg.text} ${cfg.border} flex items-center justify-between hover:ring-2 hover:ring-fsm-blue`}
-                >
-                  <span>{cfg.label}</span>
-                  <span className="font-black text-xs">{cfg.short}</span>
-                </button>
-              ))}
-            </div>
+            {canModifyAll ? (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => handleSelectState(key, excuseObs)}
+                      className={`p-3 rounded-xl border text-xs font-bold text-left transition-all ${cfg.bg} ${cfg.text} ${cfg.border} flex items-center justify-between hover:ring-2 hover:ring-fsm-blue`}
+                    >
+                      <span>{cfg.label}</span>
+                      <span className="font-black text-xs">{cfg.short}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Observaciones / Justificación</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Incapacidad médica, calamidad..."
+                    value={excuseObs}
+                    onChange={(e) => setExcuseObs(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-800 outline-none focus:border-fsm-blue"
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="space-y-3">
+                <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-teal-900 text-xs font-medium">
+                  Estás registrando una <strong>Excusa Médica</strong> para este día.
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-500 block mb-1">Detalle de la Excusa / Incapacidad *</label>
+                  <textarea
+                    rows={3}
+                    placeholder="Número de incapacidad EPS, motivo médico o justificación formal..."
+                    value={excuseObs}
+                    onChange={(e) => setExcuseObs(e.target.value)}
+                    required
+                    className="w-full p-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-800 outline-none focus:border-fsm-blue resize-none"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectState('EXCUSA_MEDICA', excuseObs)}
+                    disabled={isPending}
+                    className="w-full py-2.5 bg-teal-600 text-white rounded-xl font-bold text-xs uppercase hover:bg-teal-700 transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                  >
+                    <FileText size={14} /> Guardar Excusa Médica
+                  </button>
+                </div>
+              </div>
+            )}
 
             <button
               type="button"
               onClick={() => setSelectedCell(null)}
               className="w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs uppercase hover:bg-gray-200 transition-all"
             >
-              Cancelar
+              Cerrar
             </button>
           </div>
         </div>
       )}
 
-      {/* Bulk Update Modal */}
-      {showBulkModal && (
+      {/* Bulk Update Modal (Admin Only) */}
+      {showBulkModal && canModifyAll && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <form onSubmit={handleApplyBulk} className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-gray-100 space-y-4 animate-scale-up">
             <div className="border-b border-gray-100 pb-3">
