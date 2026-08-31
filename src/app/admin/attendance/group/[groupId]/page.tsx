@@ -29,7 +29,7 @@ export default async function GroupAttendancePage({
 
   // 2. Query enrolled students in group
   const studentsQuery = await sql`
-    SELECT s.id, s.nombre_original, s.documento_identidad as documento, s.estado
+    SELECT s.id, s.nombre_original, s.documento as documento, s.estado
     FROM students_normalized s
     JOIN enrollments e ON e.student_id = s.id
     WHERE e.group_id = ${groupId}::uuid
