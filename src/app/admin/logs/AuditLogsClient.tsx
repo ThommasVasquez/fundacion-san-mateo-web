@@ -159,6 +159,32 @@ export default function AuditLogsClient({
     });
   };
 
+  const handleSoloHoy = () => {
+    const today = new Date().toISOString().split('T')[0];
+    setStartDate(today);
+    setEndDate(today);
+    startTransition(async () => {
+      const res = await getAuditLogsAction({
+        page: 1,
+        limit,
+        userEmail: userEmailFilter,
+        category: categoryFilter,
+        action: actionFilter,
+        startDate: today,
+        endDate: today,
+        search: searchQuery
+      });
+      if (res.success && res.logs) {
+        setLogs(res.logs);
+        setTotal(res.total || 0);
+        setPage(1);
+        if (res.stats) setStats(res.stats);
+      }
+    });
+  };
+
+  const isSoloHoyActive = Boolean(startDate && endDate && startDate === endDate && startDate === new Date().toISOString().split('T')[0]);
+
   const handleCopyIp = (ip: string) => {
     navigator.clipboard.writeText(ip);
     setCopiedIp(ip);
@@ -340,26 +366,48 @@ export default function AuditLogsClient({
             />
           </div>
 
-          {/* Text Search & Submit */}
+          {/* Text Search */}
           <div>
             <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Buscar Detalle / IP</label>
-            <div className="flex gap-2">
+            <div className="relative">
               <input
                 type="text"
                 placeholder="Ej. IP, alumno, excusa..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none focus:border-fsm-blue"
+                className="w-full pl-8 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none focus:border-fsm-blue"
               />
-              <button
-                type="submit"
-                disabled={isPending}
-                className="px-4 py-2.5 bg-fsm-blue hover:bg-fsm-red text-white rounded-xl font-bold text-xs uppercase transition-all shrink-0 flex items-center justify-center"
-              >
-                <Search size={14} />
-              </button>
+              <Search size={14} className="absolute left-2.5 top-3 text-gray-400" />
             </div>
           </div>
+        </div>
+
+        {/* Action Row matching attendance filters */}
+        <div className="flex flex-wrap items-center justify-end gap-3 pt-2 border-t border-gray-100">
+          {/* Solo Hoy Button */}
+          <button
+            type="button"
+            onClick={handleSoloHoy}
+            className={`px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider border transition-all flex items-center gap-1.5 shrink-0 ${
+              isSoloHoyActive
+                ? 'bg-fsm-blue text-white border-fsm-blue shadow-sm'
+                : 'bg-blue-50/60 text-fsm-blue border-blue-200 hover:bg-fsm-blue hover:text-white'
+            }`}
+          >
+            <Calendar size={14} />
+            <span>📅 Solo Hoy</span>
+          </button>
+
+          {/* Refresh / Update Button */}
+          <button
+            type="submit"
+            disabled={isPending}
+            aria-busy={isPending}
+            className="px-6 py-2.5 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all flex items-center gap-2 disabled:cursor-wait disabled:hover:bg-fsm-blue shadow-sm shrink-0"
+          >
+            <RefreshCw size={14} className={isPending ? 'animate-spin' : ''} />
+            Actualizar
+          </button>
         </div>
       </form>
 
