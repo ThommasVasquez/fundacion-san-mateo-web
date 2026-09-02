@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useTransition } from 'react';
+import React, { useState, useTransition, useMemo } from 'react';
 import { 
   Calendar, Users, Download, Plus, CheckCircle2, XCircle, 
   Sparkles, Layers, Filter, Clock, Check, AlertCircle, RefreshCw,
-  FileSpreadsheet, ShieldCheck, Lock, FileText
+  FileSpreadsheet, ShieldCheck, Lock, FileText, Search, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { 
@@ -48,6 +48,12 @@ interface GroupAttendanceMatrixProps {
   currentUserEmail?: string;
 }
 
+const MONTH_NAMES: Record<string, string> = {
+  '01': 'Enero', '02': 'Febrero', '03': 'Marzo', '04': 'Abril',
+  '05': 'Mayo', '06': 'Junio', '07': 'Julio', '08': 'Agosto',
+  '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre'
+};
+
 const STATUS_CONFIG: Record<string, { label: string; short: string; bg: string; text: string; border: string }> = {
   PRESENTE: { label: 'Presente', short: 'P', bg: 'bg-emerald-50 hover:bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-200' },
   AUSENTE: { label: 'Ausente (Falla)', short: 'X', bg: 'bg-red-50 hover:bg-red-100', text: 'text-red-700 font-black', border: 'border-red-200' },
@@ -89,6 +95,42 @@ export default function GroupAttendanceMatrix({
   } | null>(null);
 
   const [excuseObs, setExcuseObs] = useState('');
+  const [searchStudent, setSearchStudent] = useState('');
+  
+  // Available months extraction
+  const availableMonths = useMemo(() => {
+    const map = new Map<string, { key: string; label: string; year: string; count: number }>();
+    sessions.forEach(s => {
+      if (s.fecha && s.fecha.length >= 7) {
+        const key = s.fecha.slice(0, 7); // '2026-08'
+        const [year, month] = key.split('-');
+        const monthName = MONTH_NAMES[month] || month;
+        const current = map.get(key) || { key, label: `${monthName} ${year}`, year, count: 0 };
+        current.count++;
+        map.set(key, current);
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => a.key.localeCompare(b.key));
+  }, [sessions]);
+
+  // Month selector state: default to 'ALL' (or you can pick a specific month)
+  const [selectedMonth, setSelectedMonth] = useState<string>('ALL');
+
+  // Filtered sessions based on selected month
+  const displayedSessions = useMemo(() => {
+    if (selectedMonth === 'ALL') return sessions;
+    return sessions.filter(s => s.fecha.startsWith(selectedMonth));
+  }, [sessions, selectedMonth]);
+
+  // Filtered students by search term
+  const displayedStudents = useMemo(() => {
+    if (!searchStudent.trim()) return students;
+    const q = searchStudent.toLowerCase().trim();
+    return students.filter(st => 
+      st.nombre_original.toLowerCase().includes(q) || 
+      (st.documento && st.documento.includes(q))
+    );
+  }, [students, searchStudent]);
   
   // Bulk modal state
   const [showBulkModal, setShowBulkModal] = useState(false);
@@ -199,8 +241,9 @@ export default function GroupAttendanceMatrix({
 
   // Export Matrix to Excel (XLSX) in official institutional layout
   const handleExportXLSX = () => {
+    const targetSessions = displayedSessions;
     const headerRow1 = ['#', 'DOCUMENTO', 'ESTUDIANTE / ALUMNO'];
-    sessions.forEach(s => {
+    targetSessions.forEach(s => {
       headerRow1.push(formatDateDDMMYYYY(s.fecha));
     });
     headerRow1.push('TOTAL FALLAS', '% ASISTENCIA');
@@ -211,7 +254,7 @@ export default function GroupAttendanceMatrix({
 
       const row: (string | number)[] = [idx + 1, st.documento || 'S/D', st.nombre_original];
 
-      sessions.forEach(s => {
+      targetSessions.forEach(s => {
         const state = records[`${st.id}_${s.id}`]?.estado || 'PRESENTE';
         const isHoliday = isColombiaHoliday(s.fecha).isHoliday;
         
@@ -245,9 +288,10 @@ export default function GroupAttendanceMatrix({
       return row;
     });
 
+    const monthTitle = selectedMonth === 'ALL' ? 'Semestre_Completo' : selectedMonth;
     const worksheet = XLSX.utils.aoa_to_sheet([
-      [`CONTROL DE ASISTENCIA ACADÉMICA - GRUPO: ${groupName}`],
-      [`Jornada: ${jornada} | Tipo: ${tipo} | Estudiantes: ${students.length}`],
+      [`CONTROL DE ASISTENCIA ACADÉMICA - GRUPO: ${groupName} (${monthTitle})`],
+      [`Jornada: ${jornada} | Tipo: ${tipo} | Estudiantes: ${students.length} | Sesiones: ${targetSessions.length}`],
       [],
       headerRow1,
       ...dataRows
@@ -255,7 +299,7 @@ export default function GroupAttendanceMatrix({
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Matriz_Asistencia');
-    XLSX.writeFile(workbook, `Matriz_Asistencia_${groupName.replace(/\s+/g, '_')}.xlsx`);
+    XLSX.writeFile(workbook, `Matriz_Asistencia_${groupName.replace(/\s+/g, '_')}_${monthTitle}.xlsx`);
     showToast('✓ Archivo Excel generado y descargado con éxito');
   };
 
@@ -296,7 +340,7 @@ export default function GroupAttendanceMatrix({
         <div>
           <h2 className="text-xl font-black text-fsm-blue uppercase tracking-tight flex items-center gap-2">
             <Layers size={22} className="text-fsm-blue" />
-            Planilla Semestral Cotejada
+            Planilla de Asistencia Cotejada
           </h2>
           <p className="text-xs text-gray-500 font-medium mt-0.5">
             Cotejada con los registros físicos en tiempo real de torniquetes y paneles de acceso.
@@ -336,6 +380,83 @@ export default function GroupAttendanceMatrix({
         </div>
       </div>
 
+      {/* Month Selector Tabs & Student Search Bar */}
+      <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-4">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <div className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1.5 flex items-center gap-1.5">
+              <Calendar size={13} className="text-fsm-blue" />
+              Seleccionar Período / Mes a Visualizar
+            </div>
+            
+            {/* Month Buttons Tabs */}
+            <div className="flex flex-wrap items-center gap-1.5 bg-gray-50 p-1.5 rounded-2xl border border-gray-200/80">
+              <button
+                type="button"
+                onClick={() => setSelectedMonth('ALL')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  selectedMonth === 'ALL'
+                    ? 'bg-fsm-blue text-white shadow-sm font-black'
+                    : 'text-gray-600 hover:text-gray-950 hover:bg-white/80'
+                }`}
+              >
+                🌐 Todo el Semestre ({sessions.length} clases)
+              </button>
+
+              {availableMonths.map(m => {
+                const isSelected = selectedMonth === m.key;
+                return (
+                  <button
+                    key={m.key}
+                    type="button"
+                    onClick={() => setSelectedMonth(m.key)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      isSelected
+                        ? 'bg-fsm-blue text-white shadow-sm font-black'
+                        : 'text-gray-700 hover:text-gray-950 hover:bg-white/80'
+                    }`}
+                  >
+                    <span>📅 {m.label}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${
+                      isSelected ? 'bg-white/20 text-white' : 'bg-gray-200/60 text-gray-600'
+                    }`}>
+                      {m.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Quick Search Student */}
+          <div className="w-full md:w-72">
+            <div className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1.5 flex items-center gap-1.5">
+              <Search size={13} className="text-fsm-blue" />
+              Filtrar Estudiante en Planilla
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Buscar por nombre o documento..."
+                value={searchStudent}
+                onChange={(e) => setSearchStudent(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none focus:border-fsm-blue"
+              />
+              <Search size={14} className="absolute left-3 top-2.5 text-gray-400" />
+              {searchStudent && (
+                <button
+                  type="button"
+                  onClick={() => setSearchStudent('')}
+                  className="absolute right-3 top-2.5 text-[10px] font-black text-gray-400 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Toast Notification */}
       {notification && (
         <div className={`p-4 rounded-2xl border text-xs font-bold flex items-center gap-2 transition-all animate-fade-in ${
@@ -358,6 +479,19 @@ export default function GroupAttendanceMatrix({
 
       {/* Interactive Matrix Table */}
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="p-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between text-xs font-black text-fsm-blue uppercase">
+          <div className="flex items-center gap-2">
+            <span>
+              {selectedMonth === 'ALL' 
+                ? `📅 Mostrando Semestre Completo (${displayedSessions.length} fechas)` 
+                : `📅 Mostrando Mes: ${availableMonths.find(m => m.key === selectedMonth)?.label || selectedMonth} (${displayedSessions.length} fechas)`}
+            </span>
+          </div>
+          <span className="text-gray-400 font-normal">
+            Estudiantes: {displayedStudents.length} / {students.length}
+          </span>
+        </div>
+
         <div className="overflow-x-auto max-h-[70vh]">
           <table className="w-full text-left border-collapse min-w-max">
             <thead className="sticky top-0 z-20 bg-gray-900 text-white">
@@ -368,7 +502,7 @@ export default function GroupAttendanceMatrix({
                 <th className="p-3.5 text-[11px] font-black uppercase tracking-wider sticky left-12 z-30 bg-gray-900 border-r border-gray-800 min-w-[220px]">
                   Estudiante
                 </th>
-                {sessions.map(s => {
+                {displayedSessions.map(s => {
                   const holidayInfo = isColombiaHoliday(s.fecha);
                   return (
                     <th 
@@ -394,7 +528,7 @@ export default function GroupAttendanceMatrix({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-xs">
-              {students.map((st, sIdx) => {
+              {displayedStudents.map((st, sIdx) => {
                 let totalAbsents = 0;
                 let totalLectivos = 0;
 
@@ -416,7 +550,7 @@ export default function GroupAttendanceMatrix({
                     </td>
 
                     {/* Session Cells */}
-                    {sessions.map(s => {
+                    {displayedSessions.map(s => {
                       const record = records[`${st.id}_${s.id}`];
                       const holidayInfo = isColombiaHoliday(s.fecha);
                       const estado = record?.estado || (holidayInfo.isHoliday ? 'FESTIVO' : 'PRESENTE');
