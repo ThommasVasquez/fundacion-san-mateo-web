@@ -429,35 +429,6 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         <span className="text-fsm-blue">Control de Asistencia</span>
       </div>
 
-      {/* Inter-Shift Absence Alert Banner */}
-      {pendingAlerts.pendingCount > 0 && (
-        <div className="bg-blue-50/80 border-2 border-blue-200 p-6 rounded-[2rem] shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-fsm-blue text-white rounded-2xl flex items-center justify-center shrink-0 font-black shadow-md">
-              <Bell size={24} />
-            </div>
-            <div>
-              <span className="text-[10px] font-black text-fsm-blue uppercase tracking-widest bg-white px-2.5 py-0.5 rounded border border-blue-200">
-                NOTIFICACIÓN DE TRASPASO ENTRE TURNOS
-              </span>
-              <h3 className="text-lg font-black text-fsm-blue uppercase mt-0.5">
-                {pendingAlerts.pendingCount} ESTUDIANTE(S) INASISTENTE(S) PENDIENTES POR CONTACTAR
-              </h3>
-              <p className="text-xs font-semibold text-gray-700">
-                Atención secretaría: Hay ausencias registradas que requieren seguimiento telefónico y verificación de excusas.
-              </p>
-            </div>
-          </div>
-
-          <Link
-            href="/admin/attendance/absences"
-            className="px-6 py-3 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all shadow-md shrink-0 flex items-center gap-2"
-          >
-            Gestionar Ausencias <ChevronRight size={16} />
-          </Link>
-        </div>
-      )}
-
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-black text-fsm-blue uppercase tracking-tighter mb-2">CONTROL DE ASISTENCIA</h1>
