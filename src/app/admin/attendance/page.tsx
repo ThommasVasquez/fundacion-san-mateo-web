@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { sql } from '@/lib/db';
 import { 
   Users, UserCheck, AlertTriangle, HelpCircle, 
-  Search, Calendar, Filter, ArrowLeft, Clock, ChevronRight, X, Tag, Upload, ArrowUpDown, Bell
+  Search, Calendar, Filter, ArrowLeft, Clock, ChevronRight, X, Tag, Upload, ArrowUpDown, Bell, BookOpen
 } from 'lucide-react';
 import RefreshButton from './RefreshButton';
 import ExportCsvButton from './ExportCsvButton';
@@ -478,6 +478,12 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             className="px-5 py-2.5 bg-white text-fsm-blue border border-fsm-blue/20 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-blue hover:text-white transition-all shadow-sm flex items-center gap-2"
           >
             <Upload size={14} /> Subir Alumnos
+          </Link>
+          <Link
+            href="/admin/attendance/alerts"
+            className="px-5 py-2.5 bg-amber-50 text-amber-950 border border-amber-300 hover:bg-amber-600 hover:text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-sm flex items-center gap-2"
+          >
+            <BookOpen size={14} /> Planillas y Alertas por Grupo
           </Link>
           <Link
             href="/admin/attendance/enrollment"
