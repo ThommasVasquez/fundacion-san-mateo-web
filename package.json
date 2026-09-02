@@ -14,6 +14,7 @@
     "@neondatabase/serverless": "^1.1.0",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
+    "exceljs": "^4.4.0",
     "gsap": "^3.14.2",
     "jose": "^6.2.2",
     "jspdf": "^4.2.1",

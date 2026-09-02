@@ -7,7 +7,7 @@ import {
   FileSpreadsheet, Sparkles, Smartphone, Laptop, Check, X
 } from 'lucide-react';
 import { getAuditLogsAction } from '@/app/actions';
-import * as XLSX from 'xlsx';
+import { exportAuditLogsToExcel } from '@/lib/excelExportHelper';
 
 export interface AuditLogItem {
   id: string;
@@ -191,30 +191,12 @@ export default function AuditLogsClient({
     setTimeout(() => setCopiedIp(null), 2000);
   };
 
-  const handleExportExcel = () => {
-    const rows = logs.map((l, idx) => {
-      const dev = parseDevice(l.user_agent);
-      return {
-        '#': idx + 1,
-        'FECHA Y HORA (COLOMBIA)': formatTimestamp(l.created_at),
-        'USUARIO / EMAIL': l.user_email,
-        'NOMBRE': l.user_name || 'N/A',
-        'ROL': l.user_role || 'N/A',
-        'ACCIÓN': l.action,
-        'CATEGORÍA': l.category,
-        'DESCRIPCIÓN DEL CAMBIO': l.details,
-        'DIRECCIÓN IP': l.ip_address || '127.0.0.1',
-        'UBICACIÓN': `${l.city || ''} ${l.country || ''}`.trim() || 'Colombia',
-        'DISPOSITIVO': dev.summary,
-        'USER AGENT COMPLETO': l.user_agent || ''
-      };
-    });
-
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Auditoria_Logs');
-    const todayStr = new Date().toISOString().split('T')[0];
-    XLSX.writeFile(workbook, `Registro_Auditoria_FSM_${todayStr}.xlsx`);
+  const handleExportExcel = async () => {
+    try {
+      await exportAuditLogsToExcel(logs);
+    } catch (err) {
+      console.error('Error exporting audit logs Excel:', err);
+    }
   };
 
   const totalPages = Math.ceil(total / limit) || 1;

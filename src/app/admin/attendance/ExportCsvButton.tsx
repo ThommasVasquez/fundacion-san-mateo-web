@@ -145,31 +145,21 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
   };
 
   const exportExcelList = async (formatted: ReturnType<typeof formatData>) => {
-    const XLSX = await import('xlsx');
-    const headers = ['Estudiante', 'Grado / Cargo', 'Tipo Evento', 'Hora', 'Fecha (Bogotá)', 'Sede', 'Lector / Ubicación', 'Origen', 'Observaciones', 'Estado / Anomalía', 'UID Tarjeta'];
-    const rows = formatted.map(ev => [
-      ev.studentName,
-      ev.grado,
-      ev.tipoEvento,
-      ev.timeStr,
-      ev.dateStr,
-      ev.sede,
-      ev.reader,
-      ev.origen,
-      ev.observaciones,
-      ev.estado,
-      ev.uid
-    ]);
-
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    ws['!cols'] = [
-      { wch: 32 }, { wch: 22 }, { wch: 14 }, { wch: 14 },
-      { wch: 14 }, { wch: 24 }, { wch: 28 }, { wch: 28 }, { wch: 30 }, { wch: 20 }, { wch: 16 }
-    ];
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Asistencia');
-    XLSX.writeFile(wb, `Reporte_Asistencia_${rangeName}.xlsx`);
+    const { exportAttendanceEventsToExcel } = await import('@/lib/excelExportHelper');
+    const exportItems = events.map((ev, idx) => ({
+      id: String(idx + 1),
+      student_id: ev.rfid_tag_uid || '',
+      nombre_estudiante: ev.student_name || 'Tarjeta no asignada',
+      documento: '',
+      grado: ev.student_grado || 'General',
+      timestamp: ev.timestamp,
+      tipo_evento: ev.tipo_evento,
+      sede: ev.sede || 'Sede 1',
+      rfid_tag_uid: ev.rfid_tag_uid,
+      origen: ev.origen,
+      observaciones: ev.observaciones
+    }));
+    await exportAttendanceEventsToExcel(exportItems, rangeName);
   };
 
   const exportPdf = async (formatted: ReturnType<typeof formatData>) => {

@@ -7,7 +7,6 @@ import {
   FileSpreadsheet, ShieldCheck, Lock, FileText, Search, ChevronLeft, ChevronRight,
   Target, EyeOff
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import { 
   updateCellAttendanceAction, 
   bulkUpdateGroupSessionStateAction, 
@@ -15,6 +14,7 @@ import {
 } from '@/app/actions';
 import { formatDateDDMMYYYY } from '@/lib/dateUtils';
 import { isColombiaHoliday } from '@/lib/colombiaHolidays';
+import { exportGroupMatrixToExcel } from '@/lib/excelExportHelper';
 
 export interface StudentData {
   id: string;
@@ -243,68 +243,27 @@ export default function GroupAttendanceMatrix({
     });
   };
 
-  // Export Matrix to Excel (XLSX) in official institutional layout
-  const handleExportXLSX = () => {
-    const targetSessions = displayedSessions;
-    const headerRow1 = ['#', 'DOCUMENTO', 'ESTUDIANTE / ALUMNO'];
-    targetSessions.forEach(s => {
-      headerRow1.push(formatDateDDMMYYYY(s.fecha));
-    });
-    headerRow1.push('TOTAL FALLAS', '% ASISTENCIA');
+  // Export Matrix to Excel (XLSX) in official institutional layout with Logo and Colors
+  const handleExportXLSX = async () => {
+    try {
+      const monthTitle = selectedMonth === 'ALL' 
+        ? 'Semestre Completo' 
+        : (availableMonths.find(m => m.key === selectedMonth)?.label || selectedMonth);
 
-    const dataRows = students.map((st, idx) => {
-      let totalAbsents = 0;
-      let totalLectivos = 0;
-
-      const row: (string | number)[] = [idx + 1, st.documento || 'S/D', st.nombre_original];
-
-      targetSessions.forEach(s => {
-        const state = records[`${st.id}_${s.id}`]?.estado || 'PRESENTE';
-        const isHoliday = isColombiaHoliday(s.fecha).isHoliday;
-        
-        let cellVal = 'P';
-        if (state === 'AUSENTE') {
-          cellVal = 'X';
-          totalAbsents++;
-          totalLectivos++;
-        } else if (state === 'PRESENTE') {
-          cellVal = 'P';
-          totalLectivos++;
-        } else if (state === 'FESTIVO' || isHoliday) {
-          cellVal = 'FESTIVO';
-        } else if (state === 'LIBRE') {
-          cellVal = 'LIBRE';
-        } else if (state === 'COMITE_ACADEMICO') {
-          cellVal = 'COMITE';
-        } else if (state === 'PRACTICAS') {
-          cellVal = 'PRACTICAS';
-        } else if (state === 'EXCUSA_MEDICA') {
-          cellVal = 'EXCUSA';
-          totalLectivos++;
-        } else if (state === 'CALENDARIO_B') {
-          cellVal = 'CAL_B';
-        }
-        row.push(cellVal);
+      await exportGroupMatrixToExcel({
+        groupName,
+        jornada,
+        tipo,
+        periodoTitle: monthTitle,
+        sessions: displayedSessions,
+        students,
+        records
       });
-
-      const pct = totalLectivos > 0 ? Math.round(((totalLectivos - totalAbsents) / totalLectivos) * 100) : 100;
-      row.push(totalAbsents, `${pct}%`);
-      return row;
-    });
-
-    const monthTitle = selectedMonth === 'ALL' ? 'Semestre_Completo' : selectedMonth;
-    const worksheet = XLSX.utils.aoa_to_sheet([
-      [`CONTROL DE ASISTENCIA ACADÉMICA - GRUPO: ${groupName} (${monthTitle})`],
-      [`Jornada: ${jornada} | Tipo: ${tipo} | Estudiantes: ${students.length} | Sesiones: ${targetSessions.length}`],
-      [],
-      headerRow1,
-      ...dataRows
-    ]);
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Matriz_Asistencia');
-    XLSX.writeFile(workbook, `Matriz_Asistencia_${groupName.replace(/\s+/g, '_')}_${monthTitle}.xlsx`);
-    showToast('✓ Archivo Excel generado y descargado con éxito');
+      showToast('✓ Archivo Excel institucional generado con éxito');
+    } catch (err: any) {
+      console.error('Error exporting Excel:', err);
+      showToast('Error al exportar archivo Excel', 'error');
+    }
   };
 
   const focusedStudent = useMemo(() => {
