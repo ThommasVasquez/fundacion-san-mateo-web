@@ -99,11 +99,24 @@ export default async function StudentAttendanceHistoryPage({
     overrideMap.set(r.session_id, r);
   });
 
+  // 3.1 Get telephone absence followups
+  const followups = await sql`
+    SELECT fecha::text as fecha, comentarios, estado_llamada, se_llamo
+    FROM absence_followups
+    WHERE student_id = ${studentId}::uuid
+      AND (comentarios IS NOT NULL AND comentarios != '')
+  `;
+  const followupMap = new Map();
+  followups.forEach((f: any) => {
+    followupMap.set(f.fecha, f);
+  });
+
   // 4. Synthesize complete history per class session
   const historyRecords = sessionsQuery.map((sess: any) => {
     const fStr = new Date(sess.fecha).toISOString().split('T')[0];
     const rfidScan = rfidMap.get(fStr);
     const override = overrideMap.get(sess.session_id);
+    const followup = followupMap.get(fStr);
 
     let estado = 'AUSENTE';
     let fuente = 'MANUAL';
@@ -115,14 +128,18 @@ export default async function StudentAttendanceHistoryPage({
       estado = override.estado;
       fuente = override.fuente;
       sede = override.sede || 'Sede 1';
-      observaciones = override.observaciones || '';
+      observaciones = override.observaciones || (followup?.comentarios ? `Llamada: ${followup.comentarios}` : '');
     } else if (rfidScan) {
       estado = 'PRESENTE';
       fuente = 'RFID';
       sede = rfidScan.sede || 'Sede 1';
-      observaciones = rfidScan.observaciones || '';
+      observaciones = rfidScan.observaciones || (followup?.comentarios ? `Llamada: ${followup.comentarios}` : '');
       const dateObj = new Date(rfidScan.timestamp);
       scanTime = dateObj.toLocaleTimeString('es-CO', { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit' });
+    } else if (followup) {
+      estado = 'EXCUSA_MEDICA';
+      fuente = 'SEGUIMIENTO';
+      observaciones = followup.comentarios;
     }
 
     return {

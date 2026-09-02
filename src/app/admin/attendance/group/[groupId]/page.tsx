@@ -127,6 +127,19 @@ export default async function GroupAttendancePage({
     });
   });
 
+  // 5.1 Query absence followups (phone calls / excuses) for students in this group
+  const followupsQuery = await sql`
+    SELECT af.student_id, af.fecha::text as fecha, af.comentarios, af.estado_llamada
+    FROM absence_followups af
+    JOIN enrollments e ON e.student_id = af.student_id
+    WHERE e.group_id = ${groupId}::uuid
+      AND (af.comentarios IS NOT NULL AND af.comentarios != '')
+  `;
+  const followupMap = new Map<string, string>();
+  followupsQuery.forEach((f: any) => {
+    followupMap.set(`${f.student_id}_${f.fecha}`, f.comentarios);
+  });
+
   const isGroupCB = (group.nombre || '').toUpperCase().includes('CB');
 
   const records: MatrixRecord[] = [];
@@ -135,21 +148,27 @@ export default async function GroupAttendancePage({
       const explicit = explicitMap.get(`${st.id}_${sess.id}`);
       const hasRealScan = realScansSet.has(`${st.id}_${sess.fecha}`);
       const holiday = isColombiaHoliday(sess.fecha);
+      const phoneFollowup = followupMap.get(`${st.id}_${sess.fecha}`);
 
       let finalEstado = 'PRESENTE';
       let finalObs = '';
 
       if (explicit) {
         finalEstado = explicit.estado;
-        finalObs = explicit.observaciones;
+        finalObs = explicit.observaciones || (phoneFollowup ? `Llamada: ${phoneFollowup}` : '');
       } else if (hasRealScan) {
         // Physical entry verified at torniquetes/panel
         finalEstado = 'PRESENTE';
+        finalObs = phoneFollowup ? `Llamada: ${phoneFollowup}` : '';
       } else if (holiday.isHoliday) {
         finalEstado = 'FESTIVO';
         finalObs = holiday.holidayName || 'Festivo Nacional';
       } else if (isGroupCB && sess.fecha < '2026-09-01') {
         finalEstado = 'CALENDARIO_B';
+      } else if (phoneFollowup) {
+        // Justified telephone absence
+        finalEstado = 'EXCUSA_MEDICA';
+        finalObs = `Seguimiento: ${phoneFollowup}`;
       } else if (sess.fecha <= todayStr) {
         // Past or current date with no scan and no explicit record
         finalEstado = 'AUSENTE';
