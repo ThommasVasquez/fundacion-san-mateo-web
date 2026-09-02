@@ -4,7 +4,8 @@ import React, { useState, useTransition, useMemo } from 'react';
 import { 
   Calendar, Users, Download, Plus, CheckCircle2, XCircle, 
   Sparkles, Layers, Filter, Clock, Check, AlertCircle, RefreshCw,
-  FileSpreadsheet, ShieldCheck, Lock, FileText, Search, ChevronLeft, ChevronRight
+  FileSpreadsheet, ShieldCheck, Lock, FileText, Search, ChevronLeft, ChevronRight,
+  Target, EyeOff
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { 
@@ -96,6 +97,9 @@ export default function GroupAttendanceMatrix({
 
   const [excuseObs, setExcuseObs] = useState('');
   const [searchStudent, setSearchStudent] = useState('');
+  
+  // Spotlight / Row Focus mode state
+  const [focusedStudentId, setFocusedStudentId] = useState<string | null>(null);
   
   // Available months extraction
   const availableMonths = useMemo(() => {
@@ -303,6 +307,11 @@ export default function GroupAttendanceMatrix({
     showToast('✓ Archivo Excel generado y descargado con éxito');
   };
 
+  const focusedStudent = useMemo(() => {
+    if (!focusedStudentId) return null;
+    return students.find(s => s.id === focusedStudentId) || null;
+  }, [students, focusedStudentId]);
+
   return (
     <div className="space-y-6">
       {/* Role & Permissions Banner */}
@@ -457,6 +466,25 @@ export default function GroupAttendanceMatrix({
         </div>
       </div>
 
+      {/* Focus / Spotlight Notification Banner */}
+      {focusedStudent && (
+        <div className="bg-amber-50 border-2 border-amber-300 p-3.5 rounded-2xl flex items-center justify-between gap-3 text-xs animate-fade-in shadow-sm">
+          <div className="flex items-center gap-2 text-amber-950 font-bold">
+            <Target size={18} className="text-amber-700 animate-pulse" />
+            <span>
+              🎯 Modo Enfoque Activo: Siguiendo la fila de <strong>{focusedStudent.nombre_original}</strong>
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFocusedStudentId(null)}
+            className="px-3 py-1 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl font-bold text-[11px] uppercase transition-all flex items-center gap-1 shadow-2xs"
+          >
+            <EyeOff size={12} /> Desactivar Enfoque
+          </button>
+        </div>
+      )}
+
       {/* Toast Notification */}
       {notification && (
         <div className={`p-4 rounded-2xl border text-xs font-bold flex items-center gap-2 transition-all animate-fade-in ${
@@ -475,6 +503,9 @@ export default function GroupAttendanceMatrix({
             <span className="font-black">{cfg.short}</span>: {cfg.label}
           </span>
         ))}
+        <span className="ml-auto text-gray-400 font-normal italic">
+          💡 Tip: Haz clic sobre el nombre de un alumno para enfocar y resaltar toda su fila horizontal.
+        </span>
       </div>
 
       {/* Interactive Matrix Table */}
@@ -531,21 +562,59 @@ export default function GroupAttendanceMatrix({
               {displayedStudents.map((st, sIdx) => {
                 let totalAbsents = 0;
                 let totalLectivos = 0;
+                const isFocused = focusedStudentId === st.id;
+                const isAnotherFocused = focusedStudentId !== null && !isFocused;
 
                 return (
-                  <tr key={st.id} className="hover:bg-blue-50/30 transition-colors">
+                  <tr 
+                    key={st.id} 
+                    className={`transition-all duration-200 ${
+                      isFocused 
+                        ? 'bg-amber-100/90 ring-2 ring-amber-400 ring-inset shadow-md font-bold'
+                        : isAnotherFocused 
+                          ? 'opacity-25 blur-[0.5px] hover:opacity-100 hover:blur-none hover:bg-blue-50/40' 
+                          : 'hover:bg-blue-50/40'
+                    }`}
+                  >
                     {/* Row Index */}
-                    <td className="p-3 text-center font-bold text-gray-400 sticky left-0 z-10 bg-white border-r border-gray-100">
-                      {sIdx + 1}
+                    <td 
+                      className={`p-3 text-center font-bold sticky left-0 z-10 border-r ${
+                        isFocused
+                          ? 'bg-amber-200 text-amber-950 border-amber-300'
+                          : 'bg-white text-gray-400 border-gray-100'
+                      }`}
+                    >
+                      {isFocused ? (
+                        <Target size={14} className="mx-auto text-amber-800 animate-pulse" />
+                      ) : (
+                        sIdx + 1
+                      )}
                     </td>
 
-                    {/* Student Name */}
-                    <td className="p-3 font-bold text-gray-900 sticky left-12 z-10 bg-white border-r border-gray-100 whitespace-nowrap shadow-sm">
-                      <div className="truncate max-w-[220px]" title={st.nombre_original}>
-                        {st.nombre_original}
+                    {/* Student Name (Clickable for Spotlight) */}
+                    <td 
+                      onClick={() => setFocusedStudentId(prev => prev === st.id ? null : st.id)}
+                      className={`p-3 sticky left-12 z-10 border-r whitespace-nowrap shadow-sm cursor-pointer select-none transition-colors ${
+                        isFocused 
+                          ? 'bg-amber-200 text-amber-950 border-amber-300 font-black' 
+                          : 'bg-white text-gray-900 border-gray-100 font-bold hover:text-fsm-blue hover:bg-blue-50/60'
+                      }`}
+                      title={isFocused ? "Clic para quitar el enfoque" : "Clic para enfocar y resaltar toda la fila de este alumno"}
+                    >
+                      <div className="flex items-center justify-between gap-2 max-w-[220px]">
+                        <div className="truncate" title={st.nombre_original}>
+                          {st.nombre_original}
+                        </div>
+                        {isFocused && (
+                          <span className="text-[9px] bg-amber-300 text-amber-950 px-1.5 py-0.5 rounded font-black shrink-0">
+                            ENFOCADO
+                          </span>
+                        )}
                       </div>
                       {st.documento && (
-                        <div className="text-[10px] text-gray-400 font-normal">CC: {st.documento}</div>
+                        <div className={`text-[10px] font-normal ${isFocused ? 'text-amber-800' : 'text-gray-400'}`}>
+                          CC: {st.documento}
+                        </div>
                       )}
                     </td>
 
@@ -566,7 +635,9 @@ export default function GroupAttendanceMatrix({
                       return (
                         <td 
                           key={s.id} 
-                          className="p-1 text-center border-r border-gray-100 select-none cursor-pointer"
+                          className={`p-1 text-center border-r select-none cursor-pointer ${
+                            isFocused ? 'border-amber-200/80 bg-amber-50/40' : 'border-gray-100'
+                          }`}
                           onClick={() => handleCellClick(st.id, s.id, st.nombre_original, s.fecha)}
                           onContextMenu={(e) => {
                             e.preventDefault();
@@ -582,7 +653,9 @@ export default function GroupAttendanceMatrix({
                           }}
                           title={`${st.nombre_original} - ${formatDateDDMMYYYY(s.fecha)}: ${cfg.label} ${record?.observaciones ? `(${record.observaciones})` : ''} ${!canModifyAll ? '• Clic para agregar excusa médica' : '• Clic para alternar'}`}
                         >
-                          <div className={`w-full py-2 rounded-lg border font-black text-xs transition-all ${cfg.bg} ${cfg.text} ${cfg.border} shadow-2xs hover:scale-105 active:scale-95`}>
+                          <div className={`w-full py-2 rounded-lg border font-black text-xs transition-all ${cfg.bg} ${cfg.text} ${cfg.border} shadow-2xs hover:scale-110 active:scale-95 ${
+                            isFocused ? 'ring-1 ring-amber-300' : ''
+                          }`}>
                             {cfg.short}
                           </div>
                         </td>
@@ -590,12 +663,16 @@ export default function GroupAttendanceMatrix({
                     })}
 
                     {/* Total Absences */}
-                    <td className="p-3 text-center font-black text-red-600 bg-red-50/40 border-l border-gray-100">
+                    <td className={`p-3 text-center font-black text-red-600 border-l ${
+                      isFocused ? 'bg-amber-100/90 border-amber-300 text-red-800 text-sm' : 'bg-red-50/40 border-gray-100'
+                    }`}>
                       {totalAbsents}
                     </td>
 
                     {/* Attendance Percentage */}
-                    <td className="p-3 text-center font-black text-emerald-700 bg-emerald-50/40">
+                    <td className={`p-3 text-center font-black text-emerald-700 ${
+                      isFocused ? 'bg-amber-100/90 text-emerald-900 text-sm' : 'bg-emerald-50/40'
+                    }`}>
                       {totalLectivos > 0 ? `${Math.round(((totalLectivos - totalAbsents) / totalLectivos) * 100)}%` : '100%'}
                     </td>
                   </tr>
