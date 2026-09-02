@@ -3,12 +3,11 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { saveAbsenceFollowup } from '@/app/actions';
 import { 
   AlertTriangle, PhoneCall, PhoneOff, PhoneMissed, Phone, 
-  FileText, Upload, Check, Save, Calendar, Filter, ArrowLeft, 
-  ChevronRight, ExternalLink, ShieldCheck, UserX, Clock, MessageSquare, Bell, Users
+  Check, Save, Calendar, Filter, ArrowLeft, 
+  ChevronRight, ExternalLink, ShieldCheck, MessageSquare, Bell, User, Layers
 } from 'lucide-react';
 
 interface AbsentStudent {
@@ -63,8 +62,6 @@ export default function AbsenceFollowupClient({
     seLlamo: boolean;
     estadoLlamada: string;
     comentarios: string;
-    excusaUrl: string;
-    isUploading?: boolean;
     isSaving?: boolean;
     savedSuccess?: boolean;
   }>>(() => {
@@ -74,7 +71,6 @@ export default function AbsenceFollowupClient({
         seLlamo: s.se_llamo || false,
         estadoLlamada: s.estado_llamada || 'pendiente',
         comentarios: s.comentarios || '',
-        excusaUrl: s.excusa_url || '',
       };
     });
     return initialMap;
@@ -109,42 +105,6 @@ export default function AbsenceFollowupClient({
     }));
   };
 
-  const handleFileUpload = async (studentId: string, file: File) => {
-    setFollowupData(prev => ({
-      ...prev,
-      [studentId]: { ...prev[studentId], isUploading: true }
-    }));
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch('/api/admin/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!res.ok) throw new Error('Error al subir archivo de excusa');
-      const data = await res.json();
-
-      setFollowupData(prev => ({
-        ...prev,
-        [studentId]: {
-          ...prev[studentId],
-          excusaUrl: data.url,
-          isUploading: false,
-        }
-      }));
-
-      showGlobalStatus('✓ Archivo de excusa adjuntado correctamente');
-    } catch (err: any) {
-      setFollowupData(prev => ({
-        ...prev,
-        [studentId]: { ...prev[studentId], isUploading: false }
-      }));
-      showGlobalStatus(err.message || 'Error al cargar archivo', 'error');
-    }
-  };
-
   const handleSaveStudentFollowup = async (student: AbsentStudent) => {
     const data = followupData[student.student_id];
     if (!data) return;
@@ -161,7 +121,7 @@ export default function AbsenceFollowupClient({
       seLlamo: data.seLlamo,
       estadoLlamada: data.estadoLlamada,
       comentarios: data.comentarios,
-      excusaUrl: data.excusaUrl,
+      excusaUrl: '',
     });
 
     setFollowupData(prev => ({
@@ -181,62 +141,26 @@ export default function AbsenceFollowupClient({
     }
   };
 
-  const [searchQuery, setSearchQuery] = useState('');
+  // Group filter
+  const allGrados = Array.from(new Set(initialStudents.map(s => s.grado))).sort();
   const [filterGradoSpecific, setFilterGradoSpecific] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'FOLLOWUPS_ONLY' | 'ALL_UNMARKED'>('ALL_UNMARKED');
 
-  // Sync state when server props change
-  React.useEffect(() => {
-    setSelectedDate(initialDate);
-    setSelectedShift(initialShift);
-  }, [initialDate, initialShift]);
-
-  React.useEffect(() => {
-    setFollowupData(prev => {
-      const updatedMap: Record<string, any> = { ...prev };
-      initialStudents.forEach(s => {
-        if (!updatedMap[s.student_id]) {
-          updatedMap[s.student_id] = {
-            seLlamo: s.se_llamo || false,
-            estadoLlamada: s.estado_llamada || 'pendiente',
-            comentarios: s.comentarios || '',
-            excusaUrl: s.excusa_url || '',
-          };
-        }
-      });
-      return updatedMap;
-    });
-  }, [initialStudents]);
-
-  const distinctGrados = Array.from(new Set(initialStudents.map(s => s.grado))).sort((a, b) => 
-    a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' })
-  );
-
   const totalWithFollowup = initialStudents.filter(s => 
-    s.followup_id || followupData[s.student_id]?.seLlamo || followupData[s.student_id]?.comentarios || followupData[s.student_id]?.excusaUrl
+    s.followup_id || followupData[s.student_id]?.seLlamo || followupData[s.student_id]?.comentarios
   ).length;
 
-  // Filter students based on UI filters
+  // Filter pipeline
   const filteredStudents = initialStudents.filter(s => {
-    // Day of week schedule rules:
-    if (isWeekday && selectedShift === 'SABADO') return false;
-    if (isSaturday && (selectedShift === 'DIURNO' || selectedShift === 'NOCHE')) return false;
-    if (isSunday) return false;
+    const data = followupData[s.student_id];
 
-    // Filter by active courses today if enabled (shift-aware)
-    if (onlyActiveCoursesToday && activeCoursesScanned.length > 0 && !filterGradoSpecific && !searchQuery) {
-      const hasScannedCoursesForShift = activeCoursesScanned.some(g => {
-        if (s.turno_calculado === 'NOCHE') return g.toUpperCase().includes('NOCHE');
-        if (s.turno_calculado === 'SABADO') return g.toUpperCase().includes('SABADO') || g.toUpperCase().includes('SB');
-        return !g.toUpperCase().includes('NOCHE') && !g.toUpperCase().includes('SABADO') && !g.toUpperCase().includes('SB');
-      });
-
-      if (hasScannedCoursesForShift) {
-        if (!activeCoursesScanned.includes(s.grado)) return false;
+    if (onlyActiveCoursesToday && activeCoursesScanned.length > 0) {
+      if (!activeCoursesScanned.includes(s.grado)) {
+        return false;
       }
     }
 
-    const data = followupData[s.student_id];
     const matchesShift = selectedShift === 'ALL' || selectedShift === 'AUTO' || s.turno_calculado === selectedShift;
     const matchesGrado = !filterGradoSpecific || s.grado === filterGradoSpecific;
     const matchesSearch = !searchQuery || 
@@ -245,9 +169,7 @@ export default function AbsenceFollowupClient({
 
     if (!matchesShift || !matchesGrado || !matchesSearch) return false;
 
-    // If viewMode is FOLLOWUPS_ONLY and no specific course or search query is set,
-    // only show students who have a followup record or call/comment/excuse
-    const hasFollowupRecord = s.followup_id || data?.seLlamo || data?.comentarios || data?.excusaUrl;
+    const hasFollowupRecord = s.followup_id || data?.seLlamo || data?.comentarios;
     if (viewMode === 'FOLLOWUPS_ONLY' && !filterGradoSpecific && !searchQuery && !hasFollowupRecord) {
       return false;
     }
@@ -256,8 +178,8 @@ export default function AbsenceFollowupClient({
       return !data?.seLlamo || data?.estadoLlamada === 'pendiente' || data?.estadoLlamada === 'no_contesto';
     }
     if (statusFilter === 'CONTESTO') return data?.estadoLlamada === 'contesto';
-    if (statusFilter === 'NO_CONTESTO') return data?.estadoLlamada === 'no_contesto';
-    if (statusFilter === 'EXCUSA') return !!data?.excusaUrl;
+    if (statusFilter === 'NO_CONTESTO') return data?.estadoLlamada === 'no_contesto' || data?.estadoLlamada === 'no_disponible';
+    if (statusFilter === 'CON_NOVEDAD') return !!data?.comentarios?.trim();
 
     return true;
   });
@@ -274,108 +196,32 @@ export default function AbsenceFollowupClient({
           <ArrowLeft size={14} /> Control de Asistencia
         </Link>
         <ChevronRight size={14} />
-        <span className="text-fsm-blue">Seguimiento de Ausencias y Excusas</span>
+        <span className="text-fsm-blue">Seguimiento Telefónico de Ausencias</span>
       </div>
 
       {/* Title & Actions */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-premium">
         <div>
           <span className="text-[10px] font-black text-fsm-red uppercase tracking-widest bg-red-50 px-3 py-1 rounded-full border border-red-100">
-            SISTEMA DE GESTIÓN Y SEGUIMIENTO TELEFÓNICO
+            SISTEMA DE GESTIÓN Y CONTACTO TELEFÓNICO
           </span>
           <h1 className="text-3xl font-black text-fsm-blue uppercase tracking-tighter mt-2">
-            ALERTAS DE AUSENCIAS Y EXCUSAS
+            ALERTAS DE AUSENCIAS
           </h1>
           <p className="text-gray-600 font-medium text-sm mt-1">
-            Monitoreo diario de estudiantes inasistentes, registro de llamadas telefónicas y adjunto de justificantes.
+            Monitoreo diario de estudiantes inasistentes, registro de llamadas telefónicas y justificación de novedades.
           </p>
         </div>
 
-        <Link
-          href="/admin/attendance"
-          className="px-6 py-3 bg-fsm-blue text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all shadow-md flex items-center gap-2 self-start md:self-auto"
-        >
-          <ArrowLeft size={16} /> Volver a Asistencia
-        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/admin/attendance"
+            className="px-6 py-3 bg-fsm-blue text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all shadow-md flex items-center gap-2"
+          >
+            <ArrowLeft size={16} /> Volver a Asistencia
+          </Link>
+        </div>
       </div>
-
-      {/* Shift Schedule Applicability Banners */}
-      {isWeekday && selectedShift === 'SABADO' && (
-        <div className="bg-blue-50 border-2 border-blue-200 p-6 rounded-[2rem] shadow-sm flex items-start gap-4">
-          <div className="w-12 h-12 bg-fsm-blue text-white rounded-2xl flex items-center justify-center shrink-0 font-black shadow-md">
-            <Calendar size={24} />
-          </div>
-          <div>
-            <span className="text-[10px] font-black text-fsm-blue uppercase tracking-widest bg-white px-2.5 py-0.5 rounded border border-blue-200">
-              PROGRAMACIÓN ACADÉMICA DE JORNADA
-            </span>
-            <h3 className="text-base font-black text-fsm-blue uppercase mt-0.5">
-              Sin clases programadas para el Turno Sábado en días entre semana ({selectedDate})
-            </h3>
-            <p className="text-xs font-semibold text-gray-700 mt-0.5">
-              Las clases del Turno Sábado se dictan exclusivamente los sábados. Selecciona el Turno Diurno o Noche para ver las ausencias del día de hoy.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {isSaturday && (selectedShift === 'DIURNO' || selectedShift === 'NOCHE') && (
-        <div className="bg-blue-50 border-2 border-blue-200 p-6 rounded-[2rem] shadow-sm flex items-start gap-4">
-          <div className="w-12 h-12 bg-fsm-blue text-white rounded-2xl flex items-center justify-center shrink-0 font-black shadow-md">
-            <Calendar size={24} />
-          </div>
-          <div>
-            <span className="text-[10px] font-black text-fsm-blue uppercase tracking-widest bg-white px-2.5 py-0.5 rounded border border-blue-200">
-              PROGRAMACIÓN ACADÉMICA DE JORNADA
-            </span>
-            <h3 className="text-base font-black text-fsm-blue uppercase mt-0.5">
-              Sin clases programadas para Turnos Diurno / Noche los días sábados ({selectedDate})
-            </h3>
-            <p className="text-xs font-semibold text-gray-700 mt-0.5">
-              Las clases de los Turnos Diurno y Noche se dictan de Lunes a Viernes. Selecciona el Turno Sábado para ver las ausencias de hoy.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {isSunday && (
-        <div className="bg-amber-50 border-2 border-amber-200 p-6 rounded-[2rem] shadow-sm flex items-start gap-4">
-          <div className="w-12 h-12 bg-amber-500 text-white rounded-2xl flex items-center justify-center shrink-0 font-black shadow-md">
-            <Calendar size={24} />
-          </div>
-          <div>
-            <span className="text-[10px] font-black text-amber-800 uppercase tracking-widest bg-white px-2.5 py-0.5 rounded border border-amber-200">
-              DÍA DOMINGO DE DESCANSO
-            </span>
-            <h3 className="text-base font-black text-amber-900 uppercase mt-0.5">
-              Sin actividades académicas programadas para los días Domingo
-            </h3>
-            <p className="text-xs font-semibold text-amber-800 mt-0.5">
-              Los domingos no hay actividades académicas ni lecturas de asistencia programadas.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Zero Scans / Future Date Info Banner */}
-      {totalScansOnDate === 0 && !isSunday && (
-        <div className="bg-amber-50 border-2 border-amber-200 p-6 rounded-[2rem] shadow-sm flex items-start gap-4">
-          <div className="w-12 h-12 bg-amber-500 text-white rounded-2xl flex items-center justify-center shrink-0 font-black shadow-md">
-            <Clock size={24} />
-          </div>
-          <div>
-            <span className="text-[10px] font-black text-amber-800 uppercase tracking-widest bg-white px-2.5 py-0.5 rounded border border-amber-200">
-              INFORMACIÓN DE FECHA SELECCIONADA
-            </span>
-            <h3 className="text-base font-black text-amber-900 uppercase mt-0.5">
-              Sin lecturas de asistencia registradas para {selectedDate}
-            </h3>
-            <p className="text-xs font-medium text-amber-800 mt-0.5">
-              Aún no hay escaneos de tarjeta en pasillos para este día. Selecciona la fecha actual o un día de clases para ver la asistencia en tiempo real.
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Inter-Shift Handover Alert Banner */}
       {pendingNightCount > 0 && (
@@ -392,7 +238,7 @@ export default function AbsenceFollowupClient({
                 {pendingNightCount} ALUMNO(S) DEL TURNO NOCHE PENDIENTES POR CONTACTAR
               </h3>
               <p className="text-xs font-semibold text-gray-700">
-                Atención personal administrativo: Hay inasistencias registradas en el Turno Noche que requieren seguimiento telefónico en este turno.
+                Atención secretaría: Hay inasistencias registradas en el Turno Noche que requieren seguimiento telefónico.
               </p>
             </div>
           </div>
@@ -417,7 +263,6 @@ export default function AbsenceFollowupClient({
 
       {/* Filter Controls Bar */}
       <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-premium space-y-4">
-        
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
           {/* Date Selector with Hoy shortcut */}
           <div className="flex flex-wrap items-center gap-2 bg-gray-50 p-2 rounded-2xl border border-gray-200">
@@ -449,128 +294,78 @@ export default function AbsenceFollowupClient({
             </button>
           </div>
 
-          {/* Search Input */}
-          <div className="flex-1 bg-gray-50 px-4 py-2.5 rounded-2xl border border-gray-200 flex items-center gap-2">
-            <input
-              type="text"
-              placeholder="Buscar estudiante por nombre o grado..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="bg-transparent text-xs font-bold text-gray-800 placeholder-gray-400 outline-none w-full"
-            />
-            {searchQuery && (
-              <button 
-                type="button" 
-                onClick={() => setSearchQuery('')}
-                className="text-xs font-bold text-gray-400 hover:text-gray-700"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-
-          {/* Reset Filters Button (visible when filters active) */}
-          {(filterGradoSpecific || searchQuery || statusFilter !== 'ALL' || (selectedShift !== 'ALL' && selectedShift !== 'AUTO')) && (
-            <button
-              type="button"
-              onClick={() => {
-                setFilterGradoSpecific('');
-                setSearchQuery('');
-                setStatusFilter('ALL');
-                handleShiftChange('ALL');
-              }}
-              className="px-4 py-2.5 bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-fsm-red rounded-2xl font-bold text-xs uppercase tracking-wider transition-all border border-gray-200 flex items-center justify-center gap-1.5 shrink-0"
-            >
-              🔄 Limpiar Filtros
-            </button>
-          )}
-        </div>
-
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pt-3 border-t border-gray-100">
-          {/* Specific Course / Grado Selector */}
-          <div className="flex items-center gap-2 bg-blue-50/80 px-4 py-2.5 rounded-2xl border-2 border-blue-300">
-            <Users size={16} className="text-fsm-blue shrink-0" />
-            <select
-              value={filterGradoSpecific}
-              onChange={e => setFilterGradoSpecific(e.target.value)}
-              className="bg-transparent font-black text-xs uppercase text-fsm-blue outline-none cursor-pointer"
-            >
-              <option value="">🏫 Filtrar por Curso / Salón...</option>
-              {distinctGrados.map(g => (
-                <option key={g} value={g}>{g}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Status Filter Dropdown */}
-          <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-2xl border border-gray-200">
-            <Filter size={16} className="text-gray-400" />
-            <select
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-              className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none"
-            >
-              <option value="ALL">Todos los Estados</option>
-              <option value="PENDING">Pendientes por Llamar</option>
-              <option value="CONTESTO">Contestó</option>
-              <option value="NO_CONTESTO">No Contestó</option>
-              <option value="EXCUSA">Con Excusa Adjunta</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pt-3 border-t border-gray-100">
-          {/* Turno Filter Tabs */}
-          <div className="flex flex-wrap gap-2">
+          {/* Turno Selector */}
+          <div className="flex flex-wrap items-center gap-1.5 bg-gray-50 p-2 rounded-2xl border border-gray-200">
             {[
-              { id: 'ALL', label: 'Todos los Turnos' },
-              { id: 'NOCHE', label: '🌙 Turno Noche' },
-              { id: 'DIURNO', label: '☀️ Turno Diurno' },
-              { id: 'SABADO', label: '📅 Turno Sábado' },
-            ].map(tab => (
+              { id: 'AUTO', label: '⚡ Turno Actual' },
+              { id: 'DIURNO', label: '☀️ Diurno' },
+              { id: 'NOCHE', label: '🌙 Noche' },
+              { id: 'SABADO', label: '📅 Sábado' },
+              { id: 'ALL', label: '🌐 Todos' },
+            ].map(shift => (
               <button
-                key={tab.id}
-                onClick={() => handleShiftChange(tab.id)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
-                  selectedShift === tab.id
-                    ? 'bg-fsm-blue text-white border-fsm-blue shadow-sm'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                key={shift.id}
+                type="button"
+                onClick={() => handleShiftChange(shift.id)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  selectedShift === shift.id
+                    ? 'bg-fsm-blue text-white shadow-sm font-black'
+                    : 'text-gray-600 hover:text-gray-900 font-semibold'
                 }`}
               >
-                {tab.label}
+                {shift.label}
               </button>
             ))}
           </div>
+        </div>
 
-          {/* Active Courses vs All Courses Toggle Switch */}
+        {/* Secondary Filters Bar */}
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 pt-3 border-t border-gray-100">
+          <div className="flex flex-wrap items-center gap-3 flex-1">
+            {/* Search Input */}
+            <div className="flex-1 min-w-[200px]">
+              <input
+                type="text"
+                placeholder="Buscar por nombre de alumno o curso..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-xs font-bold text-gray-800 outline-none focus:border-fsm-blue"
+              />
+            </div>
+
+            {/* Course Selector */}
+            <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-xl border border-gray-200">
+              <Filter size={14} className="text-gray-400" />
+              <select
+                value={filterGradoSpecific}
+                onChange={e => setFilterGradoSpecific(e.target.value)}
+                className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none cursor-pointer"
+              >
+                <option value="">Todos los Salones</option>
+                {allGrados.map(g => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Status Filter */}
+            <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-xl border border-gray-200">
+              <span className="text-[10px] font-black uppercase text-gray-400">Estado:</span>
+              <select
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value)}
+                className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none cursor-pointer"
+              >
+                <option value="ALL">Todos los Estados</option>
+                <option value="PENDING">Pendientes por Llamar</option>
+                <option value="CONTESTO">Llamada Contestada</option>
+                <option value="NO_CONTESTO">No Contestó / No Disponible</option>
+                <option value="CON_NOVEDAD">Con Observación Registrada</option>
+              </select>
+            </div>
+          </div>
+
           <div className="flex flex-wrap items-center gap-2">
-            {activeCoursesScanned.length > 0 && (
-              <div className="flex items-center gap-1.5 bg-blue-50 p-1.5 rounded-2xl border border-blue-200">
-                <button
-                  type="button"
-                  onClick={() => setOnlyActiveCoursesToday(true)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    onlyActiveCoursesToday
-                      ? 'bg-fsm-blue text-white shadow-sm font-black'
-                      : 'text-fsm-blue hover:text-blue-900 font-semibold'
-                  }`}
-                >
-                  ⚡ Salones en Clase Hoy
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOnlyActiveCoursesToday(false)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    !onlyActiveCoursesToday
-                      ? 'bg-fsm-blue text-white shadow-sm font-black'
-                      : 'text-fsm-blue hover:text-blue-900 font-semibold'
-                  }`}
-                >
-                  🌐 Incluir Cursos Sin Clase Hoy
-                </button>
-              </div>
-            )}
-
             {/* View Mode Toggle Switch */}
             <div className="flex items-center gap-1.5 bg-gray-100 p-1.5 rounded-2xl border border-gray-200 self-stretch lg:self-auto">
               <button
@@ -582,7 +377,7 @@ export default function AbsenceFollowupClient({
                     : 'text-gray-600 hover:text-gray-900 font-semibold'
                 }`}
               >
-                📋 Novedades ({totalWithFollowup})
+                📋 Con Novedades ({totalWithFollowup})
               </button>
               <button
                 type="button"
@@ -631,7 +426,6 @@ export default function AbsenceFollowupClient({
               seLlamo: false,
               estadoLlamada: 'pendiente',
               comentarios: '',
-              excusaUrl: '',
             };
 
             const isNight = student.turno_calculado === 'NOCHE';
@@ -682,7 +476,6 @@ export default function AbsenceFollowupClient({
 
                 {/* Interactive Controls Body */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  
                   {/* Left Column: Call Status Options */}
                   <div className="space-y-4">
                     <label className="text-xs font-black text-fsm-blue uppercase tracking-wider flex items-center gap-1.5">
@@ -738,95 +531,61 @@ export default function AbsenceFollowupClient({
                     </div>
                   </div>
 
-                  {/* Right Column: Excusa File Attachment */}
-                  <div className="space-y-3">
+                  {/* Right Column: Comments / Observations */}
+                  <div className="space-y-2">
                     <label className="text-xs font-black text-fsm-blue uppercase tracking-wider flex items-center gap-1.5">
-                      <FileText size={14} /> Adjuntar Excusa / Justificante Médico
-                    </label>
-
-                    {data.excusaUrl ? (
-                      <div className="p-4 bg-green-50 border border-green-200 rounded-2xl flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          <Check size={18} className="text-green-600" />
-                          <div>
-                            <div className="text-xs font-bold text-green-900">Excusa Adjunta Correctamente</div>
-                            <a
-                              href={data.excusaUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[11px] font-bold text-fsm-blue hover:underline flex items-center gap-1 mt-0.5"
-                            >
-                              Ver Documento Adjunto <ExternalLink size={12} />
-                            </a>
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => handleFieldChange(student.student_id, 'excusaUrl', '')}
-                          className="text-xs text-fsm-red font-bold hover:underline"
-                        >
-                          Eliminar
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="relative border-2 border-dashed border-gray-200 hover:border-fsm-blue rounded-2xl p-4 text-center transition-all bg-gray-50/60">
-                        <input
-                          type="file"
-                          accept="image/*,.pdf"
-                          onChange={e => {
-                            if (e.target.files && e.target.files[0]) {
-                              handleFileUpload(student.student_id, e.target.files[0]);
-                            }
-                          }}
-                          disabled={data.isUploading}
-                          className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-                        />
-                        <Upload size={20} className="mx-auto text-gray-400 mb-1" />
-                        <div className="text-xs font-bold text-gray-700">
-                          {data.isUploading ? 'Subiendo archivo...' : 'Haz clic o arrastra aquí la excusa (PDF o Imagen)'}
-                        </div>
-                        <p className="text-[10px] text-gray-400 font-semibold mt-0.5">Formatos permitidos: PDF, PNG, JPG</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Comments / Observations TextArea */}
-                  <div className="md:col-span-2 space-y-2">
-                    <label className="text-xs font-black text-fsm-blue uppercase tracking-wider flex items-center gap-1.5">
-                      <MessageSquare size={14} /> Observaciones / Comentarios de la Llamada
+                      <MessageSquare size={14} /> Observaciones / Justificación de la Ausencia
                     </label>
 
                     <textarea
-                      rows={2}
+                      rows={3}
                       value={data.comentarios}
                       onChange={e => handleFieldChange(student.student_id, 'comentarios', e.target.value)}
-                      placeholder="Escribe aquí el detalle de la conversación con el alumno o acudiente (ej: Madre informa cita médica, solicita incapacidad por 3 días...)"
-                      className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-3 text-xs font-medium text-gray-800 outline-none focus:border-fsm-blue focus:ring-2 focus:ring-fsm-blue/20 transition-all"
+                      placeholder="Escribe aquí el detalle de la llamada o justificación (ej: Madre informa cita médica, solicita permiso por 3 días...)"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-3 text-xs font-medium text-gray-800 outline-none focus:border-fsm-blue focus:ring-2 focus:ring-fsm-blue/20 transition-all resize-none"
                     />
                   </div>
                 </div>
 
-                {/* Card Action Footer */}
+                {/* Card Action Footer with Direct Links */}
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-100">
-                  <div className="text-[11px] font-semibold text-gray-400">
-                    {data.savedSuccess ? (
-                      <span className="text-green-600 font-bold flex items-center gap-1">
-                        <Check size={14} /> Guardado con éxito
-                      </span>
-                    ) : (
-                      'Recuerda hacer clic en "Guardar Seguimiento" tras modificar'
-                    )}
+                  {/* Direct Jump Links */}
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <Link
+                      href={`/admin/attendance?search=${encodeURIComponent(student.nombre)}`}
+                      className="px-3.5 py-2 bg-blue-50 text-fsm-blue hover:bg-fsm-blue hover:text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 border border-blue-200 shadow-2xs"
+                    >
+                      <Layers size={13} />
+                      <span>Ver en Asistencia</span>
+                      <ExternalLink size={12} />
+                    </Link>
+
+                    <Link
+                      href={`/admin/attendance/students/${student.student_id}`}
+                      className="px-3.5 py-2 bg-gray-100 text-gray-700 hover:bg-gray-800 hover:text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 border border-gray-200 shadow-2xs"
+                    >
+                      <User size={13} />
+                      <span>Historial</span>
+                    </Link>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleSaveStudentFollowup(student)}
-                    disabled={data.isSaving}
-                    className="px-6 py-2.5 bg-fsm-blue text-white hover:bg-fsm-red rounded-xl font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm active:scale-95 disabled:opacity-50 w-full sm:w-auto justify-center"
-                  >
-                    <Save size={14} /> {data.isSaving ? 'Guardando...' : 'Guardar Seguimiento'}
-                  </button>
+                  {/* Save Button */}
+                  <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                    {data.savedSuccess && (
+                      <span className="text-green-600 font-bold text-xs flex items-center gap-1">
+                        <Check size={14} /> Guardado
+                      </span>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => handleSaveStudentFollowup(student)}
+                      disabled={data.isSaving}
+                      className="px-6 py-2.5 bg-fsm-blue text-white hover:bg-fsm-red rounded-xl font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm active:scale-95 disabled:opacity-50 w-full sm:w-auto justify-center"
+                    >
+                      <Save size={14} /> {data.isSaving ? 'Guardando...' : 'Guardar Seguimiento'}
+                    </button>
+                  </div>
                 </div>
               </div>
             );
