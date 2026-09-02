@@ -1471,8 +1471,7 @@ async function checkIsAdminFull(): Promise<{ isAdmin: boolean; email: string }> 
     const email = (payload?.email || '').toLowerCase().trim();
     const isAdmin = (
       email === 'admin@fundacionsanmateo.edu.co' || 
-      email === 'admin@fundacionsanmateosoacha.edu.co' ||
-      payload?.role === 'admin'
+      email === 'admin@fundacionsanmateosoacha.edu.co'
     );
     return { isAdmin, email };
   } catch {

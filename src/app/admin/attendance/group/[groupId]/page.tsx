@@ -28,8 +28,7 @@ export default async function GroupAttendancePage({
       currentUserEmail = (payload?.email || '').toLowerCase().trim();
       canModifyAll = (
         currentUserEmail === 'admin@fundacionsanmateo.edu.co' ||
-        currentUserEmail === 'admin@fundacionsanmateosoacha.edu.co' ||
-        payload?.role === 'admin'
+        currentUserEmail === 'admin@fundacionsanmateosoacha.edu.co'
       );
     } catch {
       canModifyAll = false;
