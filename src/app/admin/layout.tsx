@@ -24,6 +24,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   const isAcademicRole = parsed.role === 'academic' || parsed.email === 'sacademica@fundacionsanmateosoacha.edu.co';
+  const userEmail = (parsed.email || '').toLowerCase().trim();
+  const isSuperAdmin = userEmail === 'admin@fundacionsanmateo.edu.co' || userEmail === 'admin@fundacionsanmateosoacha.edu.co';
 
   const defaultHomeLink = isAcademicRole ? '/admin/attendance' : '/admin';
 
@@ -71,6 +73,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               {!isAcademicRole && (
                 <Link href="/admin/users" className="px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase bg-purple-50 text-purple-800 hover:bg-purple-600 hover:text-white transition-all border border-purple-200">
                   👥 Usuarios y Permisos
+                </Link>
+              )}
+              {isSuperAdmin && (
+                <Link href="/admin/logs" className="px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase bg-indigo-50 text-indigo-900 hover:bg-indigo-600 hover:text-white transition-all border border-indigo-200 shadow-2xs">
+                  📜 LOGS & Auditoría
                 </Link>
               )}
           </nav>

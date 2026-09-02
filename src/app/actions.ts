@@ -5,9 +5,10 @@ import { revalidatePath } from 'next/cache';
 import { sql } from '@/lib/db';
 import { encrypt, decrypt } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
+import { logAuditEvent } from '@/lib/auditLogger';
 
 export async function login(formData: FormData) {
-  const email = formData.get('email') as string;
+  const email = (formData.get('email') as string)?.trim().toLowerCase();
   const password = formData.get('password') as string;
 
   if (!email || !password) {
@@ -17,17 +18,37 @@ export async function login(formData: FormData) {
   try {
     const users = await sql`SELECT id, nombre, email, password_hash, role, activo, permissions FROM admin_users WHERE email = ${email} LIMIT 1`;
     if (users.length === 0) {
+      await logAuditEvent({
+        action: 'LOGIN_FALLIDO',
+        category: 'AUTH',
+        details: `Intento de inicio de sesión fallido (usuario no encontrado): ${email}`,
+        userEmail: email,
+      });
       return { error: 'Credenciales inválidas' };
     }
 
     const user = users[0];
     if (user.activo === false) {
+      await logAuditEvent({
+        action: 'LOGIN_BLOQUEADO',
+        category: 'AUTH',
+        details: `Intento de acceso bloqueado (cuenta inactiva): ${email}`,
+        userEmail: email,
+        userName: user.nombre,
+      });
       return { error: 'Su usuario se encuentra inactivo. Por favor contacte a la administración.' };
     }
 
     const passwordMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!passwordMatch) {
+      await logAuditEvent({
+        action: 'LOGIN_FALLIDO',
+        category: 'AUTH',
+        details: `Intento de inicio de sesión fallido (contraseña incorrecta): ${email}`,
+        userEmail: email,
+        userName: user.nombre,
+      });
       return { error: 'Credenciales inválidas' };
     }
 
@@ -51,6 +72,16 @@ export async function login(formData: FormData) {
       maxAge: 60 * 60 * 24 // 24 hours
     });
 
+    await logAuditEvent({
+      action: 'LOGIN_EXITOSO',
+      category: 'AUTH',
+      details: `Inicio de sesión exitoso como [${userRole}] - ${user.nombre || user.email}`,
+      userEmail: user.email,
+      userRole,
+      userName: user.nombre,
+      metadata: { role: userRole, permissions }
+    });
+
     const redirectUrl = userRole === 'teacher' 
       ? '/teacher/attendance' 
       : (userRole === 'academic' ? '/admin/attendance' : '/admin');
@@ -66,6 +97,11 @@ export async function login(formData: FormData) {
 }
 
 export async function logout() {
+  await logAuditEvent({
+    action: 'LOGOUT',
+    category: 'AUTH',
+    details: 'Cierre de sesión de usuario',
+  });
   (await cookies()).delete('session');
 }
 
@@ -889,6 +925,13 @@ export async function recordManualAttendance(
       )
     `;
 
+    await logAuditEvent({
+      action: 'ASISTENCIA_MANUAL_PANEL',
+      category: 'ATTENDANCE',
+      details: `Marcó pase manual [${tipoEvento.toUpperCase()}] para el estudiante ${student.nombre} en ${cleanSede}${cleanObs ? ` (Obs: ${cleanObs})` : ''}`,
+      metadata: { studentId: targetUuid, estudiante: student.nombre, tipoEvento, sede: cleanSede, observaciones: cleanObs }
+    });
+
     return { success: true, studentName: student.nombre };
   } catch (error: any) {
     console.error('Error recording manual attendance:', error);
@@ -912,14 +955,36 @@ export async function updateStudentAbsenceExcuse(
       ) VALUES (
         ${studentId}::uuid, ${sessionId}::uuid, ${cleanEstado}, 'MANUAL', ${cleanObs}, 'Sede 1'
       )
-      ON CONFLICT (student_id, session_id) DO UPDATE 
-      SET estado = EXCLUDED.estado, observaciones = EXCLUDED.observaciones, updated_at = CURRENT_TIMESTAMP
+      ON CONFLICT (student_id, session_id) 
+      DO UPDATE SET
+        estado = EXCLUDED.estado,
+        observaciones = EXCLUDED.observaciones,
+        updated_at = CURRENT_TIMESTAMP
     `;
 
+    const stInfo = await sql`
+      SELECT sn.nombre_original, s.nombre 
+      FROM students_normalized sn 
+      LEFT JOIN students s ON s.id = sn.id
+      WHERE sn.id = ${studentId}::uuid OR s.id = ${studentId}::uuid
+      LIMIT 1
+    `;
+    const sessInfo = await sql`SELECT fecha FROM class_sessions WHERE id = ${sessionId}::uuid LIMIT 1`;
+    const stName = stInfo[0]?.nombre_original || stInfo[0]?.nombre || studentId;
+    const sessDate = sessInfo[0]?.fecha ? new Date(sessInfo[0].fecha).toISOString().split('T')[0] : sessionId;
+
+    await logAuditEvent({
+      action: cleanEstado === 'EXCUSA_MEDICA' ? 'EXCUSA_REGISTRADA' : 'ASISTENCIA_MODIFICADA',
+      category: 'ATTENDANCE',
+      details: `${cleanEstado === 'EXCUSA_MEDICA' ? 'Cargó excusa médica' : 'Modificó asistencia'} para ${stName} (Fecha ${sessDate}) a [${cleanEstado}]${cleanObs ? `: "${cleanObs}"` : ''}`,
+      metadata: { studentId, sessionId, estudiante: stName, fecha: sessDate, estado: cleanEstado, observaciones: cleanObs }
+    });
+
+    revalidatePath(`/admin/attendance/students/${studentId}`);
     return { success: true };
   } catch (error: any) {
     console.error('Error updating absence excuse:', error);
-    return { error: error.message || 'Error al guardar excusa u observación' };
+    return { error: error.message || 'Error al actualizar excusa' };
   }
 }
 
@@ -1262,6 +1327,22 @@ export async function saveAbsenceFollowup(data: {
         updated_at = CURRENT_TIMESTAMP
     `;
 
+    const stInfo = await sql`
+      SELECT sn.nombre_original, s.nombre 
+      FROM students_normalized sn
+      LEFT JOIN students s ON s.id = sn.id
+      WHERE sn.id = ${data.studentId}::uuid OR s.id = ${data.studentId}::uuid
+      LIMIT 1
+    `;
+    const stName = stInfo[0]?.nombre_original || stInfo[0]?.nombre || data.studentId;
+
+    await logAuditEvent({
+      action: 'SEGUIMIENTO_TELEFONICO',
+      category: 'ATTENDANCE',
+      details: `Registró seguimiento telefónico para ${stName} (${data.fecha}): [${data.estadoLlamada}] ${data.seLlamo ? '✓ Llamado' : 'Pendiente'}${data.comentarios ? ` - Comentario: "${data.comentarios}"` : ''}`,
+      metadata: { ...data, estudiante: stName }
+    });
+
     return { success: true };
   } catch (error: any) {
     console.error('Error saving absence followup:', error);
@@ -1343,6 +1424,13 @@ export async function createAdminUserAction(formData: FormData) {
       `;
     }
 
+    await logAuditEvent({
+      action: 'USUARIO_CREADO',
+      category: 'USERS',
+      details: `Creó nuevo usuario [${role}]: ${nombre} (${email})`,
+      metadata: { userId: newUserId, nombre, email, role, permissions }
+    });
+
     revalidatePath('/admin/users');
     return { success: true };
   } catch (error: any) {
@@ -1351,23 +1439,37 @@ export async function createAdminUserAction(formData: FormData) {
   }
 }
 
-export async function updateAdminUserAction(formData: FormData) {
-  const userId = formData.get('userId') as string;
+export async function updateAdminUserAction(userIdOrFormData: string | FormData, maybeFormData?: FormData) {
+  let userId = '';
+  let formData: FormData;
+
+  if (typeof userIdOrFormData === 'string') {
+    userId = userIdOrFormData;
+    formData = maybeFormData as FormData;
+  } else {
+    formData = userIdOrFormData;
+    userId = formData.get('userId') as string;
+  }
+
   const nombre = (formData.get('nombre') as string)?.trim();
   const email = (formData.get('email') as string)?.trim().toLowerCase();
   const password = formData.get('password') as string;
   const role = (formData.get('role') as string) || 'admin';
   const permissionsJson = formData.get('permissions') as string;
-  const activo = formData.get('activo') === 'true';
 
   if (!userId || !email || !nombre) {
     return { error: 'ID de usuario, nombre y correo son obligatorios.' };
   }
 
   try {
+    const existing = await sql`SELECT id FROM admin_users WHERE email = ${email} AND id != ${userId}::uuid LIMIT 1`;
+    if (existing.length > 0) {
+      return { error: 'Ya existe otro usuario con este correo electrónico.' };
+    }
+
     const permissions = permissionsJson ? JSON.parse(permissionsJson) : ['attendance_view'];
 
-    if (password && password.trim().length > 0) {
+    if (password && password.trim() !== '') {
       const passwordHash = await bcrypt.hash(password.trim(), 10);
       await sql`
         UPDATE admin_users
@@ -1376,17 +1478,9 @@ export async function updateAdminUserAction(formData: FormData) {
           email = ${email},
           password_hash = ${passwordHash},
           role = ${role},
-          permissions = ${JSON.stringify(permissions)}::jsonb,
-          activo = ${activo}
+          permissions = ${JSON.stringify(permissions)}::jsonb
         WHERE id = ${userId}::uuid
       `;
-      if (role === 'teacher' || permissions.includes('mobile_attendance')) {
-        await sql`
-          INSERT INTO teachers (id, nombre, email, password_hash)
-          VALUES (${userId}::uuid, ${nombre}, ${email}, ${passwordHash})
-          ON CONFLICT (id) DO UPDATE SET nombre = ${nombre}, email = ${email}, password_hash = ${passwordHash}
-        `;
-      }
     } else {
       await sql`
         UPDATE admin_users
@@ -1394,20 +1488,17 @@ export async function updateAdminUserAction(formData: FormData) {
           nombre = ${nombre},
           email = ${email},
           role = ${role},
-          permissions = ${JSON.stringify(permissions)}::jsonb,
-          activo = ${activo}
+          permissions = ${JSON.stringify(permissions)}::jsonb
         WHERE id = ${userId}::uuid
       `;
-      if (role === 'teacher' || permissions.includes('mobile_attendance')) {
-        await sql`
-          UPDATE teachers
-          SET nombre = ${nombre}, email = ${email}
-          WHERE id = ${userId}::uuid
-        `;
-      }
     }
 
     if (role === 'teacher' || permissions.includes('mobile_attendance')) {
+      await sql`
+        INSERT INTO teachers (id, nombre, email)
+        VALUES (${userId}::uuid, ${nombre}, ${email})
+        ON CONFLICT (id) DO UPDATE SET nombre = ${nombre}, email = ${email}
+      `;
       const readerId = `movil-${userId.slice(0, 8)}`;
       await sql`
         INSERT INTO readers (id, ubicacion, tipo, teacher_id, sede)
@@ -1415,6 +1506,13 @@ export async function updateAdminUserAction(formData: FormData) {
         ON CONFLICT (id) DO UPDATE SET teacher_id = ${userId}::uuid, ubicacion = ${`Lector Móvil - ${nombre}`}
       `;
     }
+
+    await logAuditEvent({
+      action: 'USUARIO_ACTUALIZADO',
+      category: 'USERS',
+      details: `Actualizó datos del usuario: ${nombre} (${email}) - Rol [${role}]`,
+      metadata: { userId, nombre, email, role, permissions }
+    });
 
     revalidatePath('/admin/users');
     return { success: true };
@@ -1436,6 +1534,14 @@ export async function toggleAdminUserStatusAction(userId: string, newStatus: boo
       SET activo = ${newStatus}
       WHERE id = ${userId}::uuid
     `;
+
+    await logAuditEvent({
+      action: 'ESTADO_USUARIO_CAMBIADO',
+      category: 'USERS',
+      details: `${newStatus ? 'Activó' : 'Desactivó'} la cuenta de usuario con ID ${userId}`,
+      metadata: { userId, newStatus }
+    });
+
     revalidatePath('/admin/users');
     return { success: true };
   } catch (error: any) {
@@ -1446,6 +1552,7 @@ export async function toggleAdminUserStatusAction(userId: string, newStatus: boo
 
 export async function deleteAdminUserAction(userId: string) {
   try {
+    const userToDel = await sql`SELECT nombre, email FROM admin_users WHERE id = ${userId}::uuid LIMIT 1`;
     const totalUsers = await sql`SELECT count(*) FROM admin_users`;
     if (parseInt(totalUsers[0].count, 10) <= 1) {
       return { error: 'No se puede eliminar el único usuario administrador del sistema.' };
@@ -1454,6 +1561,14 @@ export async function deleteAdminUserAction(userId: string) {
     await sql`DELETE FROM readers WHERE teacher_id = ${userId}::uuid`;
     await sql`DELETE FROM teachers WHERE id = ${userId}::uuid`;
     await sql`DELETE FROM admin_users WHERE id = ${userId}::uuid`;
+
+    await logAuditEvent({
+      action: 'USUARIO_ELIMINADO',
+      category: 'USERS',
+      details: `Eliminó el usuario: ${userToDel[0]?.nombre || ''} (${userToDel[0]?.email || userId})`,
+      metadata: { userId, user: userToDel[0] }
+    });
+
     revalidatePath('/admin/users');
     return { success: true };
   } catch (error: any) {
@@ -1513,6 +1628,32 @@ export async function updateCellAttendanceAction(
       ON CONFLICT (student_id, session_id) DO UPDATE 
       SET estado = EXCLUDED.estado, observaciones = EXCLUDED.observaciones, updated_at = CURRENT_TIMESTAMP
     `;
+
+    const stInfo = await sql`
+      SELECT sn.nombre_original, s.nombre 
+      FROM students_normalized sn
+      LEFT JOIN students s ON s.id = sn.id
+      WHERE sn.id = ${studentId}::uuid OR s.id = ${studentId}::uuid
+      LIMIT 1
+    `;
+    const sessInfo = await sql`
+      SELECT cs.fecha, g.nombre as grupo_nombre
+      FROM class_sessions cs
+      LEFT JOIN groups g ON g.id = cs.group_id
+      WHERE cs.id = ${sessionId}::uuid
+      LIMIT 1
+    `;
+
+    const stName = stInfo[0]?.nombre_original || stInfo[0]?.nombre || studentId;
+    const sessDate = sessInfo[0]?.fecha ? new Date(sessInfo[0].fecha).toISOString().split('T')[0] : sessionId;
+    const grpName = sessInfo[0]?.grupo_nombre || '';
+
+    await logAuditEvent({
+      action: cleanEstado === 'EXCUSA_MEDICA' ? 'EXCUSA_REGISTRADA' : 'ASISTENCIA_MODIFICADA',
+      category: 'ATTENDANCE',
+      details: `${cleanEstado === 'EXCUSA_MEDICA' ? 'Registró excusa médica' : 'Modificó asistencia'} para ${stName} ${grpName ? `(${grpName})` : ''} en fecha ${sessDate} a estado [${cleanEstado}]${cleanObs ? ` (Obs: "${cleanObs}")` : ''}`,
+      metadata: { studentId, sessionId, estudiante: stName, grupo: grpName, fecha: sessDate, estado: cleanEstado, observaciones: cleanObs }
+    });
 
     return { success: true };
   } catch (error: any) {
@@ -1595,6 +1736,16 @@ export async function bulkUpdateGroupSessionStateAction(
       `;
     }
 
+    const grpInfo = await sql`SELECT nombre FROM groups WHERE id = ${groupId}::uuid LIMIT 1`;
+    const grpName = grpInfo[0]?.nombre || groupId;
+
+    await logAuditEvent({
+      action: 'MARCADO_MASIVO_FECHA',
+      category: 'ATTENDANCE',
+      details: `Marcado masivo [${cleanEstado}] aplicado al grupo ${grpName} en fecha ${fechaStr} (${enrolledStudents.length} alumnos)${cleanObs ? ` - Obs: "${cleanObs}"` : ''}`,
+      metadata: { groupId, grupo: grpName, fechaStr, estado: cleanEstado, observaciones: cleanObs, count: enrolledStudents.length }
+    });
+
     revalidatePath(`/admin/attendance/group/${groupId}`);
     return { success: true, count: enrolledStudents.length };
   } catch (error: any) {
@@ -1642,6 +1793,16 @@ export async function bulkUpdateDateRangeGroupStateAction(
       current.setUTCDate(current.getUTCDate() + 1);
     }
 
+    const grpInfo = await sql`SELECT nombre FROM groups WHERE id = ${groupId}::uuid LIMIT 1`;
+    const grpName = grpInfo[0]?.nombre || groupId;
+
+    await logAuditEvent({
+      action: 'MARCADO_MASIVO_RANGO',
+      category: 'ATTENDANCE',
+      details: `Marcado masivo [${estado}] en grupo ${grpName} del ${startDateStr} al ${endDateStr} (${processedDays} días procesados)`,
+      metadata: { groupId, grupo: grpName, startDateStr, endDateStr, estado, observaciones, processedDays }
+    });
+
     revalidatePath(`/admin/attendance/group/${groupId}`);
     return { success: true, daysCount: processedDays };
   } catch (error: any) {
@@ -1650,5 +1811,131 @@ export async function bulkUpdateDateRangeGroupStateAction(
   }
 }
 
+/**
+ * Superadmin Audit Logs Query Action
+ */
+export async function getAuditLogsAction(filters?: {
+  page?: number;
+  limit?: number;
+  userEmail?: string;
+  category?: string;
+  action?: string;
+  startDate?: string;
+  endDate?: string;
+  search?: string;
+}) {
+  try {
+    const { isAdmin } = await checkIsAdminFull();
+    if (!isAdmin) {
+      return { error: 'Permiso denegado: El registro de auditoría es exclusivo para el Administrador General.', logs: [], total: 0 };
+    }
 
+    const page = Math.max(1, filters?.page || 1);
+    const limit = Math.min(100, Math.max(10, filters?.limit || 50));
+    const offset = (page - 1) * limit;
 
+    const userEmail = filters?.userEmail?.trim() || '';
+    const category = filters?.category?.trim() || '';
+    const action = filters?.action?.trim() || '';
+    const search = filters?.search?.trim() || '';
+    const startDate = filters?.startDate?.trim() || '';
+    const endDate = filters?.endDate?.trim() || '';
+
+    let logs;
+    let countRes;
+
+    if (userEmail || (category && category !== 'ALL') || (action && action !== 'ALL') || startDate || endDate || search) {
+      logs = await sql`
+        SELECT 
+          id,
+          user_email,
+          user_role,
+          user_name,
+          action,
+          category,
+          details,
+          metadata,
+          ip_address,
+          city,
+          country,
+          user_agent,
+          created_at::text as created_at
+        FROM audit_logs
+        WHERE (
+          (${userEmail} = '' OR user_email ILIKE ${'%' + userEmail + '%'}) AND
+          (${category} = '' OR ${category} = 'ALL' OR category = ${category}) AND
+          (${action} = '' OR ${action} = 'ALL' OR action = ${action}) AND
+          (${startDate} = '' OR created_at >= (${startDate} || ' 00:00:00-05')::timestamptz) AND
+          (${endDate} = '' OR created_at <= (${endDate} || ' 23:59:59-05')::timestamptz) AND
+          (${search} = '' OR details ILIKE ${'%' + search + '%'} OR ip_address ILIKE ${'%' + search + '%'} OR user_name ILIKE ${'%' + search + '%'})
+        )
+        ORDER BY created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+
+      countRes = await sql`
+        SELECT COUNT(*)::int as total 
+        FROM audit_logs
+        WHERE (
+          (${userEmail} = '' OR user_email ILIKE ${'%' + userEmail + '%'}) AND
+          (${category} = '' OR ${category} = 'ALL' OR category = ${category}) AND
+          (${action} = '' OR ${action} = 'ALL' OR action = ${action}) AND
+          (${startDate} = '' OR created_at >= (${startDate} || ' 00:00:00-05')::timestamptz) AND
+          (${endDate} = '' OR created_at <= (${endDate} || ' 23:59:59-05')::timestamptz) AND
+          (${search} = '' OR details ILIKE ${'%' + search + '%'} OR ip_address ILIKE ${'%' + search + '%'} OR user_name ILIKE ${'%' + search + '%'})
+        )
+      `;
+    } else {
+      logs = await sql`
+        SELECT 
+          id,
+          user_email,
+          user_role,
+          user_name,
+          action,
+          category,
+          details,
+          metadata,
+          ip_address,
+          city,
+          country,
+          user_agent,
+          created_at::text as created_at
+        FROM audit_logs
+        ORDER BY created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+
+      countRes = await sql`SELECT COUNT(*)::int as total FROM audit_logs`;
+    }
+
+    const total = countRes[0]?.total || 0;
+
+    // Distinct users and categories for filters
+    const usersRes = await sql`SELECT DISTINCT user_email FROM audit_logs WHERE user_email IS NOT NULL AND user_email != '' ORDER BY user_email ASC`;
+    const users = usersRes.map((u: any) => u.user_email);
+
+    // Stats calculations
+    const todayStats = await sql`
+      SELECT 
+        COUNT(*) FILTER (WHERE category = 'AUTH' AND action = 'LOGIN_EXITOSO' AND created_at >= (CURRENT_DATE AT TIME ZONE 'America/Bogota'))::int as logins_today,
+        COUNT(*) FILTER (WHERE category = 'ATTENDANCE' AND created_at >= (CURRENT_DATE AT TIME ZONE 'America/Bogota'))::int as attendance_changes_today,
+        COUNT(DISTINCT ip_address)::int as unique_ips,
+        COUNT(DISTINCT user_email)::int as unique_users
+      FROM audit_logs
+    `;
+
+    return { 
+      success: true, 
+      logs, 
+      total, 
+      page, 
+      limit, 
+      users,
+      stats: todayStats[0] || { logins_today: 0, attendance_changes_today: 0, unique_ips: 0, unique_users: 0 }
+    };
+  } catch (error: any) {
+    console.error('Error fetching audit logs:', error);
+    return { error: error?.message || 'Error al consultar logs de auditoría', logs: [], total: 0 };
+  }
+}
