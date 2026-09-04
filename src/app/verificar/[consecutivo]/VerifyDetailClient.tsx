@@ -5,10 +5,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { 
   ShieldCheck, CheckCircle2, XCircle, AlertTriangle, 
-  ArrowLeft, FileText, Calendar, User, BookOpen, Printer, Download, Copy, Check, QrCode
+  ArrowLeft, FileText, Calendar, User, BookOpen, Share2, Copy, Check, QrCode, Lock
 } from 'lucide-react';
 import { formatDateDDMMYYYY } from '@/lib/dateUtils';
-import { generateDocumentPDF } from '@/lib/documentPdfGenerator';
 
 interface DocumentRecord {
   id: string;
@@ -22,7 +21,6 @@ interface DocumentRecord {
   libro: string;
   estado: string;
   notas: string;
-  pdf_url: string;
   created_at: string;
 }
 
@@ -33,7 +31,6 @@ interface VerifyDetailClientProps {
 
 export default function VerifyDetailClient({ doc, searchedCode }: VerifyDetailClientProps) {
   const [copied, setCopied] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
 
   const isValido = doc && doc.estado === 'valido';
   const isAnulado = doc && doc.estado === 'anulado';
@@ -41,54 +38,43 @@ export default function VerifyDetailClient({ doc, searchedCode }: VerifyDetailCl
   const verificationUrl = doc ? `https://fundacionsanmateosoacha.edu.co/verificar/${encodeURIComponent(doc.consecutivo)}` : '';
   const qrImageUrl = doc ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(verificationUrl)}` : '';
 
-  const handleCopyLink = () => {
-    if (verificationUrl) {
+  const handleShareLink = async () => {
+    if (!verificationUrl) return;
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: `Verificación Oficial Fundación San Mateo - ${doc?.consecutivo}`,
+          text: `Comprueba la autenticidad del documento oficial ${doc?.consecutivo} emitido por la Fundación San Mateo:`,
+          url: verificationUrl,
+        });
+        return;
+      } catch {
+        // User cancelled or share failed, fallback to clipboard
+      }
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(verificationUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
-  const handleDownloadPDF = async () => {
-    if (!doc) return;
-    try {
-      setIsDownloading(true);
-      if (doc.pdf_url) {
-        const safeName = doc.student_nombre ? `_${doc.student_nombre.trim().replace(/\s+/g, '_')}` : '';
-        const link = document.createElement('a');
-        link.href = doc.pdf_url;
-        link.download = `FSM-000-${doc.consecutivo}${safeName}.pdf`;
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } else {
-        await generateDocumentPDF({
-          consecutivo: doc.consecutivo,
-          student_nombre: doc.student_nombre,
-          student_documento: doc.student_documento,
-          tipo_documento: doc.tipo_documento,
-          programa_curso: doc.programa_curso,
-          fecha_expedicion: doc.fecha_expedicion,
-          folio: doc.folio,
-          libro: doc.libro,
-          estado: doc.estado,
-          notas: doc.notas,
-        });
-      }
-    } catch (e) {
-      console.error('Error generating/downloading PDF:', e);
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-between">
+    <div 
+      className="min-h-screen bg-gray-50 flex flex-col justify-between select-none"
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      {/* Anti-print security protection style */}
+      <style jsx global>{`
+        @media print {
+          html, body {
+            display: none !important;
+            visibility: hidden !important;
+          }
+        }
+      `}</style>
       {/* Header Bar (Hidden on print) */}
       <header className="bg-white border-b border-gray-200 py-5 px-8 shadow-sm print:hidden">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
@@ -288,38 +274,32 @@ export default function VerifyDetailClient({ doc, searchedCode }: VerifyDetailCl
             </div>
 
             {/* Action Buttons Toolbar (Hidden on print) */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 print:hidden">
-              <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 print:hidden">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <button
-                  onClick={handleDownloadPDF}
-                  disabled={isDownloading}
-                  className="px-5 py-2.5 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all shadow-md flex items-center gap-2 disabled:opacity-50 active:scale-95"
+                  onClick={handleShareLink}
+                  className="px-6 py-3 bg-fsm-blue text-white hover:bg-fsm-red rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                  title="Compartir enlace de verificación oficial"
                 >
-                  <Download size={14} /> {isDownloading ? 'Generando...' : 'Descargar Certificado PDF'}
-                </button>
-
-                <button
-                  onClick={handlePrint}
-                  className="px-4 py-2.5 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-1.5"
-                >
-                  <Printer size={14} /> Imprimir
-                </button>
-
-                <button
-                  onClick={handleCopyLink}
-                  className="px-4 py-2.5 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-1.5"
-                >
-                  {copied ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
-                  {copied ? 'Enlace Copiado' : 'Copiar Enlace'}
+                  {copied ? <Check size={16} className="text-emerald-300" /> : <Share2 size={16} />}
+                  {copied ? '¡Enlace Oficial Copiado!' : 'Compartir Enlace de Verificación'}
                 </button>
               </div>
 
               <Link
                 href="/verificar"
-                className="text-xs font-bold text-fsm-blue hover:text-fsm-red transition-colors"
+                className="text-xs font-bold text-fsm-blue hover:text-fsm-red transition-colors text-center sm:text-right py-2"
               >
                 Nueva Consulta →
               </Link>
+            </div>
+
+            {/* Anti-Download & Anti-Tamper Security Banner */}
+            <div className="flex items-center gap-2.5 p-3.5 bg-amber-50/80 border border-amber-200/80 rounded-2xl text-amber-900 text-[11px] font-semibold print:hidden">
+              <Lock size={16} className="text-amber-700 shrink-0" />
+              <span>
+                <strong>Documento Protegido:</strong> Por políticas institucionales de seguridad académica, las descargas directas e impresiones están deshabilitadas. La autenticidad se valida exclusivamente mediante este enlace oficial.
+              </span>
             </div>
 
             {/* Official Stamp Footer */}
