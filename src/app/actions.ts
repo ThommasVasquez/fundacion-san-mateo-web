@@ -1082,6 +1082,17 @@ export async function createIssuedDocument(data: {
       return { error: 'Nombre, Tipo de Documento y Programa son obligatorios' };
     }
 
+    // Seguridad: Diplomas y Actas de Grado solo pueden ser expedidos por admin@fundacionsanmateo.edu.co
+    const isDiplomaOrActa = /diploma|acta/i.test(tipoDocumento);
+    if (isDiplomaOrActa) {
+      const { isAdmin } = await checkIsAdminFull();
+      if (!isAdmin) {
+        return { 
+          error: 'Permiso denegado: Solo el usuario admin@fundacionsanmateo.edu.co tiene autorización para expedir Diplomas y Actas de Grado.' 
+        };
+      }
+    }
+
     if (!consecutivo) {
       consecutivo = await getNextDocumentConsecutivo();
     }
@@ -1144,6 +1155,17 @@ export async function bulkCreateIssuedDocuments(items: Array<{
   try {
     if (!Array.isArray(items) || items.length === 0) {
       return { error: 'No se recibieron registros para importar.' };
+    }
+
+    // Seguridad: Diplomas y Actas de Grado solo pueden ser importados por admin@fundacionsanmateo.edu.co
+    const hasDiplomaOrActa = items.some(it => /diploma|acta/i.test(it.tipo_documento || ''));
+    if (hasDiplomaOrActa) {
+      const { isAdmin } = await checkIsAdminFull();
+      if (!isAdmin) {
+        return { 
+          error: 'Permiso denegado: El archivo contiene Diplomas o Actas de Grado. Solo el usuario admin@fundacionsanmateo.edu.co tiene autorización para expedir Diplomas y Actas.' 
+        };
+      }
     }
 
     const year = new Date().getFullYear();
@@ -1274,6 +1296,25 @@ export async function updateIssuedDocument(id: string, data: {
     const notas = data.notas?.trim() || null;
     const pdfUrl = data.pdf_url?.trim() || null;
 
+    const currentDoc = await sql`SELECT tipo_documento, estado FROM issued_documents WHERE id = ${id}::uuid LIMIT 1`;
+    if (currentDoc.length > 0) {
+      const isCurrentDiplomaOrActa = /diploma|acta/i.test(currentDoc[0].tipo_documento || '');
+      const isNewDiplomaOrActa = tipoDocumento && /diploma|acta/i.test(tipoDocumento);
+      const isAnnulling = estado === 'anulado' && currentDoc[0].estado !== 'anulado';
+
+      if (isCurrentDiplomaOrActa || isNewDiplomaOrActa) {
+        const { isAdmin } = await checkIsAdminFull();
+        if (!isAdmin) {
+          return { error: 'Permiso denegado: Solo el usuario admin@fundacionsanmateo.edu.co puede modificar o anular Diplomas y Actas de Grado.' };
+        }
+      } else if (isAnnulling) {
+        const { isAdmin } = await checkIsAdminFull();
+        if (!isAdmin) {
+          return { error: 'Permiso denegado: Solo el usuario admin@fundacionsanmateo.edu.co tiene autorización para anular documentos.' };
+        }
+      }
+    }
+
     await sql`
       UPDATE issued_documents
       SET 
@@ -1314,8 +1355,19 @@ export async function updateIssuedDocument(id: string, data: {
 
 export async function toggleDocumentStatus(id: string, newEstado: string) {
   try {
-    const existing = await sql`SELECT consecutivo, student_nombre FROM issued_documents WHERE id = ${id}::uuid LIMIT 1`;
+    const existing = await sql`SELECT consecutivo, student_nombre, tipo_documento FROM issued_documents WHERE id = ${id}::uuid LIMIT 1`;
     const docInfo = existing.length > 0 ? existing[0] : null;
+    const isDiplomaOrActa = /diploma|acta/i.test(docInfo?.tipo_documento || '');
+
+    // Seguridad: Solo admin@fundacionsanmateo.edu.co puede anular diplomas y actas (o anular documentos)
+    if (isDiplomaOrActa || newEstado === 'anulado') {
+      const { isAdmin } = await checkIsAdminFull();
+      if (!isAdmin) {
+        return { 
+          error: 'Permiso denegado: Solo el usuario admin@fundacionsanmateo.edu.co tiene autorización para anular o cambiar el estado de este documento.' 
+        };
+      }
+    }
 
     await sql`
       UPDATE issued_documents 
@@ -1344,8 +1396,19 @@ export async function toggleDocumentStatus(id: string, newEstado: string) {
 
 export async function deleteIssuedDocument(id: string) {
   try {
-    const existing = await sql`SELECT consecutivo, student_nombre FROM issued_documents WHERE id = ${id}::uuid LIMIT 1`;
+    const existing = await sql`SELECT consecutivo, student_nombre, tipo_documento FROM issued_documents WHERE id = ${id}::uuid LIMIT 1`;
     const docInfo = existing.length > 0 ? existing[0] : null;
+    const isDiplomaOrActa = /diploma|acta/i.test(docInfo?.tipo_documento || '');
+
+    // Seguridad: Solo admin@fundacionsanmateo.edu.co puede eliminar Diplomas y Actas
+    if (isDiplomaOrActa) {
+      const { isAdmin } = await checkIsAdminFull();
+      if (!isAdmin) {
+        return { 
+          error: 'Permiso denegado: Solo el usuario admin@fundacionsanmateo.edu.co tiene autorización para eliminar Diplomas y Actas de Grado.' 
+        };
+      }
+    }
 
     await sql`DELETE FROM issued_documents WHERE id = ${id}::uuid`;
 

@@ -1,5 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
+import { cookies } from 'next/headers';
+import { decrypt } from '@/lib/auth';
 import { sql } from '@/lib/db';
 import DocumentManagerClient from './DocumentManagerClient';
 import { ArrowLeft, ChevronRight, FileCheck } from 'lucide-react';
@@ -8,6 +10,17 @@ import { getNextDocumentConsecutivo } from '@/app/actions';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminDocumentsPage() {
+  const session = (await cookies()).get('session')?.value;
+  let parsed = null;
+  if (session) {
+    try {
+      parsed = await decrypt(session);
+    } catch {
+      parsed = null;
+    }
+  }
+  const userEmail = (parsed?.email || '').toLowerCase().trim();
+  const isSuperAdmin = userEmail === 'admin@fundacionsanmateo.edu.co' || userEmail === 'admin@fundacionsanmateosoacha.edu.co';
   let documents: any[] = [];
   try {
     const docsRes = await sql`
@@ -106,6 +119,7 @@ export default async function AdminDocumentsPage() {
         nextConsecutivo={nextConsecutivo}
         registeredStudents={registeredStudents}
         academicPrograms={academicPrograms}
+        isSuperAdmin={isSuperAdmin}
       />
     </div>
   );

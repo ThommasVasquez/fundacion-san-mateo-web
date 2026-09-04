@@ -115,24 +115,26 @@ export async function stampOfficialDocumentPDF(
     // CLEANUP / COVER UNWANTED BROWSER PRINT HEADERS & FOOTERS
     // ----------------------------------------------------
     // 1. Cover bottom browser print footer (e.g. Q10 URL and "Página 1 de 2")
-    // The browser print footer is located between y=12 and y=44 pt.
-    // Drawing an opaque white rectangle across the bottom 48 pt cleanly wipes it out.
+    // Browser print footer text is at y=43 pt with text bounding box up to y=54 pt.
+    // An opaque white block across the bottom 62 pt cleanly and completely wipes it out without touching the signature (starts at y=68 pt).
     page.drawRectangle({
       x: 0,
       y: 0,
       width: width,
-      height: 48,
-      color: rgb(1, 1, 1), // Pure opaque white
+      height: 62,
+      color: rgb(1, 1, 1), // Pure opaque solid white
       opacity: 1,
     });
 
     // 2. Cover top browser print header (e.g. "null 4/09/26, 10:37 a.m.")
+    // Browser print header text is at y=768 pt (height-24 pt) with text bounding box down to y=760 pt (height-32 pt).
+    // An opaque white block across the top 38 pt cleanly and completely wipes it out.
     page.drawRectangle({
       x: 0,
-      y: height - 22,
+      y: height - 38,
       width: width,
-      height: 22,
-      color: rgb(1, 1, 1), // Pure opaque white
+      height: 38,
+      color: rgb(1, 1, 1), // Pure opaque solid white
       opacity: 1,
     });
 
@@ -166,15 +168,15 @@ export async function stampOfficialDocumentPDF(
       const logoY = height - logoHeight - 16;
 
       // Clean white background card behind top-left logo to prevent background bleed
-      const leftHeaderBoxWidth = logoWidth + 175;
-      const leftHeaderBoxHeight = logoHeight + 8;
+      const leftHeaderBoxWidth = logoWidth + 200;
+      const leftHeaderBoxHeight = logoHeight + 14;
       page.drawRectangle({
-        x: logoX - 4,
-        y: logoY - 4,
+        x: logoX - 6,
+        y: logoY - 7,
         width: leftHeaderBoxWidth,
         height: leftHeaderBoxHeight,
         color: rgb(1, 1, 1),
-        opacity: 0.98,
+        opacity: 1,
       });
 
       page.drawImage(logoImage, {

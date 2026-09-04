@@ -62,13 +62,15 @@ interface DocumentManagerClientProps {
   nextConsecutivo: string;
   registeredStudents?: StudentOption[];
   academicPrograms?: string[];
+  isSuperAdmin?: boolean;
 }
 
 export default function DocumentManagerClient({ 
   documents, 
   nextConsecutivo,
   registeredStudents = [],
-  academicPrograms = []
+  academicPrograms = [],
+  isSuperAdmin = false
 }: DocumentManagerClientProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -94,7 +96,7 @@ export default function DocumentManagerClient({
   const [newConsecutivo, setNewConsecutivo] = useState(nextConsecutivo);
   const [newNombre, setNewNombre] = useState('');
   const [newDocumento, setNewDocumento] = useState('');
-  const [newTipo, setNewTipo] = useState('Diploma de Grado');
+  const [newTipo, setNewTipo] = useState(isSuperAdmin ? 'Diploma de Grado' : 'Certificado de Notas');
   const [newPrograma, setNewPrograma] = useState('');
   const [newFecha, setNewFecha] = useState(new Date().toISOString().split('T')[0]);
   const [newFolio, setNewFolio] = useState('');
@@ -203,9 +205,15 @@ export default function DocumentManagerClient({
         setNewPrograma(extracted.programaCurso);
         detectedFields.push('Programa');
       }
-      if (extracted.tipoDocumento && !newTipo) {
-        setNewTipo(extracted.tipoDocumento);
-        detectedFields.push('Tipo');
+      if (extracted.tipoDocumento) {
+        const isRestricted = /diploma|acta/i.test(extracted.tipoDocumento) && !isSuperAdmin;
+        if (isRestricted) {
+          setPdfAutoDetectedMsg('⚠️ Documento identificado como Diploma/Acta de Grado. Solo admin@fundacionsanmateo.edu.co tiene autorización para expedirlo.');
+          showStatus('Permiso denegado: Solo admin@fundacionsanmateo.edu.co puede subir Diplomas y Actas.', 'error');
+        } else {
+          setNewTipo(extracted.tipoDocumento);
+          detectedFields.push('Tipo');
+        }
       }
 
       if (detectedFields.length > 0) {
@@ -262,6 +270,11 @@ export default function DocumentManagerClient({
   const handleCreateDocument = async () => {
     if (!newNombre.trim() || !newTipo.trim() || !newPrograma.trim()) {
       showStatus('Nombre del Estudiante, Tipo de Documento y Programa son obligatorios.', 'error');
+      return;
+    }
+
+    if (/diploma|acta/i.test(newTipo) && !isSuperAdmin) {
+      showStatus('Permiso denegado: Solo el usuario admin@fundacionsanmateo.edu.co tiene autorización para expedir Diplomas y Actas de Grado.', 'error');
       return;
     }
 
@@ -378,8 +391,12 @@ export default function DocumentManagerClient({
           const libro = getVal(['libro']);
           const notas = getVal(['notas', 'observaciones', 'nota', 'detalle']);
 
-          const isValid = Boolean(student_nombre && tipo_documento && programa_curso);
-          const validationError = !student_nombre 
+          const isDiplomaOrActa = /diploma|acta/i.test(tipo_documento);
+          const hasRestricted = isDiplomaOrActa && !isSuperAdmin;
+          const isValid = Boolean(student_nombre && tipo_documento && programa_curso && !hasRestricted);
+          const validationError = hasRestricted
+            ? 'Solo admin@fundacionsanmateo.edu.co puede subir Diplomas o Actas'
+            : !student_nombre 
             ? 'Falta el nombre del estudiante' 
             : !programa_curso 
             ? 'Falta el programa o curso' 
@@ -453,9 +470,12 @@ export default function DocumentManagerClient({
     const parsedPdfs = files.map(file => {
       // Try to parse name from filename: e.g. "DIPLOMA_JUAN_PEREZ_ENFERMERIA.pdf"
       const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[_|-]/g, ' ').toUpperCase();
-      let docType = 'Diploma de Grado';
+      let docType = isSuperAdmin ? 'Diploma de Grado' : 'Certificado de Estudio';
       if (cleanName.includes('ACTA')) docType = 'Acta de Grado';
-      if (cleanName.includes('CERTIFICADO')) docType = 'Certificado de Estudio';
+      if (cleanName.includes('NOTAS') || cleanName.includes('CALIFICACI')) docType = 'Certificado de Notas';
+      if (cleanName.includes('PRÁCTICA') || cleanName.includes('PRACTICA')) docType = 'Certificado de Prácticas';
+      if (cleanName.includes('COSTO')) docType = 'Certificado de Costos';
+      if (cleanName.includes('ESTUDIO') || cleanName.includes('CERTIFICADO')) docType = 'Certificado de Estudio';
       if (cleanName.includes('CONSTANCIA')) docType = 'Constancia de Asistencia';
 
       return {
@@ -471,6 +491,11 @@ export default function DocumentManagerClient({
 
   const handleConfirmBulkPdf = async () => {
     if (pdfFiles.length === 0) return;
+
+    if (!isSuperAdmin && pdfFiles.some(p => /diploma|acta/i.test(p.docType))) {
+      showStatus('Acceso denegado: Solo la cuenta oficial admin@fundacionsanmateo.edu.co puede subir o registrar Diplomas y Actas de Grado.', 'error');
+      return;
+    }
 
     setIsProcessingBulk(true);
     const itemsToCreate = pdfFiles.map(p => ({
@@ -511,6 +536,12 @@ export default function DocumentManagerClient({
 
   const handleSaveEdit = async () => {
     if (!editingDoc) return;
+
+    if (!isSuperAdmin && (/diploma|acta/i.test(editingDoc.tipo_documento) || /diploma|acta/i.test(editTipo))) {
+      showStatus('Permiso denegado: Solo el usuario admin@fundacionsanmateo.edu.co puede modificar Diplomas y Actas de Grado.', 'error');
+      return;
+    }
+
     setIsSavingEdit(true);
 
     let stampedPdfUrl = editPdfUrl || undefined;
@@ -558,6 +589,12 @@ export default function DocumentManagerClient({
   };
 
   const handleToggleState = (doc: DocumentItem) => {
+    const isDiplomaOrActa = /diploma|acta/i.test(doc.tipo_documento);
+    if (!isSuperAdmin && (isDiplomaOrActa || doc.estado === 'valido')) {
+      showStatus('Permiso denegado: Solo el usuario admin@fundacionsanmateo.edu.co tiene autorización para anular diplomas y actas de grado.', 'error');
+      return;
+    }
+
     const isValido = doc.estado === 'valido';
     const newEstado = isValido ? 'anulado' : 'valido';
 
@@ -585,6 +622,11 @@ export default function DocumentManagerClient({
   };
 
   const handleDelete = (doc: DocumentItem) => {
+    const isDiplomaOrActa = /diploma|acta/i.test(doc.tipo_documento);
+    if (!isSuperAdmin && isDiplomaOrActa) {
+      showStatus('Permiso denegado: Solo el usuario admin@fundacionsanmateo.edu.co puede eliminar Diplomas y Actas de Grado.', 'error');
+      return;
+    }
     setConfirmDialog({
       isOpen: true,
       title: 'ELIMINAR REGISTRO DOCUMENTAL',
@@ -915,25 +957,36 @@ export default function DocumentManagerClient({
                         </button>
 
                         {/* Toggle Status Button */}
-                        <button
-                          onClick={() => handleToggleState(doc)}
-                          className={`px-2.5 py-1.5 text-xs font-bold rounded-xl transition-all border ${
-                            isValido 
-                              ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100' 
-                              : 'bg-green-50 text-green-800 border-green-200 hover:bg-green-100'
-                          }`}
-                        >
-                          {isValido ? 'Anular' : 'Activar'}
-                        </button>
+                        {(!/diploma|acta/i.test(doc.tipo_documento) || isSuperAdmin) ? (
+                          <button
+                            onClick={() => handleToggleState(doc)}
+                            className={`px-2.5 py-1.5 text-xs font-bold rounded-xl transition-all border ${
+                              isValido 
+                                ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100' 
+                                : 'bg-green-50 text-green-800 border-green-200 hover:bg-green-100'
+                            }`}
+                          >
+                            {isValido ? 'Anular' : 'Activar'}
+                          </button>
+                        ) : (
+                          <span 
+                            className="px-2.5 py-1.5 text-[10px] font-bold rounded-xl bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed inline-flex items-center gap-1"
+                            title="Solo admin@fundacionsanmateo.edu.co puede anular diplomas y actas"
+                          >
+                            🔒 Bloqueado
+                          </span>
+                        )}
 
                         {/* Edit Button */}
-                        <button
-                          onClick={() => openEditModal(doc)}
-                          className="p-1.5 text-gray-400 hover:text-fsm-blue transition-colors rounded-lg hover:bg-gray-100 inline-block align-middle"
-                          title="Editar Registro"
-                        >
-                          <Edit2 size={15} />
-                        </button>
+                        {(!/diploma|acta/i.test(doc.tipo_documento) || isSuperAdmin) && (
+                          <button
+                            onClick={() => openEditModal(doc)}
+                            className="p-1.5 text-gray-400 hover:text-fsm-blue transition-colors rounded-lg hover:bg-gray-100 inline-block align-middle"
+                            title="Editar Registro"
+                          >
+                            <Edit2 size={15} />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -1155,10 +1208,20 @@ export default function DocumentManagerClient({
                     onChange={e => setNewTipo(e.target.value)}
                     className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
                   >
-                    {documentTypes.map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
+                    {documentTypes.map(t => {
+                      const isRestricted = !isSuperAdmin && /diploma|acta/i.test(t);
+                      return (
+                        <option key={t} value={t} disabled={isRestricted}>
+                          {t} {isRestricted ? '🔒 (Solo Superadmin)' : ''}
+                        </option>
+                      );
+                    })}
                   </select>
+                  {!isSuperAdmin && (
+                    <p className="text-[10px] text-amber-600 mt-1 font-semibold">
+                      ℹ️ La expedición de Diplomas y Actas de Grado está restringida a la Dirección (admin@fundacionsanmateo.edu.co).
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1235,7 +1298,7 @@ export default function DocumentManagerClient({
               <button
                 type="button"
                 onClick={handleCreateDocument}
-                disabled={isCreating}
+                disabled={isCreating || (!isSuperAdmin && /diploma|acta/i.test(newTipo))}
                 className="px-6 py-2.5 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer shadow-md"
               >
                 <Save size={16} /> {isCreating ? 'Expidiendo y Estampando...' : 'Expedir Documento'}
@@ -1644,9 +1707,14 @@ export default function DocumentManagerClient({
                     onChange={e => setEditTipo(e.target.value)}
                     className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
                   >
-                    {documentTypes.map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
+                    {documentTypes.map(t => {
+                      const isRestricted = !isSuperAdmin && /diploma|acta/i.test(t);
+                      return (
+                        <option key={t} value={t} disabled={isRestricted}>
+                          {t} {isRestricted ? '🔒 (Solo Superadmin)' : ''}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               </div>
@@ -1780,13 +1848,19 @@ export default function DocumentManagerClient({
             </div>
 
             <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={() => handleDelete(editingDoc)}
-                className="px-4 py-2 bg-red-50 text-fsm-red hover:bg-fsm-red hover:text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-1 cursor-pointer"
-              >
-                <Trash2 size={14} /> Eliminar
-              </button>
+              {(!editingDoc || !/diploma|acta/i.test(editingDoc.tipo_documento) || isSuperAdmin) ? (
+                <button
+                  type="button"
+                  onClick={() => handleDelete(editingDoc)}
+                  className="px-4 py-2 bg-red-50 text-fsm-red hover:bg-fsm-red hover:text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <Trash2 size={14} /> Eliminar
+                </button>
+              ) : (
+                <span className="text-[11px] font-bold text-gray-400 flex items-center gap-1">
+                  🔒 Eliminación restringida a Dirección
+                </span>
+              )}
 
               <div className="flex gap-2">
                 <button
@@ -1799,7 +1873,7 @@ export default function DocumentManagerClient({
                 <button
                   type="button"
                   onClick={handleSaveEdit}
-                  disabled={isSavingEdit}
+                  disabled={isSavingEdit || (!isSuperAdmin && /diploma|acta/i.test(editTipo))}
                   className="px-5 py-2 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer shadow-md"
                 >
                   <Save size={14} /> {isSavingEdit ? 'Guardando y Estampando...' : 'Guardar Cambios'}
