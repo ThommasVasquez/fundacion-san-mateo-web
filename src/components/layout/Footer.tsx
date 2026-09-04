@@ -83,6 +83,7 @@ const Footer = () => {
     ],
     servicios: [
       { name: "Noticias y eventos", href: "/noticias-y-eventos" },
+      { name: "Validación de documentos", href: "/verificar" },
       { name: "Ofertas laborales - Creación", href: settings['footer_link_ofertas_laborales'] || "https://fundacionsanmateo.q10.com/OfertaLaboral/Crear", external: true },
       { name: "Solicitudes", href: settings['footer_link_solicitudes'] || "https://solicitudes.fundacionsanmateosoacha.edu.co/centro-de-solicitudes", external: true },
     ],

@@ -104,6 +104,7 @@ const Navbar = () => {
     { name: "Pagos estudiantes", href: "https://portalpagos.davivienda.com/#/comercio/6023/FUNDACION%20SAN%20MATEO", color: "bg-fsm-red" },
     { name: "Campus virtual", href: "https://site2.q10.com/login?ReturnUrl=%2F&aplentId=21bfe857-977b-4057-b48c-55d9717d0dfe", color: "bg-fsm-red" },
     { name: "Solicitudes", href: "https://solicitudes.fundacionsanmateosoacha.edu.co/centro-de-solicitudes", color: "bg-fsm-red" },
+    { name: "Validación de documentos", href: "/verificar", color: "bg-fsm-red" },
   ];
 
   return (
@@ -113,20 +114,23 @@ const Navbar = () => {
         "flex flex-wrap justify-center items-center gap-2 pointer-events-auto transition-all duration-500 relative z-[110]",
         scrolled ? "scale-90 opacity-90 -mb-1" : "opacity-100"
       )}>
-        {utilityLinks.map((link, index) => (
-          <a
-            key={index}
-            href={link.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              "px-3 md:px-5 py-1 md:py-1.5 rounded-full text-[8px] md:text-[9px] font-black tracking-[0.1em] md:tracking-[0.2em] uppercase text-white transition-all hover:scale-110 hover:shadow-xl active:scale-95 shadow-md",
-              link.color
-            )}
-          >
-            {link.name}
-          </a>
-        ))}
+        {utilityLinks.map((link, index) => {
+          const isExternal = link.href.startsWith("http");
+          return (
+            <Link
+              key={index}
+              href={link.href}
+              target={isExternal ? "_blank" : undefined}
+              rel={isExternal ? "noopener noreferrer" : undefined}
+              className={cn(
+                "px-3 md:px-5 py-1 md:py-1.5 rounded-full text-[8px] md:text-[9px] font-black tracking-[0.1em] md:tracking-[0.2em] uppercase text-white transition-all hover:scale-110 hover:shadow-xl active:scale-95 shadow-md",
+                link.color
+              )}
+            >
+              {link.name}
+            </Link>
+          );
+        })}
       </div>
 
       <nav 
@@ -231,20 +235,24 @@ const Navbar = () => {
             {/* Utility Links in Mobile - Sticky at top of menu */}
             <div className="sticky top-0 bg-fsm-blue py-4 flex flex-col gap-3 mb-4 relative z-[220] -mt-4">
               <div className="flex flex-wrap justify-center gap-2">
-                {utilityLinks.map((link) => (
-                  <a
-                    key={link.name}
-                    href={link.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={cn(
-                      "flex-1 min-w-[120px] px-4 py-3 rounded-2xl text-[10px] font-black tracking-widest uppercase text-white transition-all active:scale-95 shadow-lg",
-                      link.color
-                    )}
-                  >
-                    {link.name}
-                  </a>
-                ))}
+                {utilityLinks.map((link) => {
+                  const isExternal = link.href.startsWith("http");
+                  return (
+                    <Link
+                      key={link.name}
+                      href={link.href}
+                      target={isExternal ? "_blank" : undefined}
+                      rel={isExternal ? "noopener noreferrer" : undefined}
+                      onClick={() => setIsOpen(false)}
+                      className={cn(
+                        "flex-1 min-w-[120px] px-4 py-3 rounded-2xl text-[10px] font-black tracking-widest uppercase text-white transition-all active:scale-95 shadow-lg text-center",
+                        link.color
+                      )}
+                    >
+                      {link.name}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
 
