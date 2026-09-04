@@ -19,6 +19,36 @@ export default async function AdminDocumentsPage() {
 
   const nextConsecutivo = await getNextDocumentConsecutivo();
 
+  // Load registered students for fast autocomplete/selection
+  let registeredStudents: { nombre: string; documento: string; programa: string }[] = [];
+  try {
+    const studentsRes = await sql`
+      SELECT DISTINCT nombre, COALESCE(usuario_nro, '') as documento, COALESCE(grado, '') as programa
+      FROM students
+      WHERE activo = true
+      ORDER BY nombre ASC
+      LIMIT 1000
+    `;
+    registeredStudents = studentsRes.map((s: any) => ({
+      nombre: s.nombre,
+      documento: s.documento,
+      programa: s.programa
+    }));
+  } catch (e) {
+    console.error('Error fetching students for autocomplete:', e);
+  }
+
+  // Load academic programs
+  let academicPrograms: string[] = [];
+  try {
+    const progsRes = await sql`
+      SELECT title FROM academic_programs ORDER BY title ASC
+    `;
+    academicPrograms = progsRes.map((p: any) => p.title);
+  } catch (e) {
+    console.error('Error fetching academic programs:', e);
+  }
+
   return (
     <div className="max-w-6xl mx-auto space-y-8">
       {/* Breadcrumbs */}
@@ -63,6 +93,8 @@ export default async function AdminDocumentsPage() {
           created_at: d.created_at
         }))}
         nextConsecutivo={nextConsecutivo}
+        registeredStudents={registeredStudents}
+        academicPrograms={academicPrograms}
       />
     </div>
   );

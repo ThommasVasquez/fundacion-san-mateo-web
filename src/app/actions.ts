@@ -1103,6 +1103,22 @@ export async function createIssuedDocument(data: {
       )
     `;
 
+    await logAuditEvent({
+      action: 'DOCUMENT_ISSUED',
+      category: 'CONTENT',
+      details: `Expedido documento oficial ${tipoDocumento} (${consecutivo}) para el estudiante ${studentNombre}`,
+      metadata: {
+        consecutivo,
+        student_nombre: studentNombre,
+        student_documento: studentDocumento,
+        tipo_documento: tipoDocumento,
+        programa_curso: programaCurso,
+        folio,
+        libro,
+        fecha_expedicion: fechaExpedicion
+      }
+    });
+
     return { success: true, consecutivo };
   } catch (error: any) {
     console.error('Error creating issued document:', error);
@@ -1157,6 +1173,19 @@ export async function updateIssuedDocument(id: string, data: {
       WHERE id = ${id}::uuid
     `;
 
+    await logAuditEvent({
+      action: 'DOCUMENT_UPDATED',
+      category: 'CONTENT',
+      details: `Actualizado documento oficial ${consecutivo || id} (${studentNombre || ''})`,
+      metadata: {
+        id,
+        consecutivo,
+        student_nombre: studentNombre,
+        tipo_documento: tipoDocumento,
+        estado
+      }
+    });
+
     return { success: true };
   } catch (error: any) {
     console.error('Error updating issued document:', error);
@@ -1166,11 +1195,27 @@ export async function updateIssuedDocument(id: string, data: {
 
 export async function toggleDocumentStatus(id: string, newEstado: string) {
   try {
+    const existing = await sql`SELECT consecutivo, student_nombre FROM issued_documents WHERE id = ${id}::uuid LIMIT 1`;
+    const docInfo = existing.length > 0 ? existing[0] : null;
+
     await sql`
       UPDATE issued_documents 
       SET estado = ${newEstado}, updated_at = CURRENT_TIMESTAMP 
       WHERE id = ${id}::uuid
     `;
+
+    await logAuditEvent({
+      action: newEstado === 'anulado' ? 'DOCUMENT_ANNULLED' : 'DOCUMENT_ACTIVATED',
+      category: 'CONTENT',
+      details: `Estado del documento ${docInfo?.consecutivo || id} cambiado a ${newEstado.toUpperCase()}`,
+      metadata: {
+        id,
+        consecutivo: docInfo?.consecutivo,
+        student_nombre: docInfo?.student_nombre,
+        new_estado: newEstado
+      }
+    });
+
     return { success: true };
   } catch (error: any) {
     console.error('Error toggling document status:', error);
@@ -1180,11 +1225,52 @@ export async function toggleDocumentStatus(id: string, newEstado: string) {
 
 export async function deleteIssuedDocument(id: string) {
   try {
+    const existing = await sql`SELECT consecutivo, student_nombre FROM issued_documents WHERE id = ${id}::uuid LIMIT 1`;
+    const docInfo = existing.length > 0 ? existing[0] : null;
+
     await sql`DELETE FROM issued_documents WHERE id = ${id}::uuid`;
+
+    await logAuditEvent({
+      action: 'DOCUMENT_DELETED',
+      category: 'CONTENT',
+      details: `Eliminado documento oficial ${docInfo?.consecutivo || id} (${docInfo?.student_nombre || ''})`,
+      metadata: {
+        id,
+        consecutivo: docInfo?.consecutivo,
+        student_nombre: docInfo?.student_nombre
+      }
+    });
+
     return { success: true };
   } catch (error: any) {
     console.error('Error deleting issued document:', error);
     return { error: error.message || 'Error al eliminar documento' };
+  }
+}
+
+export async function searchIssuedDocuments(query: string) {
+  try {
+    const cleanQuery = query.trim().toUpperCase();
+    if (!cleanQuery) return [];
+
+    const results = await sql`
+      SELECT 
+        id, consecutivo, student_nombre, student_documento,
+        tipo_documento, programa_curso, fecha_expedicion::text,
+        folio, libro, estado, notas, pdf_url, created_at::text
+      FROM issued_documents
+      WHERE UPPER(consecutivo) = ${cleanQuery}
+         OR UPPER(student_documento) = ${cleanQuery}
+         OR UPPER(student_nombre) LIKE ${`%${cleanQuery}%`}
+         OR UPPER(consecutivo) LIKE ${`%${cleanQuery}%`}
+      ORDER BY created_at DESC
+      LIMIT 20
+    `;
+
+    return results;
+  } catch (error) {
+    console.error('Error searching issued documents:', error);
+    return [];
   }
 }
 

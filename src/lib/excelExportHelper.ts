@@ -668,3 +668,186 @@ export async function exportAttendanceEventsToExcel(events: AttendanceEventExpor
   const cleanRange = rangeTitle.replace(/[^a-zA-Z0-9_-]/g, '_');
   await downloadWorkbook(workbook, `Reporte_Asistencia_${cleanRange}.xlsx`);
 }
+
+// =========================================================================
+// 4. EXPORT ISSUED DOCUMENTS & QR REGISTRY (Reporte de Documentos y Títulos)
+// =========================================================================
+
+export interface DocumentExportItem {
+  consecutivo: string;
+  student_nombre: string;
+  student_documento?: string;
+  tipo_documento: string;
+  programa_curso: string;
+  fecha_expedicion: string;
+  folio?: string;
+  libro?: string;
+  estado: string;
+  notas?: string;
+  verification_url?: string;
+}
+
+export async function exportDocumentsToExcel(docs: DocumentExportItem[]) {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'Fundación San Mateo - Registro Documental';
+  workbook.created = new Date();
+
+  const worksheet = workbook.addWorksheet('Documentos_Expedidos', {
+    views: [{ showGridLines: true, state: 'frozen', xSplit: 0, ySplit: 5 }]
+  });
+
+  const logoBase64 = await getFSMLogoBase64();
+  if (logoBase64) {
+    const imageId = workbook.addImage({
+      base64: logoBase64,
+      extension: 'png',
+    });
+    worksheet.addImage(imageId, {
+      tl: { col: 0.1, row: 0.1 },
+      ext: { width: 52, height: 52 },
+    });
+  }
+
+  // Row 1: Header Title
+  const titleRow = worksheet.getRow(1);
+  titleRow.getCell(2).value = 'FUNDACIÓN SAN MATEO EDUCACIÓN SUPERIOR / TÉCNICA';
+  titleRow.getCell(2).font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+  worksheet.mergeCells(1, 2, 1, 10);
+  for (let c = 1; c <= 10; c++) {
+    titleRow.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + FSM_COLORS.NAVY_HEADER } };
+  }
+  titleRow.height = 28;
+
+  // Row 2: Subtitle
+  const subTitleRow = worksheet.getRow(2);
+  subTitleRow.getCell(2).value = `REGISTRO OFICIAL DE DIPLOMAS, TÍTULOS Y CERTIFICADOS EMITIDOS (Total: ${docs.length} registros)`;
+  subTitleRow.getCell(2).font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+  worksheet.mergeCells(2, 2, 2, 10);
+  for (let c = 1; c <= 10; c++) {
+    subTitleRow.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + FSM_COLORS.NAVY_ACCENT } };
+  }
+  subTitleRow.height = 20;
+
+  // Row 3: Accent Red line
+  const accentRow = worksheet.getRow(3);
+  for (let c = 1; c <= 10; c++) {
+    accentRow.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + FSM_COLORS.RED_ACCENT } };
+  }
+  accentRow.height = 4;
+
+  // Row 4: Metadata
+  const metaRow = worksheet.getRow(4);
+  metaRow.getCell(1).value = `Generado el: ${new Date().toLocaleDateString('es-CO')}  |  Sistema de Verificación Digital y Códigos QR Institucionales`;
+  metaRow.getCell(1).font = { name: 'Calibri', size: 9, italic: true, color: { argb: 'FF' + FSM_COLORS.TEXT_MUTED } };
+  worksheet.mergeCells(4, 1, 4, 10);
+  metaRow.height = 18;
+
+  // Row 5: Column Headers
+  const headerRow = worksheet.getRow(5);
+  const headers = [
+    '#',
+    'CONSECUTIVO',
+    'ESTUDIANTE TITULAR',
+    'DOCUMENTO ID',
+    'TIPO DE DOCUMENTO',
+    'PROGRAMA / CURSO',
+    'FECHA EXPEDICIÓN',
+    'FOLIO / LIBRO',
+    'ESTADO',
+    'ENLACE DE VERIFICACIÓN'
+  ];
+
+  headers.forEach((h, idx) => {
+    const cell = headerRow.getCell(idx + 1);
+    cell.value = h;
+    cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + FSM_COLORS.NAVY_HEADER } };
+    cell.alignment = { vertical: 'middle', horizontal: idx === 0 || idx === 1 || idx === 3 || idx === 6 || idx === 7 || idx === 8 ? 'center' : 'left' };
+    cell.border = {
+      top: { style: 'medium', color: { argb: 'FF' + FSM_COLORS.NAVY_DARK } },
+      bottom: { style: 'medium', color: { argb: 'FF' + FSM_COLORS.NAVY_DARK } },
+      left: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+      right: { style: 'thin', color: { argb: 'FFFFFFFF' } }
+    };
+  });
+  headerRow.height = 26;
+
+  // Data rows
+  docs.forEach((d, idx) => {
+    const rowNum = 6 + idx;
+    const row = worksheet.getRow(rowNum);
+    const isZebra = idx % 2 === 1;
+    const bgArgb = isZebra ? 'FF' + FSM_COLORS.GRAY_LIGHT : 'FFFFFFFF';
+    const isValido = d.estado.toLowerCase() === 'valido';
+
+    row.getCell(1).value = idx + 1;
+    row.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+    row.getCell(2).value = d.consecutivo;
+    row.getCell(2).alignment = { vertical: 'middle', horizontal: 'center' };
+    row.getCell(2).font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF' + FSM_COLORS.NAVY_HEADER } };
+
+    row.getCell(3).value = d.student_nombre;
+    row.getCell(3).alignment = { vertical: 'middle', horizontal: 'left' };
+    row.getCell(3).font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF' + FSM_COLORS.TEXT_DARK } };
+
+    row.getCell(4).value = d.student_documento || 'S/D';
+    row.getCell(4).alignment = { vertical: 'middle', horizontal: 'center' };
+
+    row.getCell(5).value = d.tipo_documento;
+    row.getCell(5).alignment = { vertical: 'middle', horizontal: 'left' };
+
+    row.getCell(6).value = d.programa_curso;
+    row.getCell(6).alignment = { vertical: 'middle', horizontal: 'left' };
+
+    row.getCell(7).value = d.fecha_expedicion;
+    row.getCell(7).alignment = { vertical: 'middle', horizontal: 'center' };
+
+    const folioLibro = (d.folio ? `Folio: ${d.folio}` : '') + (d.libro ? ` | Libro: ${d.libro}` : '') || 'N/A';
+    row.getCell(8).value = folioLibro;
+    row.getCell(8).alignment = { vertical: 'middle', horizontal: 'center' };
+
+    row.getCell(9).value = isValido ? 'VÁLIDO' : 'ANULADO';
+    row.getCell(9).alignment = { vertical: 'middle', horizontal: 'center' };
+    row.getCell(9).font = { name: 'Calibri', size: 10, bold: true, color: { argb: isValido ? 'FF166534' : 'FF991B1B' } };
+
+    const verUrl = d.verification_url || `https://fundacionsanmateosoacha.edu.co/verificar/${d.consecutivo}`;
+    row.getCell(10).value = verUrl;
+    row.getCell(10).alignment = { vertical: 'middle', horizontal: 'left' };
+
+    for (let c = 1; c <= 10; c++) {
+      const cell = row.getCell(c);
+      if (c !== 2 && c !== 3 && c !== 9) {
+        cell.font = { name: 'Calibri', size: 10, color: { argb: 'FF' + FSM_COLORS.TEXT_DARK } };
+      }
+      if (c === 9) {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isValido ? 'FFDCFCE7' : 'FFFEE2E2' } };
+      } else {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgArgb } };
+      }
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FF' + FSM_COLORS.GRAY_BORDER } },
+        bottom: { style: 'thin', color: { argb: 'FF' + FSM_COLORS.GRAY_BORDER } },
+        left: { style: 'thin', color: { argb: 'FF' + FSM_COLORS.GRAY_BORDER } },
+        right: { style: 'thin', color: { argb: 'FF' + FSM_COLORS.GRAY_BORDER } }
+      };
+    }
+
+    row.height = 22;
+  });
+
+  // Column widths
+  worksheet.getColumn(1).width = 6;
+  worksheet.getColumn(2).width = 18;
+  worksheet.getColumn(3).width = 34;
+  worksheet.getColumn(4).width = 16;
+  worksheet.getColumn(5).width = 24;
+  worksheet.getColumn(6).width = 32;
+  worksheet.getColumn(7).width = 18;
+  worksheet.getColumn(8).width = 20;
+  worksheet.getColumn(9).width = 14;
+  worksheet.getColumn(10).width = 44;
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  await downloadWorkbook(workbook, `Registro_Documentos_FSM_${todayStr}.xlsx`);
+}
