@@ -112,37 +112,102 @@ export async function stampOfficialDocumentPDF(
     }
 
     // ----------------------------------------------------
-    // B. ESQUINA SUPERIOR IZQUIERDA - Logo Institucional
+    // CLEANUP / COVER UNWANTED BROWSER PRINT HEADERS & FOOTERS
+    // ----------------------------------------------------
+    // 1. Cover bottom browser print footer (e.g. Q10 URL and "Página 1 de 2")
+    // The browser print footer is located between y=12 and y=44 pt.
+    // Drawing an opaque white rectangle across the bottom 48 pt cleanly wipes it out.
+    page.drawRectangle({
+      x: 0,
+      y: 0,
+      width: width,
+      height: 48,
+      color: rgb(1, 1, 1), // Pure opaque white
+      opacity: 1,
+    });
+
+    // 2. Cover top browser print header (e.g. "null 4/09/26, 10:37 a.m.")
+    page.drawRectangle({
+      x: 0,
+      y: height - 22,
+      width: width,
+      height: 22,
+      color: rgb(1, 1, 1), // Pure opaque white
+      opacity: 1,
+    });
+
+    // ----------------------------------------------------
+    // A. MARCA DE AGUA (WATERMARK) - Escudo en el Centro
     // ----------------------------------------------------
     if (logoImage) {
-      const logoWidth = 44;
+      const wmMaxWidth = Math.min(width * 0.60, 320);
+      const wmWidth = wmMaxWidth;
+      const wmHeight = (logoImage.height / logoImage.width) * wmWidth;
+      const wmX = (width - wmWidth) / 2;
+      const wmY = (height - wmHeight) / 2;
+
+      page.drawImage(logoImage, {
+        x: wmX,
+        y: wmY,
+        width: wmWidth,
+        height: wmHeight,
+        opacity: 0.10, // Subtle institutional watermark
+      });
+    }
+
+    // ----------------------------------------------------
+    // B. ESQUINA SUPERIOR IZQUIERDA - Logo Institucional (30% MÁS GRANDE)
+    // ----------------------------------------------------
+    if (logoImage) {
+      // 44 * 1.30 = 57.2 -> 58pt (30% más grande)
+      const logoWidth = 58;
       const logoHeight = (logoImage.height / logoImage.width) * logoWidth;
-      const logoX = 22;
+      const logoX = 20;
       const logoY = height - logoHeight - 16;
+
+      // Clean white background card behind top-left logo to prevent background bleed
+      const leftHeaderBoxWidth = logoWidth + 175;
+      const leftHeaderBoxHeight = logoHeight + 8;
+      page.drawRectangle({
+        x: logoX - 4,
+        y: logoY - 4,
+        width: leftHeaderBoxWidth,
+        height: leftHeaderBoxHeight,
+        color: rgb(1, 1, 1),
+        opacity: 0.98,
+      });
 
       page.drawImage(logoImage, {
         x: logoX,
         y: logoY,
         width: logoWidth,
         height: logoHeight,
-        opacity: 0.95,
+        opacity: 1,
       });
 
-      // Mini text next to logo
+      // Text next to enlarged logo
       page.drawText('FUNDACIÓN SAN MATEO', {
-        x: logoX + logoWidth + 6,
-        y: logoY + logoHeight - 12,
-        size: 7.5,
+        x: logoX + logoWidth + 8,
+        y: logoY + logoHeight - 15,
+        size: 9,
         font: helveticaBold,
         color: rgb(0 / 255, 43 / 255, 73 / 255), // #002B49 Navy
       });
 
       page.drawText('Educación para el Trabajo y Desarrollo Humano', {
-        x: logoX + logoWidth + 6,
-        y: logoY + logoHeight - 22,
+        x: logoX + logoWidth + 8,
+        y: logoY + logoHeight - 27,
+        size: 6.5,
+        font: helveticaFont,
+        color: rgb(90 / 255, 100 / 255, 115 / 255),
+      });
+
+      page.drawText('Resolución Oficial Secretaría de Educación de Soacha', {
+        x: logoX + logoWidth + 8,
+        y: logoY + logoHeight - 37,
         size: 5.5,
         font: helveticaFont,
-        color: rgb(100 / 255, 110 / 255, 125 / 255),
+        color: rgb(140 / 255, 150 / 255, 165 / 255),
       });
     }
 
@@ -154,15 +219,16 @@ export async function stampOfficialDocumentPDF(
     const badgeX = width - badgeWidth - 20;
     const badgeY = height - badgeHeight - 16;
 
-    // Badge container background
+    // Badge container background (solid white with slight tint)
     page.drawRectangle({
       x: badgeX,
       y: badgeY,
       width: badgeWidth,
       height: badgeHeight,
-      color: rgb(0.97, 0.98, 1.0), // Very light blue/white
+      color: rgb(0.98, 0.99, 1.0),
       borderColor: rgb(0 / 255, 43 / 255, 73 / 255), // Navy
       borderWidth: 1,
+      opacity: 1,
     });
 
     // Red top indicator bar on badge
@@ -217,10 +283,10 @@ export async function stampOfficialDocumentPDF(
     // ----------------------------------------------------
     const footerY = 16;
     page.drawLine({
-      start: { x: 20, y: footerY + 8 },
-      end: { x: width - 20, y: footerY + 8 },
-      thickness: 0.5,
-      color: rgb(200 / 255, 16 / 255, 46 / 255),
+      start: { x: 20, y: footerY + 12 },
+      end: { x: width - 20, y: footerY + 12 },
+      thickness: 0.8,
+      color: rgb(200 / 255, 16 / 255, 46 / 255), // FSM Red Line
     });
 
     page.drawText(
@@ -228,9 +294,9 @@ export async function stampOfficialDocumentPDF(
       {
         x: 20,
         y: footerY,
-        size: 5.8,
+        size: 6.2,
         font: helveticaFont,
-        color: rgb(90 / 255, 100 / 255, 115 / 255),
+        color: rgb(75 / 255, 85 / 255, 100 / 255),
       }
     );
   }
