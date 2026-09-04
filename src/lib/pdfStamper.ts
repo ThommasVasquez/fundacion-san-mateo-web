@@ -191,7 +191,7 @@ export async function stampOfficialDocumentPDF(
         y: logoY + logoHeight - 15,
         size: 9,
         font: helveticaBold,
-        color: rgb(0 / 255, 43 / 255, 73 / 255), // #002B49 Navy
+        color: rgb(118 / 255, 28 / 255, 48 / 255), // #761C30 Vinotinto institucional FSM
       });
 
       page.drawText('Educación para el Trabajo y Desarrollo Humano', {
