@@ -329,9 +329,17 @@ export async function generateDocumentPDF(docData: DocumentPdfData) {
     pdf.setTextColor(grayDark[0], grayDark[1], grayDark[2]);
 
     const isGradeOrExam = docData.tipo_documento.toLowerCase().includes('nota') || docData.tipo_documento.toLowerCase().includes('calific');
-    const mainStatement = isGradeOrExam
-      ? `Ha cursado y aprobado satisfactoriamente los módulos académicos correspondientes al programa:`
-      : `Cursó y completó a cabalidad todas las exigencias curriculares y prácticas del programa académico de:`;
+    const isPractice = docData.tipo_documento.toLowerCase().includes('práct') || docData.tipo_documento.toLowerCase().includes('pract');
+    const isCost = docData.tipo_documento.toLowerCase().includes('cost');
+
+    let mainStatement = `Cursó y completó a cabalidad todas las exigencias curriculares del programa académico de:`;
+    if (isGradeOrExam) {
+      mainStatement = `Ha cursado y aprobado satisfactoriamente los módulos académicos y calificaciones del programa:`;
+    } else if (isPractice) {
+      mainStatement = `Completó y aprobó a satisfacción la totalidad de horas y competencias de prácticas formativas del programa:`;
+    } else if (isCost) {
+      mainStatement = `Se encuentra debidamente registrado(a) y se certifican los costos académicos, aranceles y derechos pecuniarios del programa:`;
+    }
 
     const splitStatement = pdf.splitTextToSize(mainStatement, pageWidth - 36);
     pdf.text(splitStatement, 18, currentY);

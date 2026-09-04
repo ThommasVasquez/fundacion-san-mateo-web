@@ -358,7 +358,15 @@ export default function DocumentManagerClient({
           const consecutivo = getVal(['consecutivo', 'codigo', 'id_documento']);
           const student_nombre = getVal(['nombre', 'estudiante', 'alumno', 'titular', 'nombre_completo', 'nombres']);
           const student_documento = getVal(['documento', 'cedula', 'identificacion', 'ti', 'cc', 'dni', 'doc']);
-          const tipo_documento = getVal(['tipo', 'tipo_documento', 'titulo', 'documento_tipo']) || 'Diploma de Grado';
+          let rawTipo = getVal(['tipo', 'tipo_documento', 'titulo', 'documento_tipo']) || 'Diploma de Grado';
+          if (/calificaci|notas/i.test(rawTipo)) {
+            rawTipo = 'Certificado de Notas';
+          } else if (/pr[aá]ctica/i.test(rawTipo)) {
+            rawTipo = 'Certificado de Prácticas';
+          } else if (/costo/i.test(rawTipo)) {
+            rawTipo = 'Certificado de Costos';
+          }
+          const tipo_documento = rawTipo;
           const programa_curso = getVal(['programa', 'curso', 'carrera', 'programa_curso', 'capacitacion']) || 'AUXILIAR EN ENFERMERÍA';
           
           let fecha_expedicion = getVal(['fecha', 'fecha_expedicion', 'expedicion', 'fecha_grado']);
@@ -686,7 +694,9 @@ export default function DocumentManagerClient({
                           d.student_nombre.toLowerCase().includes(term) ||
                           d.student_documento.toLowerCase().includes(term) ||
                           d.programa_curso.toLowerCase().includes(term);
-    const matchesTipo = !filterTipo || d.tipo_documento === filterTipo;
+    const matchesTipo = !filterTipo || 
+                        d.tipo_documento === filterTipo || 
+                        (filterTipo === 'Certificado de Notas' && d.tipo_documento === 'Certificado de Calificaciones');
     const matchesEstado = filterEstado === 'all' || d.estado === filterEstado;
     return matchesSearch && matchesTipo && matchesEstado;
   });
@@ -695,7 +705,9 @@ export default function DocumentManagerClient({
     'Diploma de Grado',
     'Acta de Grado',
     'Certificado de Estudio',
-    'Certificado de Calificaciones',
+    'Certificado de Notas',
+    'Certificado de Prácticas',
+    'Certificado de Costos',
     'Constancia de Asistencia',
     'Certificado de Horas Prácticas',
     'Certificación de Competencias Laborales'
@@ -977,7 +989,7 @@ export default function DocumentManagerClient({
                       <p className="text-[11px] text-gray-600 mt-0.5 leading-relaxed">
                         {attachedPdfFile 
                           ? `Archivo: ${attachedPdfFile.name} (${(attachedPdfFile.size / 1024).toFixed(1)} KB)`
-                          : 'Adjunta el PDF del certificado o calificaciones para estampar la marca de agua y consecutivo.'}
+                          : 'Adjunta el PDF del documento (diploma, notas, prácticas, costos o constancia) para estampar la marca de agua y consecutivo.'}
                       </p>
                     </div>
                   </div>

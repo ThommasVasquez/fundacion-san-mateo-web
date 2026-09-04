@@ -61,7 +61,11 @@ export async function extractStudentInfoFromPDF(pdfArrayBuffer: ArrayBuffer): Pr
 
     // 4. Detect Document Type
     if (/calificaciones|notas|asignatura|ih semanal/i.test(fullText)) {
-      tipoDocumento = 'Certificado de Calificaciones';
+      tipoDocumento = 'Certificado de Notas';
+    } else if (/pr[aá]ctica/i.test(fullText)) {
+      tipoDocumento = 'Certificado de Prácticas';
+    } else if (/costo|arancel|tarifa|valor|pago|derecho pecuniario|matr[ií]cula/i.test(fullText)) {
+      tipoDocumento = 'Certificado de Costos';
     } else if (/hace constar que|constancia/i.test(fullText)) {
       tipoDocumento = 'Constancia de Estudio';
     } else if (/diploma|título/i.test(fullText)) {

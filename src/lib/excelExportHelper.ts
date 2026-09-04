@@ -1,6 +1,7 @@
 'use client';
 
 import ExcelJS from 'exceljs';
+import QRCode from 'qrcode';
 
 // FSM Official Brand Colors
 const FSM_COLORS = {
@@ -712,8 +713,8 @@ export async function exportDocumentsToExcel(docs: DocumentExportItem[]) {
   const titleRow = worksheet.getRow(1);
   titleRow.getCell(2).value = 'FUNDACIÓN SAN MATEO EDUCACIÓN SUPERIOR / TÉCNICA';
   titleRow.getCell(2).font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
-  worksheet.mergeCells(1, 2, 1, 10);
-  for (let c = 1; c <= 10; c++) {
+  worksheet.mergeCells(1, 2, 1, 11);
+  for (let c = 1; c <= 11; c++) {
     titleRow.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + FSM_COLORS.NAVY_HEADER } };
   }
   titleRow.height = 28;
@@ -722,15 +723,15 @@ export async function exportDocumentsToExcel(docs: DocumentExportItem[]) {
   const subTitleRow = worksheet.getRow(2);
   subTitleRow.getCell(2).value = `REGISTRO OFICIAL DE DIPLOMAS, TÍTULOS Y CERTIFICADOS EMITIDOS (Total: ${docs.length} registros)`;
   subTitleRow.getCell(2).font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
-  worksheet.mergeCells(2, 2, 2, 10);
-  for (let c = 1; c <= 10; c++) {
+  worksheet.mergeCells(2, 2, 2, 11);
+  for (let c = 1; c <= 11; c++) {
     subTitleRow.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + FSM_COLORS.NAVY_ACCENT } };
   }
   subTitleRow.height = 20;
 
   // Row 3: Accent Red line
   const accentRow = worksheet.getRow(3);
-  for (let c = 1; c <= 10; c++) {
+  for (let c = 1; c <= 11; c++) {
     accentRow.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + FSM_COLORS.RED_ACCENT } };
   }
   accentRow.height = 4;
@@ -739,7 +740,7 @@ export async function exportDocumentsToExcel(docs: DocumentExportItem[]) {
   const metaRow = worksheet.getRow(4);
   metaRow.getCell(1).value = `Generado el: ${new Date().toLocaleDateString('es-CO')}  |  Sistema de Verificación Digital y Códigos QR Institucionales`;
   metaRow.getCell(1).font = { name: 'Calibri', size: 9, italic: true, color: { argb: 'FF' + FSM_COLORS.TEXT_MUTED } };
-  worksheet.mergeCells(4, 1, 4, 10);
+  worksheet.mergeCells(4, 1, 4, 11);
   metaRow.height = 18;
 
   // Row 5: Column Headers
@@ -747,6 +748,7 @@ export async function exportDocumentsToExcel(docs: DocumentExportItem[]) {
   const headers = [
     '#',
     'CONSECUTIVO',
+    'CÓDIGO QR',
     'ESTUDIANTE TITULAR',
     'DOCUMENTO ID',
     'TIPO DE DOCUMENTO',
@@ -762,7 +764,7 @@ export async function exportDocumentsToExcel(docs: DocumentExportItem[]) {
     cell.value = h;
     cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + FSM_COLORS.NAVY_HEADER } };
-    cell.alignment = { vertical: 'middle', horizontal: idx === 0 || idx === 1 || idx === 3 || idx === 6 || idx === 7 || idx === 8 ? 'center' : 'left' };
+    cell.alignment = { vertical: 'middle', horizontal: idx === 0 || idx === 1 || idx === 2 || idx === 4 || idx === 7 || idx === 8 || idx === 9 ? 'center' : 'left' };
     cell.border = {
       top: { style: 'medium', color: { argb: 'FF' + FSM_COLORS.NAVY_DARK } },
       bottom: { style: 'medium', color: { argb: 'FF' + FSM_COLORS.NAVY_DARK } },
@@ -772,8 +774,9 @@ export async function exportDocumentsToExcel(docs: DocumentExportItem[]) {
   });
   headerRow.height = 26;
 
-  // Data rows
-  docs.forEach((d, idx) => {
+  // Data rows with embedded QR codes
+  for (let idx = 0; idx < docs.length; idx++) {
+    const d = docs[idx];
     const rowNum = 6 + idx;
     const row = worksheet.getRow(rowNum);
     const isZebra = idx % 2 === 1;
@@ -787,40 +790,49 @@ export async function exportDocumentsToExcel(docs: DocumentExportItem[]) {
     row.getCell(2).alignment = { vertical: 'middle', horizontal: 'center' };
     row.getCell(2).font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF' + FSM_COLORS.NAVY_HEADER } };
 
-    row.getCell(3).value = d.student_nombre;
-    row.getCell(3).alignment = { vertical: 'middle', horizontal: 'left' };
-    row.getCell(3).font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF' + FSM_COLORS.TEXT_DARK } };
+    // Column 3: Reserved for QR Code Image
+    row.getCell(3).value = '';
+    row.getCell(3).alignment = { vertical: 'middle', horizontal: 'center' };
 
-    row.getCell(4).value = d.student_documento || 'S/D';
-    row.getCell(4).alignment = { vertical: 'middle', horizontal: 'center' };
+    row.getCell(4).value = d.student_nombre;
+    row.getCell(4).alignment = { vertical: 'middle', horizontal: 'left' };
+    row.getCell(4).font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF' + FSM_COLORS.TEXT_DARK } };
 
-    row.getCell(5).value = d.tipo_documento;
-    row.getCell(5).alignment = { vertical: 'middle', horizontal: 'left' };
+    row.getCell(5).value = d.student_documento || 'S/D';
+    row.getCell(5).alignment = { vertical: 'middle', horizontal: 'center' };
 
-    row.getCell(6).value = d.programa_curso;
+    row.getCell(6).value = d.tipo_documento;
     row.getCell(6).alignment = { vertical: 'middle', horizontal: 'left' };
 
-    row.getCell(7).value = d.fecha_expedicion;
-    row.getCell(7).alignment = { vertical: 'middle', horizontal: 'center' };
+    row.getCell(7).value = d.programa_curso;
+    row.getCell(7).alignment = { vertical: 'middle', horizontal: 'left' };
 
-    const folioLibro = (d.folio ? `Folio: ${d.folio}` : '') + (d.libro ? ` | Libro: ${d.libro}` : '') || 'N/A';
-    row.getCell(8).value = folioLibro;
+    row.getCell(8).value = d.fecha_expedicion;
     row.getCell(8).alignment = { vertical: 'middle', horizontal: 'center' };
 
-    row.getCell(9).value = isValido ? 'VÁLIDO' : 'ANULADO';
+    const folioLibro = (d.folio ? `Folio: ${d.folio}` : '') + (d.libro ? ` | Libro: ${d.libro}` : '') || 'N/A';
+    row.getCell(9).value = folioLibro;
     row.getCell(9).alignment = { vertical: 'middle', horizontal: 'center' };
-    row.getCell(9).font = { name: 'Calibri', size: 10, bold: true, color: { argb: isValido ? 'FF166534' : 'FF991B1B' } };
 
-    const verUrl = d.verification_url || `https://fundacionsanmateosoacha.edu.co/verificar/${d.consecutivo}`;
-    row.getCell(10).value = verUrl;
-    row.getCell(10).alignment = { vertical: 'middle', horizontal: 'left' };
+    row.getCell(10).value = isValido ? 'VÁLIDO' : 'ANULADO';
+    row.getCell(10).alignment = { vertical: 'middle', horizontal: 'center' };
+    row.getCell(10).font = { name: 'Calibri', size: 10, bold: true, color: { argb: isValido ? 'FF166534' : 'FF991B1B' } };
 
-    for (let c = 1; c <= 10; c++) {
+    const verUrl = d.verification_url || `https://fundacionsanmateosoacha.edu.co/verificar/${encodeURIComponent(d.consecutivo)}`;
+    row.getCell(11).value = {
+      text: verUrl,
+      hyperlink: verUrl,
+      tooltip: 'Clic para validar documento oficial FSM'
+    };
+    row.getCell(11).alignment = { vertical: 'middle', horizontal: 'left' };
+    row.getCell(11).font = { name: 'Calibri', size: 9.5, color: { argb: 'FF0066CC' }, underline: true };
+
+    for (let c = 1; c <= 11; c++) {
       const cell = row.getCell(c);
-      if (c !== 2 && c !== 3 && c !== 9) {
+      if (c !== 2 && c !== 4 && c !== 10 && c !== 11) {
         cell.font = { name: 'Calibri', size: 10, color: { argb: 'FF' + FSM_COLORS.TEXT_DARK } };
       }
-      if (c === 9) {
+      if (c === 10) {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isValido ? 'FFDCFCE7' : 'FFFEE2E2' } };
       } else {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgArgb } };
@@ -833,20 +845,44 @@ export async function exportDocumentsToExcel(docs: DocumentExportItem[]) {
       };
     }
 
-    row.height = 22;
-  });
+    row.height = 54;
+
+    // Generate and embed official QR image inside cell (column 3)
+    try {
+      const qrDataUrl = await QRCode.toDataURL(verUrl, {
+        width: 120,
+        margin: 1,
+        color: {
+          dark: '#002B49', // Official Navy FSM
+          light: '#FFFFFFFF'
+        }
+      });
+      const base64Data = qrDataUrl.split(',')[1];
+      const qrImageId = workbook.addImage({
+        base64: base64Data,
+        extension: 'png',
+      });
+      worksheet.addImage(qrImageId, {
+        tl: { col: 2.15, row: (rowNum - 1) + 0.08 },
+        ext: { width: 50, height: 50 },
+      });
+    } catch (qrErr) {
+      console.warn('Error embedding QR image into Excel for row', rowNum, qrErr);
+    }
+  }
 
   // Column widths
   worksheet.getColumn(1).width = 6;
-  worksheet.getColumn(2).width = 18;
-  worksheet.getColumn(3).width = 34;
-  worksheet.getColumn(4).width = 16;
-  worksheet.getColumn(5).width = 24;
-  worksheet.getColumn(6).width = 32;
-  worksheet.getColumn(7).width = 18;
-  worksheet.getColumn(8).width = 20;
-  worksheet.getColumn(9).width = 14;
-  worksheet.getColumn(10).width = 44;
+  worksheet.getColumn(2).width = 20;
+  worksheet.getColumn(3).width = 14; // CÓDIGO QR
+  worksheet.getColumn(4).width = 34; // ESTUDIANTE TITULAR
+  worksheet.getColumn(5).width = 16; // DOCUMENTO ID
+  worksheet.getColumn(6).width = 25; // TIPO DE DOCUMENTO
+  worksheet.getColumn(7).width = 32; // PROGRAMA / CURSO
+  worksheet.getColumn(8).width = 18; // FECHA EXPEDICIÓN
+  worksheet.getColumn(9).width = 20; // FOLIO / LIBRO
+  worksheet.getColumn(10).width = 14; // ESTADO
+  worksheet.getColumn(11).width = 46; // ENLACE DE VERIFICACIÓN
 
   const todayStr = new Date().toISOString().split('T')[0];
   await downloadWorkbook(workbook, `Registro_Documentos_FSM_${todayStr}.xlsx`);
@@ -957,23 +993,34 @@ export async function exportBulkImportTemplateExcel() {
       consecutivo: '',
       nombre: 'ANDRÉS FELIPE CASTRO PINTO',
       documento: '1022938475',
-      tipo: 'Certificado de Estudio',
-      programa: 'ATENCIÓN INTEGRAL A LA PRIMERA INFANCIA',
+      tipo: 'Certificado de Notas',
+      programa: 'AUXILIAR EN ENFERMERÍA',
       fecha: new Date().toISOString().split('T')[0],
       folio: '046',
       libro: '012',
-      notas: 'Semestre III cursado y aprobado'
+      notas: 'Promedio acumulado 4.8 / 5.0'
     },
     {
       consecutivo: '',
       nombre: 'LAURA CAMILA RODRÍGUEZ SILVA',
       documento: '1030495867',
-      tipo: 'Constancia de Asistencia',
-      programa: 'CURSO DE SOPORTE VITAL BÁSICO (SVB)',
+      tipo: 'Certificado de Prácticas',
+      programa: 'AUXILIAR EN ENFERMERÍA',
       fecha: new Date().toISOString().split('T')[0],
       folio: '047',
       libro: '012',
-      notas: 'Intensidad 40 horas académicas'
+      notas: '600 horas clínicas certificadas en IPS aliada'
+    },
+    {
+      consecutivo: '',
+      nombre: 'CARLOS EDUARDO MORALES VARGAS',
+      documento: '1014298765',
+      tipo: 'Certificado de Costos',
+      programa: 'ATENCIÓN INTEGRAL A LA PRIMERA INFANCIA',
+      fecha: new Date().toISOString().split('T')[0],
+      folio: '048',
+      libro: '012',
+      notas: 'Valores arancelarios año lectivo 2026'
     }
   ];
 
