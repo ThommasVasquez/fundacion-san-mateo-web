@@ -8,16 +8,27 @@ import { getNextDocumentConsecutivo } from '@/app/actions';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminDocumentsPage() {
-  const documents = await sql`
-    SELECT 
-      id, consecutivo, student_nombre, student_documento,
-      tipo_documento, programa_curso, fecha_expedicion::text,
-      folio, libro, estado, notas, pdf_url, created_at::text
-    FROM issued_documents
-    ORDER BY created_at DESC
-  `;
+  let documents: any[] = [];
+  try {
+    const docsRes = await sql`
+      SELECT 
+        id, consecutivo, student_nombre, student_documento,
+        tipo_documento, programa_curso, fecha_expedicion::text,
+        folio, libro, estado, notas, pdf_url, created_at::text
+      FROM issued_documents
+      ORDER BY created_at DESC
+    `;
+    documents = Array.isArray(docsRes) ? docsRes : [];
+  } catch (err) {
+    console.error('Error fetching issued_documents:', err);
+  }
 
-  const nextConsecutivo = await getNextDocumentConsecutivo();
+  let nextConsecutivo = 'FSM-2026-00001';
+  try {
+    nextConsecutivo = await getNextDocumentConsecutivo();
+  } catch (err) {
+    console.error('Error fetching next consecutivo:', err);
+  }
 
   // Load registered students for fast autocomplete/selection
   let registeredStudents: { nombre: string; documento: string; programa: string }[] = [];

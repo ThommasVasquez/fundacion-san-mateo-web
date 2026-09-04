@@ -1,6 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 
-const sql = neon(process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_c9bvh2eQYkTF@ep-long-dew-39869189-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require');
+const sql = neon(process.env.DATABASE_URL);
 
 async function main() {
   console.log('Creating issued_documents table in Neon Postgres...');
