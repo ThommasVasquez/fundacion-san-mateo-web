@@ -426,7 +426,7 @@ export async function generateDocumentPDF(docData: DocumentPdfData) {
   }
 
   // Save the PDF
-  const safeName = docData.student_nombre.replace(/[^a-zA-Z0-9]/g, '_');
-  const filename = `${docData.tipo_documento.replace(/[^a-zA-Z0-9]/g, '_')}_${docData.consecutivo}_${safeName}.pdf`;
+  const safeName = docData.student_nombre ? `_${docData.student_nombre.replace(/[^a-zA-Z0-9]/g, '_')}` : '';
+  const filename = `FSM-000-${docData.consecutivo}${safeName}.pdf`;
   pdf.save(filename);
 }

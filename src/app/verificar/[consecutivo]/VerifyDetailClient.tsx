@@ -58,9 +58,10 @@ export default function VerifyDetailClient({ doc, searchedCode }: VerifyDetailCl
     try {
       setIsDownloading(true);
       if (doc.pdf_url) {
+        const safeName = doc.student_nombre ? `_${doc.student_nombre.trim().replace(/\s+/g, '_')}` : '';
         const link = document.createElement('a');
         link.href = doc.pdf_url;
-        link.download = `Documento_Oficial_${doc.consecutivo}_${doc.student_nombre.replace(/\s+/g, '_')}.pdf`;
+        link.download = `FSM-000-${doc.consecutivo}${safeName}.pdf`;
         link.target = '_blank';
         document.body.appendChild(link);
         link.click();

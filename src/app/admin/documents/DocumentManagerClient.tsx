@@ -107,10 +107,11 @@ export default function DocumentManagerClient({
   const [isDetectingPdf, setIsDetectingPdf] = useState(false);
   const [pdfAutoDetectedMsg, setPdfAutoDetectedMsg] = useState('');
   const [isStampingPreview, setIsStampingPreview] = useState(false);
-  const [previewPdfModal, setPreviewPdfModal] = useState<{ isOpen: boolean; url: string; title: string }>({
+  const [previewPdfModal, setPreviewPdfModal] = useState<{ isOpen: boolean; url: string; title: string; consecutivo?: string }>({
     isOpen: false,
     url: '',
-    title: ''
+    title: '',
+    consecutivo: ''
   });
 
   // Modal: Bulk Upload
@@ -243,10 +244,12 @@ export default function DocumentManagerClient({
       const blob = new Blob([stampedBytes as any], { type: 'application/pdf' });
       const blobUrl = URL.createObjectURL(blob);
 
+      const targetConsecutivo = editingDoc ? editConsecutivo : newConsecutivo;
       setPreviewPdfModal({
         isOpen: true,
         url: blobUrl,
-        title: `Vista Previa Oficial: ${editingDoc ? editConsecutivo : newConsecutivo}`
+        title: `Vista Previa Oficial: ${targetConsecutivo}`,
+        consecutivo: targetConsecutivo
       });
     } catch (err: any) {
       console.error('Error creating stamped preview:', err);
@@ -603,9 +606,10 @@ export default function DocumentManagerClient({
 
       if (doc.pdf_url) {
         // Trigger download of official stamped PDF with watermark and consecutivo
+        const safeName = doc.student_nombre ? `_${doc.student_nombre.trim().replace(/\s+/g, '_')}` : '';
         const link = document.createElement('a');
         link.href = doc.pdf_url;
-        link.download = `Documento_Oficial_${doc.consecutivo}_${doc.student_nombre.replace(/\s+/g, '_')}.pdf`;
+        link.download = `FSM-000-${doc.consecutivo}${safeName}.pdf`;
         link.target = '_blank';
         document.body.appendChild(link);
         link.click();
@@ -1868,7 +1872,7 @@ export default function DocumentManagerClient({
                 <a
                   href={previewPdfModal.url}
                   target="_blank"
-                  download="Documento_Estampado_FSM.pdf"
+                  download={`FSM-000-${previewPdfModal.consecutivo || (editingDoc ? editConsecutivo : newConsecutivo)}.pdf`}
                   className="px-3 py-1.5 bg-white text-fsm-blue hover:bg-fsm-red hover:text-white rounded-lg font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5"
                 >
                   <Download size={14} /> Descargar PDF
