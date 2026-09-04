@@ -57,20 +57,30 @@ export default function VerifyDetailClient({ doc, searchedCode }: VerifyDetailCl
     if (!doc) return;
     try {
       setIsDownloading(true);
-      await generateDocumentPDF({
-        consecutivo: doc.consecutivo,
-        student_nombre: doc.student_nombre,
-        student_documento: doc.student_documento,
-        tipo_documento: doc.tipo_documento,
-        programa_curso: doc.programa_curso,
-        fecha_expedicion: doc.fecha_expedicion,
-        folio: doc.folio,
-        libro: doc.libro,
-        estado: doc.estado,
-        notas: doc.notas,
-      });
+      if (doc.pdf_url) {
+        const link = document.createElement('a');
+        link.href = doc.pdf_url;
+        link.download = `Documento_Oficial_${doc.consecutivo}_${doc.student_nombre.replace(/\s+/g, '_')}.pdf`;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        await generateDocumentPDF({
+          consecutivo: doc.consecutivo,
+          student_nombre: doc.student_nombre,
+          student_documento: doc.student_documento,
+          tipo_documento: doc.tipo_documento,
+          programa_curso: doc.programa_curso,
+          fecha_expedicion: doc.fecha_expedicion,
+          folio: doc.folio,
+          libro: doc.libro,
+          estado: doc.estado,
+          notas: doc.notas,
+        });
+      }
     } catch (e) {
-      console.error('Error generating PDF:', e);
+      console.error('Error generating/downloading PDF:', e);
     } finally {
       setIsDownloading(false);
     }

@@ -10,12 +10,14 @@ import {
   bulkCreateIssuedDocuments 
 } from '@/app/actions';
 import { generateDocumentPDF } from '@/lib/documentPdfGenerator';
+import { stampOfficialDocumentPDF, uint8ArrayToDataUrl } from '@/lib/pdfStamper';
+import { extractStudentInfoFromPDF } from '@/lib/pdfTextExtractor';
 import { exportDocumentsToExcel, exportBulkImportTemplateExcel } from '@/lib/excelExportHelper';
 import { 
   FileCheck, Search, Plus, QrCode, Edit2, Trash2, X, Save, 
   CheckCircle2, XCircle, Download, ExternalLink, ShieldCheck, Printer, 
   FileText, Copy, Check, FileSpreadsheet, User, BookOpen, Award,
-  UploadCloud, FileUp, AlertTriangle, RefreshCw, File
+  UploadCloud, FileUp, AlertTriangle, RefreshCw, File, Eye, Sparkles, AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -72,6 +74,9 @@ export default function DocumentManagerClient({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
 
+  const createPdfInputRef = useRef<HTMLInputElement>(null);
+  const editPdfInputRef = useRef<HTMLInputElement>(null);
+
   const [search, setSearch] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
   const [filterEstado, setFilterEstado] = useState('all');
@@ -97,6 +102,17 @@ export default function DocumentManagerClient({
   const [newNotas, setNewNotas] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
+  // Single PDF upload for Expedir Documento
+  const [attachedPdfFile, setAttachedPdfFile] = useState<File | null>(null);
+  const [isDetectingPdf, setIsDetectingPdf] = useState(false);
+  const [pdfAutoDetectedMsg, setPdfAutoDetectedMsg] = useState('');
+  const [isStampingPreview, setIsStampingPreview] = useState(false);
+  const [previewPdfModal, setPreviewPdfModal] = useState<{ isOpen: boolean; url: string; title: string }>({
+    isOpen: false,
+    url: '',
+    title: ''
+  });
+
   // Modal: Bulk Upload
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [bulkTab, setBulkTab] = useState<'excel' | 'pdf'>('excel');
@@ -116,6 +132,8 @@ export default function DocumentManagerClient({
   const [editFolio, setEditFolio] = useState('');
   const [editLibro, setEditLibro] = useState('');
   const [editNotas, setEditNotas] = useState('');
+  const [editAttachedPdfFile, setEditAttachedPdfFile] = useState<File | null>(null);
+  const [editPdfUrl, setEditPdfUrl] = useState('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   // Modal: QR Viewer
@@ -152,6 +170,92 @@ export default function DocumentManagerClient({
     setStudentQuery('');
   };
 
+  // Handler for Single PDF selection in Expedir Documento
+  const handleSelectCreatePdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      showStatus('Por favor selecciona un archivo en formato PDF (.pdf)', 'error');
+      return;
+    }
+
+    setAttachedPdfFile(file);
+    setIsDetectingPdf(true);
+    setPdfAutoDetectedMsg('');
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const extracted = await extractStudentInfoFromPDF(arrayBuffer);
+
+      let detectedFields: string[] = [];
+
+      if (extracted.studentNombre && !newNombre) {
+        setNewNombre(extracted.studentNombre);
+        detectedFields.push('Nombre');
+      }
+      if (extracted.studentDocumento && !newDocumento) {
+        setNewDocumento(extracted.studentDocumento);
+        detectedFields.push('Documento');
+      }
+      if (extracted.programaCurso && !newPrograma) {
+        setNewPrograma(extracted.programaCurso);
+        detectedFields.push('Programa');
+      }
+      if (extracted.tipoDocumento && !newTipo) {
+        setNewTipo(extracted.tipoDocumento);
+        detectedFields.push('Tipo');
+      }
+
+      if (detectedFields.length > 0) {
+        setPdfAutoDetectedMsg(`Detectado automáticamente del PDF: ${detectedFields.join(', ')}.`);
+        showStatus(`Datos detectados del PDF: ${detectedFields.join(', ')}.`);
+      } else {
+        showStatus('PDF adjunto. Se estampará marca de agua, logo y consecutivo.');
+      }
+    } catch (err) {
+      console.warn('Could not parse PDF text:', err);
+    } finally {
+      setIsDetectingPdf(false);
+    }
+  };
+
+  // Live preview of stamped PDF
+  const handlePreviewStampedPdf = async (fileToPreview?: File | null) => {
+    const targetFile = fileToPreview || attachedPdfFile || editAttachedPdfFile;
+    if (!targetFile) {
+      showStatus('No hay ningún archivo PDF seleccionado para previsualizar.', 'error');
+      return;
+    }
+
+    setIsStampingPreview(true);
+    try {
+      const arrayBuffer = await targetFile.arrayBuffer();
+      const stampedBytes = await stampOfficialDocumentPDF(arrayBuffer, {
+        consecutivo: editingDoc ? editConsecutivo : newConsecutivo,
+        studentNombre: editingDoc ? editNombre : newNombre,
+        studentDocumento: editingDoc ? editDocumento : newDocumento,
+        tipoDocumento: editingDoc ? editTipo : newTipo,
+        programaCurso: editingDoc ? editPrograma : newPrograma,
+        fechaExpedicion: editingDoc ? editFecha : newFecha,
+      });
+
+      const blob = new Blob([stampedBytes as any], { type: 'application/pdf' });
+      const blobUrl = URL.createObjectURL(blob);
+
+      setPreviewPdfModal({
+        isOpen: true,
+        url: blobUrl,
+        title: `Vista Previa Oficial: ${editingDoc ? editConsecutivo : newConsecutivo}`
+      });
+    } catch (err: any) {
+      console.error('Error creating stamped preview:', err);
+      showStatus('Error al generar la previsualización del PDF estampado.', 'error');
+    } finally {
+      setIsStampingPreview(false);
+    }
+  };
+
   const handleCreateDocument = async () => {
     if (!newNombre.trim() || !newTipo.trim() || !newPrograma.trim()) {
       showStatus('Nombre del Estudiante, Tipo de Documento y Programa son obligatorios.', 'error');
@@ -159,6 +263,28 @@ export default function DocumentManagerClient({
     }
 
     setIsCreating(true);
+
+    let stampedPdfUrl: string | undefined = undefined;
+
+    // If a PDF is attached, stamp it with watermark, logo on top-left, and consecutivo on top-right!
+    if (attachedPdfFile) {
+      try {
+        const arrayBuffer = await attachedPdfFile.arrayBuffer();
+        const stampedBytes = await stampOfficialDocumentPDF(arrayBuffer, {
+          consecutivo: newConsecutivo,
+          studentNombre: newNombre,
+          studentDocumento: newDocumento,
+          tipoDocumento: newTipo,
+          programaCurso: newPrograma,
+          fechaExpedicion: newFecha,
+        });
+        stampedPdfUrl = uint8ArrayToDataUrl(stampedBytes);
+      } catch (e: any) {
+        console.error('Error stamping PDF during document creation:', e);
+        showStatus('Advertencia: No se pudo estampar el PDF adjunto, se creará el registro sin el archivo.', 'error');
+      }
+    }
+
     const res = await createIssuedDocument({
       consecutivo: newConsecutivo,
       student_nombre: newNombre,
@@ -169,11 +295,12 @@ export default function DocumentManagerClient({
       folio: newFolio,
       libro: newLibro,
       notas: newNotas,
+      pdf_url: stampedPdfUrl,
     });
 
     setIsCreating(false);
     if (res.success) {
-      showStatus(`Documento consecutivo ${res.consecutivo} expedido con éxito.`);
+      showStatus(`Documento consecutivo ${res.consecutivo} expedido y verificado con éxito.`);
       setCreateModalOpen(false);
       setNewNombre('');
       setNewDocumento('');
@@ -181,6 +308,8 @@ export default function DocumentManagerClient({
       setNewFolio('');
       setNewLibro('');
       setNewNotas('');
+      setAttachedPdfFile(null);
+      setPdfAutoDetectedMsg('');
       router.refresh();
     } else {
       showStatus(res.error || 'Error al expedir documento', 'error');
@@ -365,11 +494,33 @@ export default function DocumentManagerClient({
     setEditFolio(doc.folio);
     setEditLibro(doc.libro);
     setEditNotas(doc.notas);
+    setEditPdfUrl(doc.pdf_url || '');
+    setEditAttachedPdfFile(null);
   };
 
   const handleSaveEdit = async () => {
     if (!editingDoc) return;
     setIsSavingEdit(true);
+
+    let stampedPdfUrl = editPdfUrl || undefined;
+
+    if (editAttachedPdfFile) {
+      try {
+        const arrayBuffer = await editAttachedPdfFile.arrayBuffer();
+        const stampedBytes = await stampOfficialDocumentPDF(arrayBuffer, {
+          consecutivo: editConsecutivo,
+          studentNombre: editNombre,
+          studentDocumento: editDocumento,
+          tipoDocumento: editTipo,
+          programaCurso: editPrograma,
+          fechaExpedicion: editFecha,
+        });
+        stampedPdfUrl = uint8ArrayToDataUrl(stampedBytes);
+      } catch (err) {
+        console.error('Error stamping updated PDF:', err);
+        showStatus('Advertencia: No se pudo estampar el nuevo PDF', 'error');
+      }
+    }
 
     const res = await updateIssuedDocument(editingDoc.id, {
       consecutivo: editConsecutivo,
@@ -381,12 +532,14 @@ export default function DocumentManagerClient({
       folio: editFolio,
       libro: editLibro,
       notas: editNotas,
+      pdf_url: stampedPdfUrl,
     });
 
     setIsSavingEdit(false);
     if (res.success) {
       showStatus(`Documento ${editConsecutivo} actualizado con éxito.`);
       setEditingDoc(null);
+      setEditAttachedPdfFile(null);
       router.refresh();
     } else {
       showStatus(res.error || 'Error al actualizar documento', 'error');
@@ -443,26 +596,39 @@ export default function DocumentManagerClient({
     });
   };
 
-  // Download official PDF for document
+  // Download official PDF for document (Stamped PDF or generated diploma/certificate)
   const handleDownloadPDF = async (doc: DocumentItem) => {
     try {
       setIsGeneratingPdfId(doc.id);
-      await generateDocumentPDF({
-        consecutivo: doc.consecutivo,
-        student_nombre: doc.student_nombre,
-        student_documento: doc.student_documento,
-        tipo_documento: doc.tipo_documento,
-        programa_curso: doc.programa_curso,
-        fecha_expedicion: doc.fecha_expedicion,
-        folio: doc.folio,
-        libro: doc.libro,
-        estado: doc.estado,
-        notas: doc.notas,
-      });
-      showStatus(`PDF Oficial de ${doc.consecutivo} descargado exitosamente.`);
+
+      if (doc.pdf_url) {
+        // Trigger download of official stamped PDF with watermark and consecutivo
+        const link = document.createElement('a');
+        link.href = doc.pdf_url;
+        link.download = `Documento_Oficial_${doc.consecutivo}_${doc.student_nombre.replace(/\s+/g, '_')}.pdf`;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showStatus(`PDF Oficial Estampado de ${doc.consecutivo} descargado exitosamente.`);
+      } else {
+        await generateDocumentPDF({
+          consecutivo: doc.consecutivo,
+          student_nombre: doc.student_nombre,
+          student_documento: doc.student_documento,
+          tipo_documento: doc.tipo_documento,
+          programa_curso: doc.programa_curso,
+          fecha_expedicion: doc.fecha_expedicion,
+          folio: doc.folio,
+          libro: doc.libro,
+          estado: doc.estado,
+          notas: doc.notas,
+        });
+        showStatus(`PDF Oficial de ${doc.consecutivo} descargado exitosamente.`);
+      }
     } catch (e: any) {
       console.error('Error generating PDF:', e);
-      showStatus('Error al generar el PDF del documento.', 'error');
+      showStatus('Error al descargar el PDF del documento.', 'error');
     } finally {
       setIsGeneratingPdfId(null);
     }
@@ -669,6 +835,14 @@ export default function DocumentManagerClient({
                           <span className="font-mono font-black text-fsm-blue bg-fsm-blue/5 px-2.5 py-1 rounded-lg">
                             {doc.consecutivo}
                           </span>
+                          {doc.pdf_url && (
+                            <span 
+                              className="text-[9px] font-black text-teal-800 bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded-md flex items-center gap-0.5"
+                              title="Documento con archivo PDF oficial estampado adjunto"
+                            >
+                              <FileText size={10} /> PDF
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="py-4 px-6">
@@ -707,10 +881,12 @@ export default function DocumentManagerClient({
                         <button
                           onClick={() => handleDownloadPDF(doc)}
                           disabled={isDownloading}
-                          className="px-2.5 py-1.5 bg-fsm-blue text-white hover:bg-fsm-red transition-all text-xs font-bold rounded-xl inline-flex items-center gap-1 shadow-sm disabled:opacity-50"
-                          title="Descargar PDF Oficial con QR membretado"
+                          className={`px-2.5 py-1.5 text-white transition-all text-xs font-bold rounded-xl inline-flex items-center gap-1 shadow-sm disabled:opacity-50 ${
+                            doc.pdf_url ? 'bg-teal-700 hover:bg-teal-800' : 'bg-fsm-blue hover:bg-fsm-red'
+                          }`}
+                          title={doc.pdf_url ? "Descargar PDF Estampado (Marca de agua, logo y consecutivo)" : "Descargar Certificado Institucional Oficial"}
                         >
-                          <Download size={13} /> {isDownloading ? 'Generando...' : 'PDF'}
+                          <Download size={13} /> {isDownloading ? 'Generando...' : (doc.pdf_url ? 'PDF Estampado' : 'PDF')}
                         </button>
 
                         {/* View QR Modal */}
@@ -755,7 +931,7 @@ export default function DocumentManagerClient({
       {/* Modal 1: Expedir Nuevo Documento (Individual) */}
       {createModalOpen && (
         <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl overflow-hidden w-full max-w-lg p-8 space-y-6 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl overflow-hidden w-full max-w-xl p-8 space-y-6 animate-in zoom-in-95 duration-200 max-h-[92vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b border-gray-100 pb-4">
               <div>
                 <span className="text-[10px] font-black text-fsm-blue uppercase tracking-widest">NUEVO REGISTRO DOCUMENTAL</span>
@@ -770,6 +946,106 @@ export default function DocumentManagerClient({
             </div>
 
             <div className="space-y-4">
+              {/* PDF Upload / Subir Documento Requerido */}
+              <div className="bg-blue-50/50 border-2 border-dashed border-blue-200 hover:border-fsm-blue rounded-2xl p-4 transition-all">
+                <input 
+                  ref={createPdfInputRef}
+                  type="file"
+                  accept=".pdf"
+                  className="hidden"
+                  onChange={handleSelectCreatePdf}
+                />
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-fsm-blue/10 text-fsm-blue flex items-center justify-center shrink-0">
+                      <FileText size={20} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-fsm-blue uppercase tracking-wide">
+                          Subir Documento PDF Requerido
+                        </span>
+                        <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-100 text-fsm-blue">
+                          Recomendado
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-gray-600 mt-0.5 leading-relaxed">
+                        {attachedPdfFile 
+                          ? `Archivo: ${attachedPdfFile.name} (${(attachedPdfFile.size / 1024).toFixed(1)} KB)`
+                          : 'Adjunta el PDF del certificado o calificaciones para estampar la marca de agua y consecutivo.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => createPdfInputRef.current?.click()}
+                      className="px-4 py-2 bg-fsm-blue text-white hover:bg-fsm-red rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <FileUp size={14} /> {attachedPdfFile ? 'Cambiar PDF' : 'Subir PDF'}
+                    </button>
+
+                    {attachedPdfFile && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAttachedPdfFile(null);
+                          setPdfAutoDetectedMsg('');
+                          if (createPdfInputRef.current) createPdfInputRef.current.value = '';
+                        }}
+                        className="p-2 text-gray-400 hover:text-fsm-red rounded-xl hover:bg-red-50 transition-colors cursor-pointer"
+                        title="Quitar PDF"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Stamping details info badge */}
+                {attachedPdfFile && (
+                  <div className="mt-3 pt-3 border-t border-blue-100/80 space-y-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px]">
+                      <div className="bg-white p-2 rounded-lg border border-blue-100 flex items-center gap-1.5 text-gray-700 font-medium shadow-2xs">
+                        <ShieldCheck size={13} className="text-emerald-600 shrink-0" />
+                        <span><strong>Marca de Agua:</strong> Escudo FSM</span>
+                      </div>
+                      <div className="bg-white p-2 rounded-lg border border-blue-100 flex items-center gap-1.5 text-gray-700 font-medium shadow-2xs">
+                        <Sparkles size={13} className="text-fsm-blue shrink-0" />
+                        <span><strong>Esq. Sup. Izq:</strong> Logo FSM</span>
+                      </div>
+                      <div className="bg-white p-2 rounded-lg border border-blue-100 flex items-center gap-1.5 text-gray-700 font-medium shadow-2xs">
+                        <QrCode size={13} className="text-fsm-red shrink-0" />
+                        <span><strong>Esq. Sup. Der:</strong> {newConsecutivo}</span>
+                      </div>
+                    </div>
+
+                    {pdfAutoDetectedMsg && (
+                      <div className="bg-emerald-50 text-emerald-800 text-[11px] font-bold px-3 py-1.5 rounded-lg border border-emerald-200 flex items-center gap-1.5">
+                        <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
+                        <span>{pdfAutoDetectedMsg}</span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-[10px] font-bold text-gray-500">
+                        Verifica el resultado visual antes de expedir:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handlePreviewStampedPdf(attachedPdfFile)}
+                        disabled={isStampingPreview}
+                        className="text-xs font-black text-fsm-blue hover:text-fsm-red underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                      >
+                        <Eye size={13} /> {isStampingPreview ? 'Generando vista previa...' : 'Previsualizar PDF Estampado'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Código Consecutivo:*</label>
                 <input 
@@ -936,7 +1212,7 @@ export default function DocumentManagerClient({
               <button
                 type="button"
                 onClick={() => setCreateModalOpen(false)}
-                className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-all"
+                className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-all cursor-pointer"
               >
                 Cancelar
               </button>
@@ -944,9 +1220,9 @@ export default function DocumentManagerClient({
                 type="button"
                 onClick={handleCreateDocument}
                 disabled={isCreating}
-                className="px-6 py-2.5 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all flex items-center gap-2 disabled:opacity-50"
+                className="px-6 py-2.5 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer shadow-md"
               >
-                <Save size={16} /> {isCreating ? 'Guardando...' : 'Expedir Documento'}
+                <Save size={16} /> {isCreating ? 'Expidiendo y Estampando...' : 'Expedir Documento'}
               </button>
             </div>
           </div>
@@ -1401,6 +1677,82 @@ export default function DocumentManagerClient({
                 </div>
               </div>
 
+              {/* PDF Attachment in Edit Modal */}
+              <div className="bg-blue-50/50 border-2 border-dashed border-blue-200 hover:border-fsm-blue rounded-2xl p-4 transition-all">
+                <input 
+                  ref={editPdfInputRef}
+                  type="file"
+                  accept=".pdf"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f && f.name.toLowerCase().endsWith('.pdf')) {
+                      setEditAttachedPdfFile(f);
+                      showStatus(`Nuevo PDF "${f.name}" seleccionado para estampar.`);
+                    }
+                  }}
+                />
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-fsm-blue/10 text-fsm-blue flex items-center justify-center shrink-0">
+                      <FileText size={20} />
+                    </div>
+                    <div>
+                      <span className="text-xs font-black text-fsm-blue uppercase tracking-wide">
+                        {editAttachedPdfFile ? 'Nuevo PDF Seleccionado' : (editPdfUrl ? 'PDF Oficial Ya Adjunto' : 'Adjuntar Documento PDF')}
+                      </span>
+                      <p className="text-[11px] text-gray-600 mt-0.5 leading-relaxed">
+                        {editAttachedPdfFile 
+                          ? `Archivo: ${editAttachedPdfFile.name} (${(editAttachedPdfFile.size / 1024).toFixed(1)} KB)`
+                          : (editPdfUrl ? 'Este documento ya cuenta con un PDF estampado. Puedes reemplazarlo si lo deseas.' : 'Sube el PDF para estampar marca de agua, logo y consecutivo.')}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => editPdfInputRef.current?.click()}
+                      className="px-4 py-2 bg-fsm-blue text-white hover:bg-fsm-red rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <FileUp size={14} /> {editAttachedPdfFile || editPdfUrl ? 'Reemplazar PDF' : 'Subir PDF'}
+                    </button>
+
+                    {(editAttachedPdfFile || editPdfUrl) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditAttachedPdfFile(null);
+                          setEditPdfUrl('');
+                          if (editPdfInputRef.current) editPdfInputRef.current.value = '';
+                        }}
+                        className="p-2 text-gray-400 hover:text-fsm-red rounded-xl hover:bg-red-50 transition-colors cursor-pointer"
+                        title="Quitar PDF"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {editAttachedPdfFile && (
+                  <div className="mt-3 pt-3 border-t border-blue-100/80 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-gray-500">
+                      Previsualiza el PDF estampado con los nuevos datos:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handlePreviewStampedPdf(editAttachedPdfFile)}
+                      disabled={isStampingPreview}
+                      className="text-xs font-black text-fsm-blue hover:text-fsm-red underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                    >
+                      <Eye size={13} /> {isStampingPreview ? 'Generando...' : 'Previsualizar PDF Estampado'}
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Observaciones / Notas:</label>
                 <textarea 
@@ -1415,7 +1767,7 @@ export default function DocumentManagerClient({
               <button
                 type="button"
                 onClick={() => handleDelete(editingDoc)}
-                className="px-4 py-2 bg-red-50 text-fsm-red hover:bg-fsm-red hover:text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-1"
+                className="px-4 py-2 bg-red-50 text-fsm-red hover:bg-fsm-red hover:text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-1 cursor-pointer"
               >
                 <Trash2 size={14} /> Eliminar
               </button>
@@ -1424,7 +1776,7 @@ export default function DocumentManagerClient({
                 <button
                   type="button"
                   onClick={() => setEditingDoc(null)}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-all"
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-all cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -1432,9 +1784,9 @@ export default function DocumentManagerClient({
                   type="button"
                   onClick={handleSaveEdit}
                   disabled={isSavingEdit}
-                  className="px-5 py-2 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all flex items-center gap-2 disabled:opacity-50"
+                  className="px-5 py-2 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer shadow-md"
                 >
-                  <Save size={14} /> {isSavingEdit ? 'Guardando...' : 'Guardar Cambios'}
+                  <Save size={14} /> {isSavingEdit ? 'Guardando y Estampando...' : 'Guardar Cambios'}
                 </button>
               </div>
             </div>
@@ -1479,18 +1831,82 @@ export default function DocumentManagerClient({
               <button
                 type="button"
                 onClick={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
-                className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-all"
+                className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-all cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={confirmDialog.onConfirm}
-                className={`flex-1 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-md active:scale-95 ${
+                className={`flex-1 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-md active:scale-95 cursor-pointer ${
                   confirmDialog.confirmBtnClass || 'bg-fsm-blue text-white hover:bg-fsm-red'
                 }`}
               >
                 {confirmDialog.confirmBtnText}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 6: Live Stamped PDF Preview Modal */}
+      {previewPdfModal.isOpen && (
+        <div className="fixed inset-0 z-[220] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2rem] border border-gray-100 shadow-2xl overflow-hidden w-full max-w-4xl h-[88vh] flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center bg-fsm-blue text-white px-6 py-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+                  <ShieldCheck size={18} className="text-white" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-blue-200">VISTA PREVIA DOCUMENTO ESTAMPADO</span>
+                  <h3 className="text-sm font-black uppercase tracking-wide leading-none mt-0.5">{previewPdfModal.title}</h3>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <a
+                  href={previewPdfModal.url}
+                  target="_blank"
+                  download="Documento_Estampado_FSM.pdf"
+                  className="px-3 py-1.5 bg-white text-fsm-blue hover:bg-fsm-red hover:text-white rounded-lg font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5"
+                >
+                  <Download size={14} /> Descargar PDF
+                </a>
+                <button
+                  onClick={() => setPreviewPdfModal({ isOpen: false, url: '', title: '' })}
+                  className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 bg-gray-100 p-2 overflow-hidden">
+              <iframe
+                src={previewPdfModal.url}
+                className="w-full h-full rounded-xl border border-gray-300 shadow-inner"
+                title="Vista previa del PDF estampado"
+              />
+            </div>
+
+            <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between text-xs text-gray-600">
+              <div className="flex items-center gap-4">
+                <span className="flex items-center gap-1 text-emerald-700 font-bold">
+                  <CheckCircle2 size={14} /> Marca de Agua (Escudo FSM)
+                </span>
+                <span className="flex items-center gap-1 text-fsm-blue font-bold">
+                  <CheckCircle2 size={14} /> Logo Superior Izquierdo
+                </span>
+                <span className="flex items-center gap-1 text-fsm-red font-bold">
+                  <CheckCircle2 size={14} /> Consecutivo y QR Superior Derecho
+                </span>
+              </div>
+              <button
+                onClick={() => setPreviewPdfModal({ isOpen: false, url: '', title: '' })}
+                className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
+              >
+                Cerrar Vista Previa
               </button>
             </div>
           </div>
