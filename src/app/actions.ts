@@ -1129,6 +1129,125 @@ export async function createIssuedDocument(data: {
   }
 }
 
+export async function bulkCreateIssuedDocuments(items: Array<{
+  consecutivo?: string;
+  student_nombre: string;
+  student_documento?: string;
+  tipo_documento: string;
+  programa_curso: string;
+  fecha_expedicion?: string;
+  folio?: string;
+  libro?: string;
+  notas?: string;
+  pdf_url?: string;
+}>) {
+  try {
+    if (!Array.isArray(items) || items.length === 0) {
+      return { error: 'No se recibieron registros para importar.' };
+    }
+
+    const year = new Date().getFullYear();
+    // Get last consecutivo number for base
+    const lastResult = await sql`
+      SELECT consecutivo 
+      FROM issued_documents 
+      WHERE consecutivo LIKE ${`FSM-${year}-%`} 
+      ORDER BY created_at DESC 
+      LIMIT 1
+    `;
+    let currentNum = 0;
+    if (lastResult.length > 0) {
+      const parts = lastResult[0].consecutivo.split('-');
+      const parsed = parseInt(parts[parts.length - 1], 10);
+      if (!isNaN(parsed)) currentNum = parsed;
+    }
+
+    const createdList: string[] = [];
+    let successCount = 0;
+    let errors: string[] = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const studentNombre = item.student_nombre?.trim();
+      const tipoDocumento = item.tipo_documento?.trim() || 'Diploma de Grado';
+      const programaCurso = item.programa_curso?.trim() || 'PROGRAMA GENERAL';
+
+      if (!studentNombre) {
+        errors.push(`Fila ${i + 1}: El nombre del estudiante es obligatorio.`);
+        continue;
+      }
+
+      let consecutivo = item.consecutivo?.trim();
+      if (!consecutivo) {
+        currentNum++;
+        consecutivo = `FSM-${year}-${String(currentNum).padStart(5, '0')}`;
+      }
+
+      const studentDocumento = item.student_documento?.trim() || null;
+      
+      // Parse fecha expedicion
+      let fechaExpedicion = item.fecha_expedicion?.trim() || new Date().toISOString().split('T')[0];
+      if (fechaExpedicion.includes('/')) {
+        const dParts = fechaExpedicion.split('/');
+        if (dParts.length === 3) {
+          // DD/MM/YYYY to YYYY-MM-DD
+          fechaExpedicion = `${dParts[2]}-${dParts[1].padStart(2, '0')}-${dParts[0].padStart(2, '0')}`;
+        }
+      }
+
+      const folio = item.folio?.trim() || null;
+      const libro = item.libro?.trim() || null;
+      const notas = item.notas?.trim() || null;
+      const pdfUrl = item.pdf_url?.trim() || null;
+
+      try {
+        await sql`
+          INSERT INTO issued_documents (
+            consecutivo, student_nombre, student_documento, tipo_documento,
+            programa_curso, fecha_expedicion, folio, libro, estado, notas, pdf_url
+          ) VALUES (
+            ${consecutivo}, ${studentNombre}, ${studentDocumento}, ${tipoDocumento},
+            ${programaCurso}, ${fechaExpedicion}::date, ${folio}, ${libro}, 'valido', ${notas}, ${pdfUrl}
+          )
+        `;
+        createdList.push(consecutivo);
+        successCount++;
+      } catch (err: any) {
+        console.error(`Error inserting row ${i + 1}:`, err);
+        if (err.message?.includes('unique') || err.message?.includes('duplicate key')) {
+          errors.push(`Fila ${i + 1}: Consecutivo "${consecutivo}" ya registrado.`);
+        } else {
+          errors.push(`Fila ${i + 1} (${studentNombre}): ${err.message || 'Error al guardar'}`);
+        }
+      }
+    }
+
+    if (successCount > 0) {
+      await logAuditEvent({
+        action: 'DOCUMENT_BULK_IMPORTED',
+        category: 'CONTENT',
+        details: `Carga masiva completada: ${successCount} documentos oficiales expedidos`,
+        metadata: {
+          total_imported: successCount,
+          errors_count: errors.length,
+          first_consecutivo: createdList[0],
+          last_consecutivo: createdList[createdList.length - 1]
+        }
+      });
+    }
+
+    return {
+      success: successCount > 0,
+      count: successCount,
+      errors: errors.slice(0, 10),
+      createdList
+    };
+  } catch (error: any) {
+    console.error('Error in bulkCreateIssuedDocuments:', error);
+    return { error: error.message || 'Error al procesar la carga masiva de documentos' };
+  }
+}
+
 export async function updateIssuedDocument(id: string, data: {
   consecutivo?: string;
   student_nombre?: string;

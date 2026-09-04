@@ -851,3 +851,171 @@ export async function exportDocumentsToExcel(docs: DocumentExportItem[]) {
   const todayStr = new Date().toISOString().split('T')[0];
   await downloadWorkbook(workbook, `Registro_Documentos_FSM_${todayStr}.xlsx`);
 }
+
+// =========================================================================
+// 5. EXPORT BULK IMPORT TEMPLATE (Plantilla de Importación Masiva)
+// =========================================================================
+
+export async function exportBulkImportTemplateExcel() {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'Fundación San Mateo - Sistema Académico';
+  workbook.created = new Date();
+
+  const worksheet = workbook.addWorksheet('Plantilla_Documentos', {
+    views: [{ showGridLines: true, state: 'frozen', xSplit: 0, ySplit: 5 }]
+  });
+
+  const logoBase64 = await getFSMLogoBase64();
+  if (logoBase64) {
+    const imageId = workbook.addImage({
+      base64: logoBase64,
+      extension: 'png',
+    });
+    worksheet.addImage(imageId, {
+      tl: { col: 0.1, row: 0.1 },
+      ext: { width: 52, height: 52 },
+    });
+  }
+
+  // Row 1: Header Title
+  const titleRow = worksheet.getRow(1);
+  titleRow.getCell(2).value = 'FUNDACIÓN SAN MATEO — PLANTILLA OFICIAL DE CARGA MASIVA DE DOCUMENTOS';
+  titleRow.getCell(2).font = { name: 'Calibri', size: 13, bold: true, color: { argb: 'FFFFFFFF' } };
+  worksheet.mergeCells(1, 2, 1, 9);
+  for (let c = 1; c <= 9; c++) {
+    titleRow.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + FSM_COLORS.NAVY_HEADER } };
+  }
+  titleRow.height = 28;
+
+  // Row 2: Subtitle
+  const subTitleRow = worksheet.getRow(2);
+  subTitleRow.getCell(2).value = 'Diligencia los datos de los estudiantes y títulos a expedir. Guarda y sube este archivo en el panel.';
+  subTitleRow.getCell(2).font = { name: 'Calibri', size: 10, italic: true, color: { argb: 'FFFFFFFF' } };
+  worksheet.mergeCells(2, 2, 2, 9);
+  for (let c = 1; c <= 9; c++) {
+    subTitleRow.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + FSM_COLORS.NAVY_ACCENT } };
+  }
+  subTitleRow.height = 20;
+
+  // Row 3: Accent Red line
+  const accentRow = worksheet.getRow(3);
+  for (let c = 1; c <= 9; c++) {
+    accentRow.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + FSM_COLORS.RED_ACCENT } };
+  }
+  accentRow.height = 4;
+
+  // Row 4: Instructions
+  const metaRow = worksheet.getRow(4);
+  metaRow.getCell(1).value = '* Si dejas la columna CONSECUTIVO vacía, el sistema asignará automáticamente códigos FSM-2026-XXXXX correlativos.';
+  metaRow.getCell(1).font = { name: 'Calibri', size: 9, bold: true, color: { argb: 'FF' + FSM_COLORS.RED_ACCENT } };
+  worksheet.mergeCells(4, 1, 4, 9);
+  metaRow.height = 18;
+
+  // Row 5: Column Headers
+  const headerRow = worksheet.getRow(5);
+  const headers = [
+    'CONSECUTIVO',
+    'NOMBRE_ESTUDIANTE',
+    'DOCUMENTO_ID',
+    'TIPO_DOCUMENTO',
+    'PROGRAMA_CURSO',
+    'FECHA_EXPEDICION',
+    'FOLIO',
+    'LIBRO',
+    'OBSERVACIONES_NOTAS'
+  ];
+
+  headers.forEach((h, idx) => {
+    const cell = headerRow.getCell(idx + 1);
+    cell.value = h;
+    cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + FSM_COLORS.NAVY_HEADER } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    cell.border = {
+      top: { style: 'medium', color: { argb: 'FF' + FSM_COLORS.NAVY_DARK } },
+      bottom: { style: 'medium', color: { argb: 'FF' + FSM_COLORS.NAVY_DARK } },
+      left: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+      right: { style: 'thin', color: { argb: 'FFFFFFFF' } }
+    };
+  });
+  headerRow.height = 26;
+
+  // Sample Rows
+  const sampleData = [
+    {
+      consecutivo: '',
+      nombre: 'MARÍA FERNANDA GÓMEZ LÓPEZ',
+      documento: '1019283746',
+      tipo: 'Diploma de Grado',
+      programa: 'AUXILIAR EN ENFERMERÍA',
+      fecha: new Date().toISOString().split('T')[0],
+      folio: '045',
+      libro: '012',
+      notas: 'Graduación ordinaria periodo 2026-1'
+    },
+    {
+      consecutivo: '',
+      nombre: 'ANDRÉS FELIPE CASTRO PINTO',
+      documento: '1022938475',
+      tipo: 'Certificado de Estudio',
+      programa: 'ATENCIÓN INTEGRAL A LA PRIMERA INFANCIA',
+      fecha: new Date().toISOString().split('T')[0],
+      folio: '046',
+      libro: '012',
+      notas: 'Semestre III cursado y aprobado'
+    },
+    {
+      consecutivo: '',
+      nombre: 'LAURA CAMILA RODRÍGUEZ SILVA',
+      documento: '1030495867',
+      tipo: 'Constancia de Asistencia',
+      programa: 'CURSO DE SOPORTE VITAL BÁSICO (SVB)',
+      fecha: new Date().toISOString().split('T')[0],
+      folio: '047',
+      libro: '012',
+      notas: 'Intensidad 40 horas académicas'
+    }
+  ];
+
+  sampleData.forEach((item, idx) => {
+    const rowNum = 6 + idx;
+    const row = worksheet.getRow(rowNum);
+    const bgArgb = idx % 2 === 1 ? 'FF' + FSM_COLORS.GRAY_LIGHT : 'FFFFFFFF';
+
+    row.getCell(1).value = item.consecutivo;
+    row.getCell(2).value = item.nombre;
+    row.getCell(3).value = item.documento;
+    row.getCell(4).value = item.tipo;
+    row.getCell(5).value = item.programa;
+    row.getCell(6).value = item.fecha;
+    row.getCell(7).value = item.folio;
+    row.getCell(8).value = item.libro;
+    row.getCell(9).value = item.notas;
+
+    for (let c = 1; c <= 9; c++) {
+      const cell = row.getCell(c);
+      cell.font = { name: 'Calibri', size: 10, color: { argb: 'FF' + FSM_COLORS.TEXT_DARK } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgArgb } };
+      cell.alignment = { vertical: 'middle', horizontal: c === 1 || c === 3 || c === 6 || c === 7 || c === 8 ? 'center' : 'left' };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FF' + FSM_COLORS.GRAY_BORDER } },
+        bottom: { style: 'thin', color: { argb: 'FF' + FSM_COLORS.GRAY_BORDER } },
+        left: { style: 'thin', color: { argb: 'FF' + FSM_COLORS.GRAY_BORDER } },
+        right: { style: 'thin', color: { argb: 'FF' + FSM_COLORS.GRAY_BORDER } }
+      };
+    }
+    row.height = 22;
+  });
+
+  worksheet.getColumn(1).width = 20;
+  worksheet.getColumn(2).width = 36;
+  worksheet.getColumn(3).width = 18;
+  worksheet.getColumn(4).width = 26;
+  worksheet.getColumn(5).width = 36;
+  worksheet.getColumn(6).width = 18;
+  worksheet.getColumn(7).width = 12;
+  worksheet.getColumn(8).width = 12;
+  worksheet.getColumn(9).width = 36;
+
+  await downloadWorkbook(workbook, 'Plantilla_Carga_Masiva_Documentos_FSM.xlsx');
+}

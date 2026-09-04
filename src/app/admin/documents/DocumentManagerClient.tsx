@@ -1,18 +1,21 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import * as XLSX from 'xlsx';
 import { formatDateDDMMYYYY } from '@/lib/dateUtils';
 import { 
-  createIssuedDocument, updateIssuedDocument, toggleDocumentStatus, deleteIssuedDocument 
+  createIssuedDocument, updateIssuedDocument, toggleDocumentStatus, deleteIssuedDocument,
+  bulkCreateIssuedDocuments 
 } from '@/app/actions';
 import { generateDocumentPDF } from '@/lib/documentPdfGenerator';
-import { exportDocumentsToExcel } from '@/lib/excelExportHelper';
+import { exportDocumentsToExcel, exportBulkImportTemplateExcel } from '@/lib/excelExportHelper';
 import { 
   FileCheck, Search, Plus, QrCode, Edit2, Trash2, X, Save, 
   CheckCircle2, XCircle, Download, ExternalLink, ShieldCheck, Printer, 
-  FileText, Copy, Check, FileSpreadsheet, User, BookOpen, Award
+  FileText, Copy, Check, FileSpreadsheet, User, BookOpen, Award,
+  UploadCloud, FileUp, AlertTriangle, RefreshCw, File
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -38,6 +41,20 @@ interface StudentOption {
   programa: string;
 }
 
+interface ParsedBulkItem {
+  consecutivo?: string;
+  student_nombre: string;
+  student_documento?: string;
+  tipo_documento: string;
+  programa_curso: string;
+  fecha_expedicion?: string;
+  folio?: string;
+  libro?: string;
+  notas?: string;
+  isValid: boolean;
+  validationError?: string;
+}
+
 interface DocumentManagerClientProps {
   documents: DocumentItem[];
   nextConsecutivo: string;
@@ -52,6 +69,9 @@ export default function DocumentManagerClient({
   academicPrograms = []
 }: DocumentManagerClientProps) {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+
   const [search, setSearch] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
   const [filterEstado, setFilterEstado] = useState('all');
@@ -76,6 +96,14 @@ export default function DocumentManagerClient({
   const [newLibro, setNewLibro] = useState('');
   const [newNotas, setNewNotas] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+
+  // Modal: Bulk Upload
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [bulkTab, setBulkTab] = useState<'excel' | 'pdf'>('excel');
+  const [parsedRows, setParsedRows] = useState<ParsedBulkItem[]>([]);
+  const [bulkFileName, setBulkFileName] = useState('');
+  const [isProcessingBulk, setIsProcessingBulk] = useState(false);
+  const [pdfFiles, setPdfFiles] = useState<{ file: File; studentName: string; docType: string; program: string }[]>([]);
 
   // Modal: Edit Document
   const [editingDoc, setEditingDoc] = useState<DocumentItem | null>(null);
@@ -113,7 +141,7 @@ export default function DocumentManagerClient({
 
   const showStatus = (text: string, type: 'success' | 'error' = 'success') => {
     setStatusMsg({ text, type });
-    setTimeout(() => setStatusMsg({ text: '', type: '' }), 5000);
+    setTimeout(() => setStatusMsg({ text: '', type: '' }), 6000);
   };
 
   const handleSelectRegisteredStudent = (s: StudentOption) => {
@@ -156,6 +184,173 @@ export default function DocumentManagerClient({
       router.refresh();
     } else {
       showStatus(res.error || 'Error al expedir documento', 'error');
+    }
+  };
+
+  // =========================================================================
+  // BULK EXCEL / CSV PARSER
+  // =========================================================================
+  const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setBulkFileName(file.name);
+    const reader = new FileReader();
+
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary', cellDates: true });
+        const wsName = wb.SheetNames[0];
+        const ws = wb.Sheets[wsName];
+        const rawData: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+        if (rawData.length === 0) {
+          showStatus('El archivo no contiene filas con datos válidos.', 'error');
+          return;
+        }
+
+        const normalized: ParsedBulkItem[] = rawData.map((row) => {
+          // Normalize column keys
+          const keys = Object.keys(row);
+          const getVal = (possibleKeys: string[]) => {
+            for (const pk of possibleKeys) {
+              const matchedKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '').includes(pk.toLowerCase().replace(/[^a-z0-9]/g, '')));
+              if (matchedKey && row[matchedKey] !== undefined && row[matchedKey] !== '') {
+                return String(row[matchedKey]).trim();
+              }
+            }
+            return '';
+          };
+
+          const consecutivo = getVal(['consecutivo', 'codigo', 'id_documento']);
+          const student_nombre = getVal(['nombre', 'estudiante', 'alumno', 'titular', 'nombre_completo', 'nombres']);
+          const student_documento = getVal(['documento', 'cedula', 'identificacion', 'ti', 'cc', 'dni', 'doc']);
+          const tipo_documento = getVal(['tipo', 'tipo_documento', 'titulo', 'documento_tipo']) || 'Diploma de Grado';
+          const programa_curso = getVal(['programa', 'curso', 'carrera', 'programa_curso', 'capacitacion']) || 'AUXILIAR EN ENFERMERÍA';
+          
+          let fecha_expedicion = getVal(['fecha', 'fecha_expedicion', 'expedicion', 'fecha_grado']);
+          if (!fecha_expedicion) {
+            fecha_expedicion = new Date().toISOString().split('T')[0];
+          }
+
+          const folio = getVal(['folio']);
+          const libro = getVal(['libro']);
+          const notas = getVal(['notas', 'observaciones', 'nota', 'detalle']);
+
+          const isValid = Boolean(student_nombre && tipo_documento && programa_curso);
+          const validationError = !student_nombre 
+            ? 'Falta el nombre del estudiante' 
+            : !programa_curso 
+            ? 'Falta el programa o curso' 
+            : undefined;
+
+          return {
+            consecutivo: consecutivo || undefined,
+            student_nombre,
+            student_documento: student_documento || undefined,
+            tipo_documento,
+            programa_curso,
+            fecha_expedicion,
+            folio: folio || undefined,
+            libro: libro || undefined,
+            notas: notas || undefined,
+            isValid,
+            validationError
+          };
+        });
+
+        setParsedRows(normalized);
+      } catch (err: any) {
+        console.error('Error parsing Excel/CSV:', err);
+        showStatus('Error al leer el archivo Excel o CSV. Verifica que no esté dañado.', 'error');
+      }
+    };
+
+    reader.readAsBinaryString(file);
+  };
+
+  // Submit Bulk Excel/CSV
+  const handleConfirmBulkExcel = async () => {
+    const validRows = parsedRows.filter(r => r.isValid);
+    if (validRows.length === 0) {
+      showStatus('No hay registros válidos para procesar.', 'error');
+      return;
+    }
+
+    setIsProcessingBulk(true);
+    const res = await bulkCreateIssuedDocuments(validRows.map(r => ({
+      consecutivo: r.consecutivo,
+      student_nombre: r.student_nombre,
+      student_documento: r.student_documento,
+      tipo_documento: r.tipo_documento,
+      programa_curso: r.programa_curso,
+      fecha_expedicion: r.fecha_expedicion,
+      folio: r.folio,
+      libro: r.libro,
+      notas: r.notas,
+    })));
+
+    setIsProcessingBulk(false);
+    if (res.success) {
+      showStatus(`¡Éxito! Se expidieron y registraron ${res.count} documentos con QR oficial.`);
+      setBulkModalOpen(false);
+      setParsedRows([]);
+      setBulkFileName('');
+      router.refresh();
+    } else {
+      showStatus(res.error || 'Error al procesar la carga masiva.', 'error');
+    }
+  };
+
+  // =========================================================================
+  // BULK PDF PARSER & HANDLER
+  // =========================================================================
+  const handlePdfUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const parsedPdfs = files.map(file => {
+      // Try to parse name from filename: e.g. "DIPLOMA_JUAN_PEREZ_ENFERMERIA.pdf"
+      const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[_|-]/g, ' ').toUpperCase();
+      let docType = 'Diploma de Grado';
+      if (cleanName.includes('ACTA')) docType = 'Acta de Grado';
+      if (cleanName.includes('CERTIFICADO')) docType = 'Certificado de Estudio';
+      if (cleanName.includes('CONSTANCIA')) docType = 'Constancia de Asistencia';
+
+      return {
+        file,
+        studentName: cleanName,
+        docType,
+        program: 'AUXILIAR EN ENFERMERÍA'
+      };
+    });
+
+    setPdfFiles(parsedPdfs);
+  };
+
+  const handleConfirmBulkPdf = async () => {
+    if (pdfFiles.length === 0) return;
+
+    setIsProcessingBulk(true);
+    const itemsToCreate = pdfFiles.map(p => ({
+      student_nombre: p.studentName,
+      tipo_documento: p.docType,
+      programa_curso: p.program,
+      fecha_expedicion: new Date().toISOString().split('T')[0],
+      notas: `Documento importado desde archivo PDF: ${p.file.name}`
+    }));
+
+    const res = await bulkCreateIssuedDocuments(itemsToCreate);
+    setIsProcessingBulk(false);
+
+    if (res.success) {
+      showStatus(`¡Éxito! Se registraron ${res.count} documentos oficiales con código QR.`);
+      setBulkModalOpen(false);
+      setPdfFiles([]);
+      router.refresh();
+    } else {
+      showStatus(res.error || 'Error al registrar documentos PDF.', 'error');
     }
   };
 
@@ -357,22 +552,32 @@ export default function DocumentManagerClient({
       {/* Action Toolbar */}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="flex flex-wrap items-center gap-3">
+          {/* Create Single Document */}
           <button
             onClick={() => {
               setNewConsecutivo(nextConsecutivo);
               setCreateModalOpen(true);
             }}
-            className="px-6 py-3 bg-fsm-blue text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all shadow-md flex items-center gap-2 active:scale-95"
+            className="px-5 py-3 bg-fsm-blue text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all shadow-md flex items-center gap-2 active:scale-95"
           >
-            <Plus size={18} /> Expedir Nuevo Documento
+            <Plus size={16} /> Expedir Documento
           </button>
 
+          {/* Bulk Upload Button */}
+          <button
+            onClick={() => setBulkModalOpen(true)}
+            className="px-5 py-3 bg-teal-800 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-teal-900 transition-all shadow-md flex items-center gap-2 active:scale-95"
+          >
+            <UploadCloud size={16} /> Subida Masiva (Excel / CSV / PDF)
+          </button>
+
+          {/* Export to Excel */}
           <button
             onClick={handleExportExcel}
             disabled={isExportingExcel || filteredDocs.length === 0}
-            className="px-5 py-3 bg-emerald-700 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-emerald-800 transition-all shadow-md flex items-center gap-2 disabled:opacity-50 active:scale-95"
+            className="px-4 py-3 bg-emerald-700 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-emerald-800 transition-all shadow-md flex items-center gap-2 disabled:opacity-50 active:scale-95"
           >
-            <FileSpreadsheet size={16} /> {isExportingExcel ? 'Exportando...' : 'Exportar a Excel'}
+            <FileSpreadsheet size={16} /> {isExportingExcel ? 'Exportando...' : 'Exportar Excel'}
           </button>
         </div>
 
@@ -381,7 +586,7 @@ export default function DocumentManagerClient({
           target="_blank"
           className="px-5 py-2.5 bg-white text-fsm-blue border border-fsm-blue/20 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-blue hover:text-white transition-all shadow-sm flex items-center gap-2"
         >
-          <ExternalLink size={14} /> Abrir Portal de Verificación Pública
+          <ExternalLink size={14} /> Portal de Verificación Pública
         </Link>
       </div>
 
@@ -547,7 +752,7 @@ export default function DocumentManagerClient({
         </div>
       </div>
 
-      {/* Modal 1: Expedir Nuevo Documento */}
+      {/* Modal 1: Expedir Nuevo Documento (Individual) */}
       {createModalOpen && (
         <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl overflow-hidden w-full max-w-lg p-8 space-y-6 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
@@ -748,7 +953,266 @@ export default function DocumentManagerClient({
         </div>
       )}
 
-      {/* Modal 2: QR Viewer & Actions Modal */}
+      {/* Modal 2: Subida Masiva (Excel / CSV / PDF) */}
+      {bulkModalOpen && (
+        <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl overflow-hidden w-full max-w-4xl p-8 space-y-6 animate-in zoom-in-95 duration-200 max-h-[92vh] overflow-y-auto">
+            
+            <div className="flex justify-between items-center border-b border-gray-100 pb-4">
+              <div>
+                <span className="text-[10px] font-black text-teal-800 uppercase tracking-widest bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
+                  IMPORTACIÓN MASIVA
+                </span>
+                <h3 className="text-xl font-black text-fsm-blue uppercase leading-tight mt-1.5">
+                  CARGA MASIVA DE DOCUMENTOS PARA VERIFICACIÓN
+                </h3>
+              </div>
+              <button 
+                onClick={() => {
+                  setBulkModalOpen(false);
+                  setParsedRows([]);
+                  setBulkFileName('');
+                  setPdfFiles([]);
+                }}
+                className="text-gray-400 hover:text-fsm-red transition-colors p-1"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Tab Selectors */}
+            <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
+              <button
+                type="button"
+                onClick={() => setBulkTab('excel')}
+                className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${
+                  bulkTab === 'excel'
+                    ? 'bg-fsm-blue text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <FileSpreadsheet size={15} /> Subir Archivo Excel / CSV
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setBulkTab('pdf')}
+                className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${
+                  bulkTab === 'pdf'
+                    ? 'bg-fsm-blue text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <FileText size={15} /> Subir Documentos PDF
+              </button>
+            </div>
+
+            {/* TAB 1: EXCEL & CSV */}
+            {bulkTab === 'excel' && (
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-blue-50/60 p-4 rounded-2xl border border-blue-100">
+                  <div className="text-xs text-gray-700">
+                    <strong className="text-fsm-blue">¿Primera vez usando la carga masiva?</strong> Descarga la plantilla oficial con los campos y columnas pre-configurados.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => exportBulkImportTemplateExcel()}
+                    className="px-4 py-2 bg-white text-fsm-blue border border-fsm-blue/20 hover:bg-fsm-blue hover:text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-xs flex items-center gap-1.5 shrink-0"
+                  >
+                    <Download size={14} /> Descargar Plantilla Excel
+                  </button>
+                </div>
+
+                {/* Dropzone */}
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-gray-300 hover:border-fsm-blue rounded-3xl p-8 text-center cursor-pointer transition-all bg-gray-50/50 hover:bg-blue-50/20 flex flex-col items-center justify-center space-y-3"
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx, .xls, .csv"
+                    className="hidden"
+                    onChange={handleExcelUpload}
+                  />
+                  <div className="w-16 h-16 bg-teal-50 text-teal-800 rounded-full flex items-center justify-center border border-teal-100 shadow-inner">
+                    <FileUp size={30} />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-sm text-gray-800 uppercase">
+                      {bulkFileName ? bulkFileName : 'Haz clic para seleccionar o arrastra tu archivo Excel / CSV'}
+                    </h4>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Formatos compatibles: .xlsx, .xls, .csv (Se detectarán nombres, cédulas, títulos y programas automáticamente)
+                    </p>
+                  </div>
+                </div>
+
+                {/* Preview Table */}
+                {parsedRows.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-black text-fsm-blue uppercase tracking-wider">
+                        Filas Detectadas: {parsedRows.length} ({parsedRows.filter(r => r.isValid).length} válidas)
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setParsedRows([]);
+                          setBulkFileName('');
+                        }}
+                        className="text-xs font-bold text-fsm-red hover:underline"
+                      >
+                        Limpiar lista
+                      </button>
+                    </div>
+
+                    <div className="border border-gray-200 rounded-2xl overflow-hidden max-h-64 overflow-y-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead className="bg-gray-100 text-[10px] font-black uppercase text-gray-600 sticky top-0">
+                          <tr>
+                            <th className="p-3">#</th>
+                            <th className="p-3">Consecutivo</th>
+                            <th className="p-3">Estudiante</th>
+                            <th className="p-3">Documento</th>
+                            <th className="p-3">Tipo Documento</th>
+                            <th className="p-3">Programa</th>
+                            <th className="p-3">Estado</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {parsedRows.map((r, i) => (
+                            <tr key={i} className={r.isValid ? 'hover:bg-gray-50' : 'bg-red-50/50'}>
+                              <td className="p-3 font-mono text-gray-400">{i + 1}</td>
+                              <td className="p-3 font-mono font-bold text-fsm-blue">
+                                {r.consecutivo || <span className="text-gray-400 font-normal italic">Auto-generar</span>}
+                              </td>
+                              <td className="p-3 font-bold text-gray-900 uppercase">{r.student_nombre || <span className="text-red-500">Falta Nombre</span>}</td>
+                              <td className="p-3 text-gray-600">{r.student_documento || 'S/D'}</td>
+                              <td className="p-3 text-gray-700">{r.tipo_documento}</td>
+                              <td className="p-3 text-gray-600 uppercase">{r.programa_curso}</td>
+                              <td className="p-3">
+                                {r.isValid ? (
+                                  <span className="text-[9px] font-black text-green-700 bg-green-50 px-2 py-0.5 rounded-md border border-green-200">
+                                    LISTO
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] font-black text-fsm-red bg-red-50 px-2 py-0.5 rounded-md border border-red-200">
+                                    {r.validationError || 'ERROR'}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-4 border-t border-gray-100 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBulkModalOpen(false);
+                      setParsedRows([]);
+                    }}
+                    className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmBulkExcel}
+                    disabled={isProcessingBulk || parsedRows.filter(r => r.isValid).length === 0}
+                    className="px-6 py-2.5 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all flex items-center gap-2 disabled:opacity-50 shadow-md"
+                  >
+                    {isProcessingBulk ? <RefreshCw className="animate-spin" size={16} /> : <UploadCloud size={16} />}
+                    {isProcessingBulk ? 'Procesando Documentos...' : `Confirmar e Importar (${parsedRows.filter(r => r.isValid).length})`}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: PDF UPLOAD */}
+            {bulkTab === 'pdf' && (
+              <div className="space-y-6">
+                <div 
+                  onClick={() => pdfInputRef.current?.click()}
+                  className="border-2 border-dashed border-gray-300 hover:border-fsm-blue rounded-3xl p-8 text-center cursor-pointer transition-all bg-gray-50/50 hover:bg-blue-50/20 flex flex-col items-center justify-center space-y-3"
+                >
+                  <input
+                    ref={pdfInputRef}
+                    type="file"
+                    multiple
+                    accept=".pdf"
+                    className="hidden"
+                    onChange={handlePdfUpload}
+                  />
+                  <div className="w-16 h-16 bg-red-50 text-fsm-red rounded-full flex items-center justify-center border border-red-100 shadow-inner">
+                    <FileText size={30} />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-sm text-gray-800 uppercase">
+                      Selecciona o arrastra varios archivos PDF de diplomas o certificados
+                    </h4>
+                    <p className="text-xs text-gray-500 mt-1">
+                      El sistema extraerá el nombre y creará un expediente con consecutivo único y código QR para cada uno.
+                    </p>
+                  </div>
+                </div>
+
+                {pdfFiles.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="text-xs font-black text-fsm-blue uppercase tracking-wider">
+                      Archivos PDF Cargados: {pdfFiles.length}
+                    </div>
+
+                    <div className="border border-gray-200 rounded-2xl overflow-hidden max-h-60 overflow-y-auto p-3 space-y-2 bg-gray-50/50">
+                      {pdfFiles.map((pdf, idx) => (
+                        <div key={idx} className="flex items-center justify-between bg-white p-3 rounded-xl border border-gray-100 shadow-2xs">
+                          <div className="flex items-center gap-3">
+                            <File className="text-fsm-red shrink-0" size={18} />
+                            <div>
+                              <div className="font-bold text-xs text-gray-900">{pdf.file.name}</div>
+                              <div className="text-[10px] text-gray-500 uppercase">{pdf.studentName} — {pdf.docType}</div>
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-mono text-gray-400">{(pdf.file.size / 1024).toFixed(1)} KB</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-4 border-t border-gray-100 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBulkModalOpen(false);
+                      setPdfFiles([]);
+                    }}
+                    className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmBulkPdf}
+                    disabled={isProcessingBulk || pdfFiles.length === 0}
+                    className="px-6 py-2.5 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all flex items-center gap-2 disabled:opacity-50 shadow-md"
+                  >
+                    {isProcessingBulk ? <RefreshCw className="animate-spin" size={16} /> : <UploadCloud size={16} />}
+                    {isProcessingBulk ? 'Procesando...' : `Registrar ${pdfFiles.length} Documentos con QR`}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal 3: QR Viewer & Actions Modal */}
       {qrModalDoc && (
         <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl overflow-hidden w-full max-w-md p-8 space-y-6 animate-in zoom-in-95 duration-200 text-center">
@@ -832,7 +1296,7 @@ export default function DocumentManagerClient({
         </div>
       )}
 
-      {/* Modal 3: Edit Document Modal */}
+      {/* Modal 4: Edit Document Modal */}
       {editingDoc && (
         <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl overflow-hidden w-full max-w-lg p-8 space-y-6 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
@@ -865,7 +1329,7 @@ export default function DocumentManagerClient({
                 <input 
                   type="text" 
                   value={editNombre}
-                  onChange={e => setNewNombre(e.target.value)}
+                  onChange={e => setEditNombre(e.target.value)}
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
                 />
               </div>
@@ -978,7 +1442,7 @@ export default function DocumentManagerClient({
         </div>
       )}
 
-      {/* Modal 4: Custom Branded Fundación San Mateo Confirmation Modal */}
+      {/* Modal 5: Custom Branded Fundación San Mateo Confirmation Modal */}
       {confirmDialog.isOpen && (
         <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl overflow-hidden w-full max-w-md p-8 text-center space-y-6 animate-in zoom-in-95 duration-200 relative">
