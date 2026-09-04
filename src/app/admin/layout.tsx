@@ -38,46 +38,46 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <span>Panel {isAcademicRole ? 'Académico' : 'de Control'}</span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-1 bg-gray-100 p-1 rounded-xl">
+          <nav className="hidden lg:flex items-center gap-1 bg-gray-100 p-1 rounded-xl overflow-x-auto max-w-3xl">
              {!isAcademicRole && (
                <>
-                 <Link href="/admin" className="px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase hover:bg-white transition-all text-fsm-blue">
+                 <Link href="/admin" className="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase hover:bg-white transition-all text-fsm-blue shrink-0">
                    Contenido
                  </Link>
-                 <Link href="/admin/pages/home" className="px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase hover:bg-white transition-all text-fsm-blue">
+                 <Link href="/admin/pages/home" className="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase hover:bg-white transition-all text-fsm-blue shrink-0">
                    Inicio
                  </Link>
-                 <Link href="/admin/blog" className="px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase hover:bg-white transition-all text-fsm-blue">
+                 <Link href="/admin/blog" className="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase hover:bg-white transition-all text-fsm-blue shrink-0">
                    Blog
                  </Link>
-                 <Link href="/admin/faqs" className="px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase hover:bg-white transition-all text-fsm-blue">
+                 <Link href="/admin/faqs" className="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase hover:bg-white transition-all text-fsm-blue shrink-0">
                    FAQs
                  </Link>
                </>
              )}
-              <Link href="/admin/attendance" className="px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase hover:bg-white transition-all text-fsm-blue">
+              <Link href="/admin/attendance" className="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase hover:bg-white transition-all text-fsm-blue shrink-0">
                 Asistencia
               </Link>
-              <Link href="/admin/attendance/alerts" className="px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase bg-amber-50 text-amber-900 hover:bg-amber-600 hover:text-white transition-all border border-amber-200">
-                📊 Planillas por Grupo
+              <Link href="/admin/attendance/alerts" className="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase bg-amber-50 text-amber-900 hover:bg-amber-600 hover:text-white transition-all border border-amber-200 shrink-0">
+                📊 Planillas
               </Link>
-              <Link href="/admin/attendance/absences" className="px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase bg-blue-50 text-fsm-blue hover:bg-fsm-blue hover:text-white transition-all border border-blue-200">
-                📋 Alertas de Ausencias
+              <Link href="/admin/attendance/absences" className="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase bg-blue-50 text-fsm-blue hover:bg-fsm-blue hover:text-white transition-all border border-blue-200 shrink-0">
+                📋 Alertas
               </Link>
-             <Link href="/admin/attendance/enrollment" className="px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase hover:bg-white transition-all text-fsm-blue">
-               Matrícula y Alumnos
+             <Link href="/admin/attendance/enrollment" className="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase hover:bg-white transition-all text-fsm-blue shrink-0">
+               Matrícula
              </Link>
-              <Link href="/admin/documents" className="px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase hover:bg-white transition-all text-fsm-blue">
-                Documentos y QR
+              <Link href="/admin/documents" className="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase bg-teal-50 text-teal-900 hover:bg-teal-700 hover:text-white transition-all border border-teal-200 shadow-2xs shrink-0 font-bold">
+                📜 Documentos y QR
               </Link>
               {!isAcademicRole && (
-                <Link href="/admin/users" className="px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase bg-purple-50 text-purple-800 hover:bg-purple-600 hover:text-white transition-all border border-purple-200">
-                  👥 Usuarios y Permisos
+                <Link href="/admin/users" className="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase bg-purple-50 text-purple-800 hover:bg-purple-600 hover:text-white transition-all border border-purple-200 shrink-0">
+                  👥 Usuarios
                 </Link>
               )}
               {isSuperAdmin && (
-                <Link href="/admin/logs" className="px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase bg-indigo-50 text-indigo-900 hover:bg-indigo-600 hover:text-white transition-all border border-indigo-200 shadow-2xs">
-                  📜 LOGS & Auditoría
+                <Link href="/admin/logs" className="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase bg-indigo-50 text-indigo-900 hover:bg-indigo-600 hover:text-white transition-all border border-indigo-200 shadow-2xs shrink-0">
+                  📜 LOGS
                 </Link>
               )}
           </nav>
