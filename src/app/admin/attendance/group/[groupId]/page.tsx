@@ -26,10 +26,7 @@ export default async function GroupAttendancePage({
     try {
       const payload = await decrypt(sessionToken);
       currentUserEmail = (payload?.email || '').toLowerCase().trim();
-      canModifyAll = (
-        currentUserEmail === 'admin@fundacionsanmateo.edu.co' ||
-        currentUserEmail === 'admin@fundacionsanmateosoacha.edu.co'
-      );
+      canModifyAll = !!(payload?.adminId || payload?.teacherId || currentUserEmail);
     } catch {
       canModifyAll = false;
     }
@@ -84,10 +81,10 @@ export default async function GroupAttendancePage({
       COUNT(ae.id) as scan_count
     FROM attendance_events ae
     LEFT JOIN students s ON s.id = ae.student_id
-    LEFT JOIN students_normalized sn ON sn.id = ae.student_id OR UPPER(TRIM(sn.nombre_original)) = UPPER(TRIM(s.nombre))
+    LEFT JOIN students_normalized sn ON sn.id = ae.student_id 
+      OR UPPER(REGEXP_REPLACE(TRIM(sn.nombre_original), '\\s+', ' ', 'g')) = UPPER(REGEXP_REPLACE(TRIM(s.nombre), '\\s+', ' ', 'g'))
     JOIN enrollments e ON e.student_id = sn.id
     WHERE e.group_id = ${groupId}::uuid
-      AND ae.tipo_evento = 'entrada'
     GROUP BY sn.id, (ae.timestamp AT TIME ZONE 'America/Bogota')::date::text
   `;
 
@@ -153,28 +150,35 @@ export default async function GroupAttendancePage({
       let finalEstado = 'PRESENTE';
       let finalObs = '';
 
-      if (explicit) {
-        finalEstado = explicit.estado;
-        finalObs = explicit.observaciones || (phoneFollowup ? `Llamada: ${phoneFollowup}` : '');
-      } else if (hasRealScan) {
-        // Physical entry verified at torniquetes/panel
-        finalEstado = 'PRESENTE';
-        finalObs = phoneFollowup ? `Llamada: ${phoneFollowup}` : '';
-      } else if (holiday.isHoliday) {
+      if (holiday.isHoliday) {
         finalEstado = 'FESTIVO';
         finalObs = holiday.holidayName || 'Festivo Nacional';
       } else if (isGroupCB && sess.fecha < '2026-09-01') {
         finalEstado = 'CALENDARIO_B';
+      } else if (explicit && ['EXCUSA_MEDICA', 'PRACTICAS', 'COMITE_ACADEMICO', 'LIBRE', 'CONGELADO', 'TERMINACION_DE_SEMESTRE', 'NO_HUBO_CLASE', 'CLASE_NO_SE_LLEVO_A_CABO'].includes(explicit.estado)) {
+        // Justificación especial institucional preservada
+        finalEstado = explicit.estado;
+        finalObs = explicit.observaciones || '';
+      } else if (explicit && explicit.observaciones && explicit.observaciones.trim().length > 0) {
+        // Marcación manual explícita con observación
+        finalEstado = explicit.estado;
+        finalObs = explicit.observaciones;
       } else if (phoneFollowup) {
-        // Justified telephone absence
+        // Seguimiento telefónico registrado
         finalEstado = 'EXCUSA_MEDICA';
         finalObs = `Seguimiento: ${phoneFollowup}`;
-      } else if (sess.fecha <= todayStr) {
-        // Past or current date with no scan and no explicit record
-        finalEstado = 'AUSENTE';
-      } else {
-        // Future dates default to regular state
+      } else if (hasRealScan) {
+        // Entrada física verificada en torniquetes / lector
         finalEstado = 'PRESENTE';
+        finalObs = explicit?.observaciones || '';
+      } else if (sess.fecha <= todayStr) {
+        // Sesión de clase ya ocurrida sin escaneo físico -> INASISTENCIA (FALLA)
+        finalEstado = 'AUSENTE';
+        finalObs = explicit?.observaciones || '';
+      } else {
+        // Fechas a futuro
+        finalEstado = explicit?.estado || 'PRESENTE';
+        finalObs = explicit?.observaciones || '';
       }
 
       records.push({

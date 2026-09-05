@@ -1876,16 +1876,18 @@ export async function updateCellAttendanceAction(
       return { error: 'Parámetros incompletos' };
     }
 
-    const { isAdmin } = await checkIsAdminFull();
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session')?.value;
+    if (!sessionToken) {
+      return { error: 'No autorizado: debes iniciar sesión en la plataforma institucional.' };
+    }
+    const payload = await decrypt(sessionToken);
+    if (!payload || (!payload.adminId && !payload.teacherId && !payload.email)) {
+      return { error: 'No autorizado: sesión inválida o expirada.' };
+    }
+
     const cleanEstado = estado.trim().toUpperCase();
     const cleanObs = observaciones?.trim() || null;
-
-    // Permissions: Non-admins can only submit EXCUSA_MEDICA
-    if (!isAdmin && cleanEstado !== 'EXCUSA_MEDICA') {
-      return { 
-        error: 'Permiso denegado: Solo el Administrador General (admin@fundacionsanmateo.edu.co) puede modificar la asistencia general. Tú puedes registrar excusas médicas.' 
-      };
-    }
 
     await sql`
       INSERT INTO attendance_records_normalized (

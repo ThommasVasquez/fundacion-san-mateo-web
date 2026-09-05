@@ -5,7 +5,7 @@ import {
   Calendar, Users, Download, Plus, CheckCircle2, XCircle, 
   Sparkles, Layers, Filter, Clock, Check, AlertCircle, RefreshCw,
   FileSpreadsheet, ShieldCheck, Lock, FileText, Search, ChevronLeft, ChevronRight,
-  Target, EyeOff
+  Target, EyeOff, AlertTriangle
 } from 'lucide-react';
 import { 
   updateCellAttendanceAction, 
@@ -135,6 +135,44 @@ export default function GroupAttendanceMatrix({
       (st.documento && st.documento.includes(q))
     );
   }, [students, searchStudent]);
+
+  // Group summary metrics
+  const groupMetrics = useMemo(() => {
+    let totalStudentsWithAbsences = 0;
+    let totalStudentsAtRisk = 0;
+    let totalGroupAbsents = 0;
+    let totalGroupLectivos = 0;
+
+    students.forEach(st => {
+      let stAbsents = 0;
+      let stLectivos = 0;
+      sessions.forEach(s => {
+        const record = records[`${st.id}_${s.id}`];
+        const holidayInfo = isColombiaHoliday(s.fecha);
+        const estado = record?.estado || (holidayInfo.isHoliday ? 'FESTIVO' : 'PRESENTE');
+        if (estado === 'AUSENTE') {
+          stAbsents++;
+          stLectivos++;
+        } else if (estado === 'PRESENTE' || estado === 'EXCUSA_MEDICA') {
+          stLectivos++;
+        }
+      });
+      if (stAbsents > 0) totalStudentsWithAbsences++;
+      if (stAbsents >= 3) totalStudentsAtRisk++;
+      totalGroupAbsents += stAbsents;
+      totalGroupLectivos += stLectivos;
+    });
+
+    const avgAttendance = totalGroupLectivos > 0 
+      ? Math.round(((totalGroupLectivos - totalGroupAbsents) / totalGroupLectivos) * 100) 
+      : 100;
+
+    return {
+      totalStudentsWithAbsences,
+      totalStudentsAtRisk,
+      avgAttendance
+    };
+  }, [students, sessions, records]);
   
   // Bulk modal state
   const [showBulkModal, setShowBulkModal] = useState(false);
@@ -454,6 +492,58 @@ export default function GroupAttendanceMatrix({
         </div>
       )}
 
+      {/* Group Attendance & Absenteeism Key Metrics */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-2xs">
+          <span className="text-[10px] font-black uppercase text-gray-400 block tracking-wider">
+            Matriculados
+          </span>
+          <span className="text-xl font-black text-fsm-blue mt-0.5 block">
+            {students.length}
+          </span>
+        </div>
+
+        <div className="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-2xs">
+          <span className="text-[10px] font-black uppercase text-gray-400 block tracking-wider">
+            Asistencia Grupal
+          </span>
+          <span className={`text-xl font-black mt-0.5 block ${
+            groupMetrics.avgAttendance >= 80 ? 'text-emerald-700' : 'text-amber-700'
+          }`}>
+            {groupMetrics.avgAttendance}%
+          </span>
+        </div>
+
+        <div className="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-2xs">
+          <span className="text-[10px] font-black uppercase text-gray-400 block tracking-wider">
+            Con Inasistencias
+          </span>
+          <span className="text-xl font-black text-amber-800 mt-0.5 block">
+            {groupMetrics.totalStudentsWithAbsences}
+          </span>
+        </div>
+
+        <div className={`p-3.5 rounded-2xl border shadow-2xs ${
+          groupMetrics.totalStudentsAtRisk > 0 
+            ? 'bg-red-50/80 border-red-200 text-red-900' 
+            : 'bg-white border-gray-100 text-gray-700'
+        }`}>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-wider block">
+              En Riesgo (≥3 Fallas)
+            </span>
+            {groupMetrics.totalStudentsAtRisk > 0 && (
+              <span className="px-1.5 py-0.5 bg-red-600 text-white rounded text-[9px] font-black animate-pulse">
+                ALERTA
+              </span>
+            )}
+          </div>
+          <span className="text-xl font-black text-red-700 mt-0.5 block">
+            {groupMetrics.totalStudentsAtRisk}
+          </span>
+        </div>
+      </div>
+
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold text-gray-600 bg-gray-50 p-4 rounded-2xl border border-gray-200/60">
         <span className="uppercase text-gray-400 font-black mr-2">Convenciones:</span>
@@ -622,15 +712,33 @@ export default function GroupAttendanceMatrix({
                     })}
 
                     {/* Total Absences */}
-                    <td className={`p-3 text-center font-black text-red-600 border-l ${
-                      isFocused ? 'bg-amber-100/90 border-amber-300 text-red-800 text-sm' : 'bg-red-50/40 border-gray-100'
+                    <td className={`p-3 text-center font-black border-l ${
+                      isFocused 
+                        ? 'bg-amber-100/90 border-amber-300 text-red-800 text-sm' 
+                        : totalAbsents >= 3 
+                          ? 'bg-red-100/80 border-red-200 text-red-700' 
+                          : totalAbsents > 0
+                            ? 'bg-amber-50/60 border-gray-100 text-amber-800'
+                            : 'bg-emerald-50/30 border-gray-100 text-emerald-700'
                     }`}>
-                      {totalAbsents}
+                      <div className="flex items-center justify-center gap-1">
+                        {totalAbsents >= 3 && <AlertTriangle size={13} className="text-red-600 animate-pulse shrink-0" />}
+                        <span className="text-xs font-black">{totalAbsents}</span>
+                      </div>
+                      {totalAbsents >= 3 && (
+                        <span className="block text-[8px] font-extrabold uppercase tracking-tighter text-red-600 mt-0.5">
+                          Riesgo
+                        </span>
+                      )}
                     </td>
 
                     {/* Attendance Percentage */}
-                    <td className={`p-3 text-center font-black text-emerald-700 ${
-                      isFocused ? 'bg-amber-100/90 text-emerald-900 text-sm' : 'bg-emerald-50/40'
+                    <td className={`p-3 text-center font-black ${
+                      isFocused 
+                        ? 'bg-amber-100/90 text-emerald-900 text-sm' 
+                        : totalLectivos > 0 && Math.round(((totalLectivos - totalAbsents) / totalLectivos) * 100) < 80
+                          ? 'bg-red-50 text-red-700 font-black'
+                          : 'bg-emerald-50/40 text-emerald-700'
                     }`}>
                       {totalLectivos > 0 ? `${Math.round(((totalLectivos - totalAbsents) / totalLectivos) * 100)}%` : '100%'}
                     </td>
