@@ -378,13 +378,48 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
 
           if (ov) {
             estado = ov.estado;
-            tipo_evento = ov.estado === 'PRESENTE' ? 'entrada' : ov.estado.toLowerCase();
+            tipo_evento = ov.estado.toLowerCase();
             observaciones = ov.observaciones || '';
             sede = ov.sede || 'Sede 1';
+
+            if (ov.estado === 'LIBRE') {
+              reader_name = 'Día Libre / No Lectivo Programado';
+              origen = 'Calendario Institucional';
+            } else if (ov.estado === 'FESTIVO') {
+              reader_name = 'Festivo Nacional';
+              origen = 'Calendario Nacional';
+            } else if (ov.estado === 'NO_HUBO_CLASE') {
+              reader_name = 'Clase no dictada / Cancelada';
+              origen = 'Planilla Oficial';
+            } else if (ov.estado === 'COMITE_ACADEMICO') {
+              reader_name = 'Comité Académico Institucional';
+              origen = 'Institucional';
+            } else if (ov.estado === 'PRACTICAS') {
+              reader_name = 'Prácticas Clínicas';
+              origen = 'Planilla Oficial';
+            } else if (ov.estado === 'CALENDARIO_B') {
+              reader_name = 'Calendario B (Inicio en Septiembre)';
+              origen = 'Planilla Oficial';
+            } else if (ov.estado === 'PRESENTE') {
+              if (rfid) {
+                tipo_evento = rfid.tipo_evento || 'entrada';
+                reader_name = rfid.reader_name || rfid.reader_id || 'Torniquete / Lector Fijo';
+                origen = rfid.origen === 'movil_profesor' ? 'Dispositivo Móvil' : 'Lector Fijo';
+                timestamp = rfid.timestamp;
+              } else {
+                tipo_evento = 'presente';
+                reader_name = 'Asistencia registrada en aula';
+                origen = 'Planilla Docente';
+              }
+            } else if (ov.estado === 'AUSENTE') {
+              tipo_evento = 'inasistencia';
+              reader_name = 'Inasistencia a clase (Sin justificar)';
+              origen = 'Planilla Docente';
+            }
           } else if (rfid) {
             estado = 'PRESENTE';
             tipo_evento = rfid.tipo_evento;
-            reader_name = rfid.reader_name || rfid.reader_id;
+            reader_name = rfid.reader_name || rfid.reader_id || 'Torniquete';
             origen = rfid.origen === 'movil_profesor' ? 'Dispositivo Móvil' : 'Lector Fijo';
             timestamp = rfid.timestamp;
             observaciones = rfid.observaciones || '';
