@@ -32,7 +32,7 @@ const TiktokIcon = ({ size = 24 }: { size?: number }) => (
     <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
   </svg>
 );
-import { getFooterSettings, getFooterAddresses, getFooterSocials, getFooterCertifications } from "@/app/actions";
+
 
 const getSocialIcon = (iconName: string) => {
   switch (iconName?.toLowerCase()) {
@@ -57,18 +57,15 @@ const Footer = () => {
   useEffect(() => {
     async function loadFooter() {
       try {
-        const [footerSettings, footerAddr, footerSoc, footerCerts] = await Promise.all([
-          getFooterSettings(),
-          getFooterAddresses(),
-          getFooterSocials(),
-          getFooterCertifications()
-        ]);
-        setSettings(footerSettings);
-        setAddresses(footerAddr);
-        setSocials(footerSoc);
-        setCerts(footerCerts);
+        const res = await fetch('/api/footer');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.settings) setSettings(data.settings);
+        if (data.addresses) setAddresses(data.addresses);
+        if (data.socials) setSocials(data.socials);
+        if (data.certifications) setCerts(data.certifications);
       } catch (err) {
-        console.error("Error loading footer settings:", err);
+        // Silently use defaults without console errors
       }
     }
     loadFooter();
