@@ -64,6 +64,9 @@ const STATUS_CONFIG: Record<string, { label: string; short: string; bg: string; 
   PRACTICAS: { label: 'Prácticas Clínicas', short: 'PR', bg: 'bg-sky-50 hover:bg-sky-100', text: 'text-sky-700 font-bold', border: 'border-sky-200' },
   EXCUSA_MEDICA: { label: 'Excusa Médica', short: 'E', bg: 'bg-teal-50 hover:bg-teal-100', text: 'text-teal-700 font-bold', border: 'border-teal-200' },
   CALENDARIO_B: { label: 'Calendario B', short: 'CB', bg: 'bg-purple-50 hover:bg-purple-100', text: 'text-purple-700 font-bold', border: 'border-purple-200' },
+  NO_HUBO_CLASE: { label: 'No Hubo Clase', short: 'NHC', bg: 'bg-orange-50 hover:bg-orange-100', text: 'text-orange-700 font-bold', border: 'border-orange-200' },
+  TERMINACION_DE_SEMESTRE: { label: 'Fin de Semestre', short: 'FIN', bg: 'bg-slate-100 hover:bg-slate-200', text: 'text-slate-600 font-bold', border: 'border-slate-300' },
+  CONGELADO: { label: 'Congelado', short: 'CG', bg: 'bg-cyan-50 hover:bg-cyan-100', text: 'text-cyan-700 font-bold', border: 'border-cyan-200' },
 };
 
 export default function GroupAttendanceMatrix({
@@ -346,10 +349,10 @@ export default function GroupAttendanceMatrix({
         <div>
           <h2 className="text-xl font-black text-fsm-blue uppercase tracking-tight flex items-center gap-2">
             <Layers size={22} className="text-fsm-blue" />
-            Planilla de Asistencia Cotejada
+            Planilla Oficial de Asistencia
           </h2>
           <p className="text-xs text-gray-500 font-medium mt-0.5">
-            Cotejada con los registros físicos en tiempo real de torniquetes y paneles de acceso.
+            Control oficial celda por celda — Información fidedigna de planillas docentes y registros institucionales.
           </p>
         </div>
 

@@ -146,39 +146,25 @@ export default async function GroupAttendancePage({
       const hasRealScan = realScansSet.has(`${st.id}_${sess.fecha}`);
       const holiday = isColombiaHoliday(sess.fecha);
       const phoneFollowup = followupMap.get(`${st.id}_${sess.fecha}`);
-
       let finalEstado = 'PRESENTE';
       let finalObs = '';
 
-      if (holiday.isHoliday) {
+      if (explicit) {
+        finalEstado = explicit.estado;
+        finalObs = explicit.observaciones || '';
+      } else if (holiday.isHoliday) {
         finalEstado = 'FESTIVO';
         finalObs = holiday.holidayName || 'Festivo Nacional';
       } else if (isGroupCB && sess.fecha < '2026-09-01') {
         finalEstado = 'CALENDARIO_B';
-      } else if (explicit && ['EXCUSA_MEDICA', 'PRACTICAS', 'COMITE_ACADEMICO', 'LIBRE', 'CONGELADO', 'TERMINACION_DE_SEMESTRE', 'NO_HUBO_CLASE', 'CLASE_NO_SE_LLEVO_A_CABO'].includes(explicit.estado)) {
-        // Justificación especial institucional preservada
-        finalEstado = explicit.estado;
-        finalObs = explicit.observaciones || '';
-      } else if (explicit && explicit.observaciones && explicit.observaciones.trim().length > 0) {
-        // Marcación manual explícita con observación
-        finalEstado = explicit.estado;
-        finalObs = explicit.observaciones;
-      } else if (phoneFollowup) {
-        // Seguimiento telefónico registrado
-        finalEstado = 'EXCUSA_MEDICA';
-        finalObs = `Seguimiento: ${phoneFollowup}`;
-      } else if (hasRealScan) {
-        // Entrada física verificada en torniquetes / lector
-        finalEstado = 'PRESENTE';
-        finalObs = explicit?.observaciones || '';
-      } else if (sess.fecha <= todayStr) {
-        // Sesión de clase ya ocurrida sin escaneo físico -> INASISTENCIA (FALLA)
-        finalEstado = 'AUSENTE';
-        finalObs = explicit?.observaciones || '';
       } else {
-        // Fechas a futuro
-        finalEstado = explicit?.estado || 'PRESENTE';
-        finalObs = explicit?.observaciones || '';
+        finalEstado = 'PRESENTE';
+        finalObs = '';
+      }
+
+      // If there was a phone followup registered for this student on this date, show it
+      if (phoneFollowup && finalEstado === 'AUSENTE') {
+        finalObs = finalObs ? `${finalObs} | Seguimiento: ${phoneFollowup}` : `Seguimiento: ${phoneFollowup}`;
       }
 
       records.push({
