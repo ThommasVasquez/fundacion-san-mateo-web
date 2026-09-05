@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { X, Clock, Calendar } from 'lucide-react';
 import { formatDateDDMMYYYY } from '@/lib/dateUtils';
 
@@ -132,18 +131,16 @@ export default function StudentHistoryModal({
   historyEvents,
   closeUrl
 }: StudentHistoryModalProps) {
-  const router = useRouter();
   const [isOpen, setIsOpen] = useState(true);
 
   const handleClose = () => {
     setIsOpen(false);
-    // Remove query param from URL cleanly
+    // Cleanly update URL without triggering heavy server re-fetches or popstate collisions
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
       url.searchParams.delete('studentHistoryId');
-      window.history.pushState({}, '', url.toString());
+      window.history.replaceState(null, '', url.pathname + (url.search ? url.search : ''));
     }
-    router.push(closeUrl, { scroll: false });
   };
 
   useEffect(() => {
