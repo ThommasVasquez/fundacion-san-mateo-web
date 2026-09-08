@@ -1,5 +1,24 @@
 import { sql } from './db';
 
+/**
+ * Next no pide una página dinámica: la exige lanzando.
+ *
+ * Al prerenderizar, una consulta con `cache: 'no-store'` hace que Next lance su
+ * `DynamicServerError` para decir "esta ruta no se puede dejar hecha de
+ * antemano". No es un fallo de la consulta, es la señal, y tiene que seguir
+ * subiendo. Los `catch` de aquí abajo se la tragaban y devolvían `{}`, así que
+ * la página se quedaba prerenderizada -- vacía, y con revalidate 0 apuntado --
+ * y ese estado contradictorio es el que respondía 500 en Cloudflare. Pasaba
+ * solo en las páginas cuya única fuente de dinamismo era esta consulta:
+ * /contacto, /institucion/acerca-de-fsm y /institucion/porque-nosotros.
+ *
+ * Van también NEXT_REDIRECT y NEXT_NOT_FOUND, que son señales igual que ésta.
+ */
+function esSenalDeNext(e: unknown): boolean {
+  const digest = (e as { digest?: unknown } | null | undefined)?.digest;
+  return typeof digest === 'string' && (digest === 'DYNAMIC_SERVER_USAGE' || digest.startsWith('NEXT_'));
+}
+
 // Simple cache to prevent hitting Neon constantly during a single page render
 const cache = new Map<string, string>();
 
@@ -25,6 +44,7 @@ export async function getContentMap(path: string): Promise<Record<string, string
     }
     return map;
   } catch (e) {
+    if (esSenalDeNext(e)) throw e;
     console.error("Error fetching content:", e);
     return {};
   }
@@ -34,6 +54,7 @@ export async function getAllContent() {
   try {
     return await sql`SELECT id, content_key, content_type, value, page_path, updated_at FROM site_content ORDER BY page_path, content_key`;
   } catch (e) {
+    if (esSenalDeNext(e)) throw e;
     console.error("Error fetching all content:", e);
     return [];
   }
@@ -43,6 +64,7 @@ export async function getTestimonials() {
   try {
     return await sql`SELECT id, text, author, role FROM testimonials ORDER BY order_index ASC`;
   } catch (e) {
+    if (esSenalDeNext(e)) throw e;
     console.error("Error fetching testimonials:", e);
     return [];
   }
@@ -51,6 +73,7 @@ export async function getDirectoryItems() {
   try {
     return await sql`SELECT id, title, phone FROM directory_items ORDER BY order_index ASC`;
   } catch (e) {
+    if (esSenalDeNext(e)) throw e;
     console.error("Error fetching directory items:", e);
     return [];
   }
@@ -67,6 +90,7 @@ export async function getPrograms() {
       image_url: sanitizeImageUrl(p.image_url, '/img/banner1.jpg')
     }));
   } catch (e) {
+    if (esSenalDeNext(e)) throw e;
     console.error("Error fetching programs:", e);
     return [];
   }
@@ -82,6 +106,7 @@ export async function getProgramByHref(href: string) {
     }
     return null;
   } catch (e) {
+    if (esSenalDeNext(e)) throw e;
     console.error(`Error fetching program by href ${href}:`, e);
     return null;
   }
@@ -90,6 +115,7 @@ export async function getNewsEvents() {
   try {
     return await sql`SELECT * FROM news_events ORDER BY created_at DESC`;
   } catch (e) {
+    if (esSenalDeNext(e)) throw e;
     console.error("Error fetching news events:", e);
     return [];
   }
@@ -103,6 +129,7 @@ export async function getCalendarEvents() {
   try {
     return await sql`SELECT * FROM academic_calendar WHERE is_active = true ORDER BY start_date ASC`;
   } catch (e) {
+    if (esSenalDeNext(e)) throw e;
     console.error("Error fetching calendar events:", e);
     return [];
   }
@@ -112,6 +139,7 @@ export async function getBlogPosts() {
   try {
     return await sql`SELECT id, title, slug FROM blog_posts WHERE published = true ORDER BY created_at DESC LIMIT 20`;
   } catch (e) {
+    if (esSenalDeNext(e)) throw e;
     console.error("Error fetching blog posts:", e);
     return [];
   }
@@ -121,6 +149,7 @@ export async function getFAQs() {
   try {
     return await sql`SELECT id, question, answer, category, order_index FROM faqs WHERE is_active = true ORDER BY category ASC, order_index ASC`;
   } catch (e) {
+    if (esSenalDeNext(e)) throw e;
     console.error("Error fetching FAQs:", e);
     return [];
   }
@@ -130,6 +159,7 @@ export async function getNormativityDocuments() {
   try {
     return await sql`SELECT id, title, category_key, file_name, external_link, order_index, created_at FROM normativity_documents ORDER BY category_key ASC, order_index ASC`;
   } catch (e) {
+    if (esSenalDeNext(e)) throw e;
     console.error("Error fetching normativity documents:", e);
     return [];
   }

@@ -34,20 +34,75 @@ function webDbKey(): string {
 }
 
 /**
+ * Una consulta ya escrita, todavía sin mandar.
+ *
+ * Se manda al esperarla, no al escribirla, que es lo que hacía el driver de
+ * Neon y lo que permite las dos cosas que el proyecto ya daba por hechas: meter
+ * varias en un `Promise.all` y, sobre todo, meter una dentro de otra como un
+ * trozo de SQL más -- ver `desdePlantilla`.
+ */
+class ConsultaSql implements PromiseLike<any[]> {
+  #enviada: Promise<any[]> | undefined;
+
+  constructor(
+    readonly text: string,
+    readonly params: unknown[],
+  ) {}
+
+  #enviar(): Promise<any[]> {
+    this.#enviada ??= ejecutar(this.text, this.params);
+    return this.#enviada;
+  }
+
+  then<A = any[], B = never>(
+    ok?: ((filas: any[]) => A | PromiseLike<A>) | null,
+    mal?: ((error: unknown) => B | PromiseLike<B>) | null,
+  ): Promise<A | B> {
+    return this.#enviar().then(ok, mal);
+  }
+
+  catch<B = never>(mal?: ((error: unknown) => B | PromiseLike<B>) | null): Promise<any[] | B> {
+    return this.#enviar().catch(mal);
+  }
+
+  finally(alFinal?: (() => void) | null): Promise<any[]> {
+    return this.#enviar().finally(alFinal);
+  }
+}
+
+/**
  * Una plantilla etiquetada se convierte en el texto con $1, $2... y la lista de
  * valores aparte. Es lo que hacía Neon y por la misma razón: así un nombre con
  * una comilla sigue siendo un nombre y no se convierte en SQL.
+ *
+ * Con una excepción, que también es de Neon: si lo interpolado es otra consulta
+ * -- `${filtro ? sql`AND g.nombre = ${filtro}` : sql``}` -- no es un valor, es
+ * un trozo de SQL. Entra su texto, con sus $ renumerados detrás de los que ya
+ * había, y sus valores al final de la lista. Tratarlo como un valor es lo que
+ * dejaba un `$5` suelto donde tenía que ir una condición, y Postgres respondía
+ * lo único que podía: syntax error at or near "$5".
  */
 function desdePlantilla(
   strings: TemplateStringsArray,
   valores: unknown[],
 ): { text: string; params: unknown[] } {
   let text = '';
+  const params: unknown[] = [];
   for (let i = 0; i < strings.length; i++) {
     text += strings[i];
-    if (i < valores.length) text += `$${i + 1}`;
+    if (i >= valores.length) continue;
+
+    const valor = valores[i];
+    if (valor instanceof ConsultaSql) {
+      // Los suyos empiezan en $1; aquí van detrás de los que ya se han contado.
+      text += valor.text.replace(/\$(\d+)/g, (_, n) => `$${Number(n) + params.length}`);
+      params.push(...valor.params);
+    } else {
+      params.push(valor);
+      text += `$${params.length}`;
+    }
   }
-  return { text, params: valores };
+  return { text, params };
 }
 
 async function ejecutar(text: string, params: unknown[]): Promise<any[]> {
@@ -91,7 +146,7 @@ export const sql = new Proxy(function () {} as any, {
   apply(_target, _thisArg, args: any[]) {
     const [strings, ...valores] = args;
     const { text, params } = desdePlantilla(strings as TemplateStringsArray, valores);
-    return ejecutar(text, params);
+    return new ConsultaSql(text, params);
   },
   get(_target, prop: string) {
     if (prop === 'query') {
