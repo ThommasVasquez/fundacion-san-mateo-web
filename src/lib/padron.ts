@@ -1,9 +1,8 @@
 /**
  * Lectura y validación de un padrón de alumnos.
  *
- * Es la misma lógica que `scripts/importar_padron.mjs`, que ya se usó para
- * meter los 618 alumnos del instituto. Vive aquí para que la página de
- * importación y la ruta de API compartan un solo criterio: si el navegador
+ * Vive aquí para que la página de importación y la ruta de API compartan un
+ * solo criterio: si el navegador
  * acepta una fila y el servidor la rechaza, el usuario ve una vista previa que
  * no se parece a lo que acaba guardado, y ese desajuste no se descubre hasta
  * que alguien no puede entrar por la puerta.

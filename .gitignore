@@ -15,3 +15,6 @@
 # Estado local de miniflare: no es codigo, cambia en cada `wrangler dev` y no
 # tiene por que viajar.
 .wrangler/
+
+# Cache incremental de tsc: artefacto de compilacion, distinto en cada maquina.
+tsconfig.tsbuildinfo

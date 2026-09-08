@@ -7,13 +7,39 @@ assets = { directory = ".open-next/assets", binding = "ASSETS" }
 
 [vars]
 NODE_VERSION = "22.16.0"
-# DATABASE_URL y JWT_SECRET vivian aqui, en claro, en un repositorio publico:
-# la contrasena de la base del colegio y la clave con la que se firman las
-# sesiones, cualquiera podia leerlas. Ahora son secrets de Cloudflare, que no
-# viajan en el codigo:
+
+# Explicito, no heredado. `next build` ya compila en produccion, asi que esto no
+# cambia como se construye el bundle: fija lo que ve process.env.NODE_ENV cuando
+# el Worker corre. Sin ponerlo, cualquier codigo que mire esa variable en
+# tiempo de ejecucion decide por omision, y "por omision" en un despliegue de
+# produccion es justo lo que no se quiere dejar al azar.
+NODE_ENV = "production"
+
+# La base ya no es Neon. El padron, la asistencia y todo el CMS viven ahora en el
+# Postgres del colegio, detras del backend de la puerta, y esta web le manda su
+# SQL por HTTPS igual que se lo mandaba a Neon. Habia dos censos de alumnos en
+# dos bases y cada pantalla ensenaba una lista distinta; ahora hay uno.
 #
-#   npx wrangler secret put DATABASE_URL
-#   npx wrangler secret put JWT_SECRET
+# Un Worker no puede abrir un socket de Postgres contra ese equipo -- solo se
+# llega por el tunel, y el tunel habla HTTPS -- asi que el SQL sigue viajando por
+# HTTP. Es lo que hacia el driver de Neon; cambia el destino, no el mecanismo.
+BACKEND_URL = "https://entrada.conjuntos.app"
+
+# WEB_DB_KEY es la llave con la que este Worker consulta esa base, y es un
+# secret, no una var: no vuelve a escribirse en claro en un repositorio.
+#
+#   npx wrangler secret put WEB_DB_KEY
+#
+# Aparte a proposito de la API_KEY de los lectores: aquella va compilada en cada
+# ESP32 y a la vista en los dos bundles de las apps, y solo abre un torno. Esta
+# abre la base entera.
+#
+# DATABASE_URL y JWT_SECRET vivian aqui, en claro, en un repositorio publico: la
+# contrasena de la base del colegio y la clave con la que se firman las sesiones,
+# cualquiera podia leerlas. JWT_SECRET sigue siendo un secret de Cloudflare.
+# DATABASE_URL ya no hace falta: apuntaba a Neon.
+#
+#   npx wrangler secret delete DATABASE_URL
 #
 # Las que estuvieron publicadas ya estan rotadas; siguen en el historial de git,
 # pero no abren nada. Nada que sea un secreto vuelve a este fichero.

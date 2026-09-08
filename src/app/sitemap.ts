@@ -1,5 +1,5 @@
 import { MetadataRoute } from 'next';
-import { neon } from '@neondatabase/serverless';
+import { sql } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -143,10 +143,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  // Fetch dynamic blog posts from Neon Postgres
+  // Los posts salen ahora de la base del colegio, via el backend.
+  //
+  // La condicion mira BACKEND_URL y no DATABASE_URL: esa variable ya no existe,
+  // asi que preguntando por ella el if era siempre falso y el sitemap se quedaba
+  // sin una sola entrada de blog -- sin error, sin aviso y sin nada que mirar,
+  // que es como se pierde el posicionamiento durante semanas.
   try {
-    if (process.env.DATABASE_URL) {
-      const sql = neon(process.env.DATABASE_URL);
+    if (process.env.BACKEND_URL) {
       const blogPosts = await sql`
         SELECT slug, updated_at, created_at 
         FROM blog_posts 

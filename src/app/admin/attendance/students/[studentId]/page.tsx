@@ -1,10 +1,9 @@
-import { neon } from '@neondatabase/serverless';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { User, Calendar, ArrowLeft, Filter, XCircle, CheckCircle } from 'lucide-react';
 import StudentHistoryClient from './StudentHistoryClient';
+import { sql } from '@/lib/db';
 
-const sql = neon(process.env.DATABASE_URL || '');
 
 export const revalidate = 0;
 

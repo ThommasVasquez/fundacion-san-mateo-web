@@ -1,8 +1,7 @@
-import { neon } from '@neondatabase/serverless';
 import Link from 'next/link';
 import { AlertTriangle, Users, BookOpen, ChevronRight, CheckCircle2, XCircle } from 'lucide-react';
+import { sql } from '@/lib/db';
 
-const sql = neon(process.env.DATABASE_URL || '');
 
 export const revalidate = 0;
 
