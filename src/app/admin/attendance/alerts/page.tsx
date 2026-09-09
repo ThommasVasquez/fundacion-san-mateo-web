@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { AlertTriangle, Users, BookOpen, ChevronRight, CheckCircle2, XCircle } from 'lucide-react';
 import { sql } from '@/lib/db';
+import StudentAlertsTable from './StudentAlertsTable';
 
 
 export const revalidate = 0;
@@ -141,49 +142,7 @@ export default async function AttendanceAlertsPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="bg-gray-50 text-gray-400 font-black uppercase tracking-wider border-b border-gray-100">
-                <th className="py-3 px-4">Estudiante</th>
-                <th className="py-3 px-4">Grupo</th>
-                <th className="py-3 px-4 text-center">Sesiones Evaluadas</th>
-                <th className="py-3 px-4 text-center">Inasistencias</th>
-                <th className="py-3 px-4 text-center">% Ausentismo</th>
-                <th className="py-3 px-4 text-right">Acción</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 font-medium">
-              {studentAlertsQuery.map((row: any) => (
-                <tr key={row.student_id} className="hover:bg-amber-50/30 transition-colors">
-                  <td className="py-3 px-4 font-bold text-gray-800">{row.student_name}</td>
-                  <td className="py-3 px-4">
-                    <span className="bg-blue-50 text-fsm-blue font-bold px-2.5 py-1 rounded-lg border border-blue-200">
-                      {row.group_name}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-center font-bold text-gray-700">{row.total_sessions}</td>
-                  <td className="py-3 px-4 text-center">
-                    <span className="bg-red-50 text-fsm-red font-black px-2.5 py-1 rounded-lg border border-red-200">
-                      {row.total_absences} Faltas
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-center font-black text-amber-600 text-sm">
-                    {row.absence_rate}%
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <Link
-                      href={`/admin/attendance/students/${row.student_id}`}
-                      className="inline-flex items-center gap-1 text-fsm-blue font-bold hover:underline"
-                    >
-                      Ver Historial <ChevronRight size={14} />
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <StudentAlertsTable alerts={studentAlertsQuery as any} />
       </div>
 
       {/* Section 2: Group Summary Cards */}
