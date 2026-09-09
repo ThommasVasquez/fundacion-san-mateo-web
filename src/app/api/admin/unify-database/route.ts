@@ -126,6 +126,141 @@ export async function POST(req: Request) {
       });
     }
 
+    if (body.action === 'compare_groups') {
+      const g1 = body.g1 || "f847ea2c-0c47-4e34-9b3e-7828f9a6e1c0";
+      const g2 = body.g2 || "fe0f0776-d2a0-4a58-b75f-d5ee31838486";
+
+      const gInfo = await sql`
+        SELECT g.id, g.nombre, g.jornada, g.tipo, g.programa_nombre,
+               (SELECT count(*) FROM enrollments e WHERE e.group_id = g.id AND e.activo = TRUE) as enrolled_count,
+               (SELECT count(*) FROM class_sessions cs WHERE cs.group_id = g.id) as sessions_count,
+               (SELECT count(*) FROM attendance_records_normalized arn 
+                JOIN class_sessions cs ON cs.id = arn.session_id WHERE cs.group_id = g.id) as records_count
+        FROM groups g
+        WHERE g.id IN (${g1}::uuid, ${g2}::uuid)
+      `;
+
+      const g1Sessions = await sql`
+        SELECT id, fecha::text as fecha, dia_semana_texto
+        FROM class_sessions
+        WHERE group_id = ${g1}::uuid
+        ORDER BY fecha ASC
+        LIMIT 10
+      `;
+
+      const g2Sessions = await sql`
+        SELECT id, fecha::text as fecha, dia_semana_texto
+        FROM class_sessions
+        WHERE group_id = ${g2}::uuid
+        ORDER BY fecha ASC
+        LIMIT 10
+      `;
+
+      const g1Students = await sql`
+        SELECT s.id, s.nombre, s.documento, s.grado
+        FROM students s
+        JOIN enrollments e ON e.student_id = s.id
+        WHERE e.group_id = ${g1}::uuid AND e.activo = TRUE
+        LIMIT 10
+      `;
+
+      const g2Students = await sql`
+        SELECT s.id, s.nombre, s.documento, s.grado
+        FROM students s
+        JOIN enrollments e ON e.student_id = s.id
+        WHERE e.group_id = ${g2}::uuid AND e.activo = TRUE
+        LIMIT 10
+      `;
+
+      return NextResponse.json({
+        success: true,
+        groups: gInfo,
+        g1: { sessionsCount: g1Sessions.length, sampleSessions: g1Sessions, sampleStudents: g1Students },
+        g2: { sessionsCount: g2Sessions.length, sampleSessions: g2Sessions, sampleStudents: g2Students }
+      });
+    }
+
+    if (body.action === 'audit_and_fix_group_sessions') {
+      // 1. Obtener todos los grupos con su conteo de sesiones
+      const allGroups = await sql`
+        SELECT g.id, g.nombre, g.jornada, g.tipo, g.programa_nombre,
+               COUNT(cs.id) as sessions_count
+        FROM groups g
+        LEFT JOIN class_sessions cs ON cs.group_id = g.id
+        GROUP BY g.id, g.nombre, g.jornada, g.tipo, g.programa_nombre
+        ORDER BY g.nombre ASC
+      `;
+
+      // 2. Obtener fechas de referencia para DIURNO/NOCHE (de lunes a viernes)
+      // Tomamos las fechas de II DIURNO A CB o de I DIURNO A
+      const weekdayDatesRes = await sql`
+        SELECT DISTINCT fecha::text as fecha, dia_semana_texto
+        FROM class_sessions
+        WHERE group_id IN (
+          SELECT id FROM groups WHERE nombre IN ('II DIURNO A CB', 'I DIURNO A', 'II DIURNO A')
+        )
+        ORDER BY fecha ASC
+      `;
+
+      // 3. Obtener fechas de referencia para SABADO
+      const saturdayDatesRes = await sql`
+        SELECT DISTINCT fecha::text as fecha, dia_semana_texto
+        FROM class_sessions
+        WHERE group_id IN (
+          SELECT id FROM groups WHERE nombre IN ('I SABADO A', 'II SABADO A', 'III SABADO A')
+        )
+        ORDER BY fecha ASC
+      `;
+
+      const results: any[] = [];
+
+      for (const grp of allGroups) {
+        const count = parseInt(grp.sessions_count || '0', 10);
+        let status = 'OK';
+        let addedCount = 0;
+
+        if (count === 0 && body.fix === true) {
+          const isSaturday = grp.jornada === 'SABADO' || grp.nombre.includes('SABADO');
+          const refDates = isSaturday ? saturdayDatesRes : weekdayDatesRes;
+
+          for (const d of refDates) {
+            const exists = await sql`
+              SELECT id FROM class_sessions 
+              WHERE group_id = ${grp.id}::uuid AND fecha = ${d.fecha}::date 
+              LIMIT 1
+            `;
+            if (exists.length === 0) {
+              await sql`
+                INSERT INTO class_sessions (id, group_id, fecha, dia_semana_texto, dia_semana_calculado, activa)
+                VALUES (gen_random_uuid(), ${grp.id}::uuid, ${d.fecha}::date, ${d.dia_semana_texto}, ${d.dia_semana_texto}, TRUE)
+              `;
+              addedCount++;
+            }
+          }
+          status = `Generadas ${addedCount} sesiones`;
+        } else if (count === 0) {
+          status = 'FALTAN_SESIONES';
+        }
+
+        results.push({
+          id: grp.id,
+          nombre: grp.nombre,
+          jornada: grp.jornada,
+          tipo: grp.tipo,
+          sessions_count: count,
+          added: addedCount,
+          status
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        weekdayDatesCount: weekdayDatesRes.length,
+        saturdayDatesCount: saturdayDatesRes.length,
+        groups: results
+      });
+    }
+
     if (body.action === 'check_nieves') {
       const nievesStudents = await sql`
         SELECT s.id, s.nombre, s.grado, s.documento, s.tarjeta_numero, s.rfid_tag_uid, s.activo
