@@ -126,6 +126,59 @@ export async function POST(req: Request) {
       });
     }
 
+    if (body.action === 'check_nieves') {
+      const nievesStudents = await sql`
+        SELECT s.id, s.nombre, s.grado, s.documento, s.tarjeta_numero, s.rfid_tag_uid, s.activo
+        FROM students s
+        WHERE s.nombre ILIKE '%NIEVES%'
+      `;
+
+      const nievesEnrollments = await sql`
+        SELECT e.id as enrollment_id, e.student_id, e.group_id, e.activo as enrollment_activo,
+               g.nombre as group_name, s.nombre as student_name
+        FROM enrollments e
+        JOIN groups g ON g.id = e.group_id
+        JOIN students s ON s.id = e.student_id
+        WHERE s.nombre ILIKE '%NIEVES%'
+      `;
+
+      const nievesRecords = await sql`
+        SELECT ar.student_id, s.nombre as student_name, cs.group_id, g.nombre as group_name, count(ar.id) as records_count
+        FROM attendance_records_normalized ar
+        JOIN students s ON s.id = ar.student_id
+        JOIN class_sessions cs ON cs.id = ar.session_id
+        JOIN groups g ON g.id = cs.group_id
+        WHERE s.nombre ILIKE '%NIEVES%'
+        GROUP BY ar.student_id, s.nombre, cs.group_id, g.nombre
+      `;
+
+      const nievesEvents = await sql`
+        SELECT ae.id, ae.student_id, s.nombre as student_name, ae.timestamp, ae.reader_id
+        FROM attendance_events ae
+        JOIN students s ON s.id = ae.student_id
+        WHERE s.nombre ILIKE '%NIEVES%'
+        ORDER BY ae.timestamp DESC
+        LIMIT 10
+      `;
+
+      const groupsOverview = await sql`
+        SELECT g.id, g.nombre, count(cs.id) as sessions_count
+        FROM groups g
+        LEFT JOIN class_sessions cs ON cs.group_id = g.id
+        WHERE g.nombre ILIKE '%CB%'
+        GROUP BY g.id, g.nombre
+      `;
+
+      return NextResponse.json({
+        success: true,
+        nievesStudents,
+        nievesEnrollments,
+        nievesRecords,
+        nievesEvents,
+        groupsOverview
+      });
+    }
+
     console.log('[UNIFICATION] Starting Canonical Student Unification in Production DB...');
 
     // 1. Ensure columns

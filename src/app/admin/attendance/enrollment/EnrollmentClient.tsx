@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getAcademicGroupConfig } from '@/lib/academicCatalog';
+import { getAcademicGroupConfig, OFFICIAL_GROUPS } from '@/lib/academicCatalog';
 
 interface Student {
   id: string;
@@ -714,12 +714,36 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Grado / Curso / Turno:</label>
+                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Curso / Carrera / Turno:</label>
+                <select
+                  value={OFFICIAL_GROUPS.some(g => g.name === editGrado) ? editGrado : ''}
+                  onChange={e => {
+                    if (e.target.value) setEditGrado(e.target.value);
+                  }}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue bg-white mb-2"
+                >
+                  <option value="">-- Seleccionar curso / carrera oficial --</option>
+                  <optgroup label="🩺 Técnico Auxiliar en Enfermería (TAE)">
+                    {OFFICIAL_GROUPS.filter(g => g.programCode === 'TAE').map(g => (
+                      <option key={g.name} value={g.name}>{g.name} ({g.shift} {g.calendar === 'CB' ? '• Calendario B' : ''})</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="👶 Primera Infancia (AIPI)">
+                    {OFFICIAL_GROUPS.filter(g => g.programCode === 'AIPI').map(g => (
+                      <option key={g.name} value={g.name}>{g.name} (Diurno)</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🎒 Técnico Auxiliar en Preescolar">
+                    {OFFICIAL_GROUPS.filter(g => g.programCode === 'PREESCOLAR').map(g => (
+                      <option key={g.name} value={g.name}>{g.name} (Diurno)</option>
+                    ))}
+                  </optgroup>
+                </select>
                 <input 
                   type="text" 
                   value={editGrado}
                   onChange={e => setEditGrado(e.target.value)}
-                  placeholder="Ej: 10A, 11B, 3 SABADO A, NOCTURNO B"
+                  placeholder="O escribe manualmente el curso aquí..."
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
                 />
               </div>
@@ -799,10 +823,34 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Grado / Curso / Turno:*</label>
+                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Curso / Carrera / Turno:*</label>
+                <select
+                  value={OFFICIAL_GROUPS.some(g => g.name === newGrado) ? newGrado : ''}
+                  onChange={e => {
+                    if (e.target.value) setNewGrado(e.target.value);
+                  }}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue bg-white mb-2"
+                >
+                  <option value="">-- Seleccionar curso / carrera oficial --</option>
+                  <optgroup label="🩺 Técnico Auxiliar en Enfermería (TAE)">
+                    {OFFICIAL_GROUPS.filter(g => g.programCode === 'TAE').map(g => (
+                      <option key={g.name} value={g.name}>{g.name} ({g.shift} {g.calendar === 'CB' ? '• Calendario B' : ''})</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="👶 Primera Infancia (AIPI)">
+                    {OFFICIAL_GROUPS.filter(g => g.programCode === 'AIPI').map(g => (
+                      <option key={g.name} value={g.name}>{g.name} (Diurno)</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🎒 Técnico Auxiliar en Preescolar">
+                    {OFFICIAL_GROUPS.filter(g => g.programCode === 'PREESCOLAR').map(g => (
+                      <option key={g.name} value={g.name}>{g.name} (Diurno)</option>
+                    ))}
+                  </optgroup>
+                </select>
                 <input 
                   type="text" 
-                  placeholder="Ej: 10A, 11B, 3 SABADO A, NOCTURNO B"
+                  placeholder="O escribe manualmente el curso aquí..."
                   value={newGrado}
                   onChange={e => setNewGrado(e.target.value)}
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
@@ -849,7 +897,7 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
             <div className="flex justify-between items-center border-b border-gray-100 pb-4">
               <div>
                 <span className="text-[10px] font-black text-purple-700 uppercase tracking-widest">ACTUALIZACIÓN MASIVA</span>
-                <h3 className="text-lg font-black text-fsm-blue uppercase leading-tight mt-0.5">CAMBIAR GRADO/CURSO</h3>
+                <h3 className="text-lg font-black text-fsm-blue uppercase leading-tight mt-0.5">CAMBIAR GRADO/CURSO O CARRERA</h3>
               </div>
               <button 
                 onClick={() => setBulkModalOpen(false)}
@@ -861,14 +909,40 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
 
             <div className="space-y-4">
               <p className="text-xs font-semibold text-gray-600">
-                Se cambiará el grado/curso a los <strong className="text-purple-700">{selectedStudentIds.length} estudiantes seleccionados</strong>.
+                Se cambiará el curso o carrera a los <strong className="text-purple-700">{selectedStudentIds.length} estudiantes seleccionados</strong>.
               </p>
 
               <div>
-                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Nuevo Grado / Curso / Turno:</label>
+                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">
+                  Nuevo Curso / Carrera / Turno de Destino:
+                </label>
+                <select
+                  value={OFFICIAL_GROUPS.some(g => g.name === newBulkGrado) ? newBulkGrado : ''}
+                  onChange={e => {
+                    if (e.target.value) setNewBulkGrado(e.target.value);
+                  }}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-purple-600 bg-white mb-2"
+                >
+                  <option value="">-- Seleccionar curso / carrera oficial --</option>
+                  <optgroup label="🩺 Técnico Auxiliar en Enfermería (TAE)">
+                    {OFFICIAL_GROUPS.filter(g => g.programCode === 'TAE').map(g => (
+                      <option key={g.name} value={g.name}>{g.name} ({g.shift} {g.calendar === 'CB' ? '• Calendario B' : ''})</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="👶 Primera Infancia (AIPI)">
+                    {OFFICIAL_GROUPS.filter(g => g.programCode === 'AIPI').map(g => (
+                      <option key={g.name} value={g.name}>{g.name} (Diurno)</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🎒 Técnico Auxiliar en Preescolar">
+                    {OFFICIAL_GROUPS.filter(g => g.programCode === 'PREESCOLAR').map(g => (
+                      <option key={g.name} value={g.name}>{g.name} (Diurno)</option>
+                    ))}
+                  </optgroup>
+                </select>
                 <input 
                   type="text" 
-                  placeholder="Ej: 11A, PROMO 2026, 3 SABADO B"
+                  placeholder="O escribe manualmente aquí..."
                   value={newBulkGrado}
                   onChange={e => setNewBulkGrado(e.target.value)}
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-purple-600"

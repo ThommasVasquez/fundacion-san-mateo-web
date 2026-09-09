@@ -736,9 +736,12 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
                           </button>
                         </div>
 
-                        {/* If transfer, show target group selector */}
+                        {/* If transfer, show target group selector with ALL careers */}
                         {decision.action === 'transfer' && (
-                          <div className="mt-2">
+                          <div className="mt-2 space-y-1">
+                            <span className="text-[9px] font-black uppercase text-indigo-700 block">
+                              🔀 Traslado / Cambio de Curso o Carrera:
+                            </span>
                             <select
                               value={decision.customTargetGroupId || ''}
                               onChange={e => {
@@ -748,8 +751,8 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
                               }}
                               className="w-full bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-lg p-1.5 text-[11px] font-bold"
                             >
-                              <option value="">Seleccionar curso destino...</option>
-                              {renderGroupOptions(allGroups)}
+                              <option value="">-- Seleccionar curso o carrera destino --</option>
+                              {renderGroupOptions(allGroups, 'ALL')}
                             </select>
                           </div>
                         )}
