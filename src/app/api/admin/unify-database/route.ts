@@ -179,6 +179,248 @@ export async function POST(req: Request) {
       });
     }
 
+    if (body.action === 'verify_user_list') {
+      const targetList = [
+        "ABELLO FUENTES JUAN DAVID",
+        "ARBOLEDA CONDE LUZ ANDREA",
+        "ARIZA ARIZA KELLY JOHANA",
+        "COLMENARES CORTES CHAROL GISEHL",
+        "CUBIDES RONCANCIO NATALY PAOLA",
+        "GARZON RODRIGUEZ SARA VALENTINA",
+        "GUEVARA CASTRO SARAY VALENTINA",
+        "HUERTAS BELTRAN ANA SOFIA",
+        "MUNIVE RIVADENEIRA KAREN LORENA",
+        "NIEVES SANCHEZ ANGELICA ROCIO",
+        "NIEVES SANCHEZ PAULA ALEXANDRA",
+        "PARRA MONTAÑEZ MARIA CAMILA",
+        "RIVERA INCIARTE JUNIOR ALEJANDRO",
+        "RODRIGUEZ QUINTERO ASLY JULIETH",
+        "ROJAS CANTE HASBLEIDY",
+        "ROSERO CHILLAMBO ANYI TATIANA",
+        "SERRANO BECERRA ANDRES CAMILO",
+        "TIBADUIZA APARICIO KARLA YESENIA",
+        "TRUJILLO MAYERLY",
+        "VELASQUEZ VELASQUEZ RENDYS OMAR",
+        "VILLALOBOS VELASQUEZ LAURA VALENTINA"
+      ];
+
+      // Obtener todos los estudiantes de la BD con sus matrículas
+      const allStudents = await sql`
+        SELECT s.id, s.nombre, s.documento, s.tarjeta_numero, s.rfid_tag_uid, s.grado, s.activo,
+               g.id as group_id, g.nombre as group_name
+        FROM students s
+        LEFT JOIN enrollments e ON e.student_id = s.id AND e.activo = TRUE
+        LEFT JOIN groups g ON g.id = e.group_id
+        ORDER BY s.nombre ASC
+      `;
+
+      // Obtener el ID del grupo II DIURNO A CB
+      const groupRes = await sql`SELECT id, nombre FROM groups WHERE nombre = 'II DIURNO A CB' LIMIT 1`;
+      const targetGroupId = groupRes[0]?.id;
+
+      const foundList: any[] = [];
+      const notFoundList: string[] = [];
+
+      for (const targetName of targetList) {
+        const parts = targetName.split(/\s+/);
+        // Coincidencia exacta o contiene
+        let matches = allStudents.filter((s: any) => {
+          const sName = s.nombre.toUpperCase();
+          return parts.every((p: string) => sName.includes(p));
+        });
+
+        if (matches.length === 0) {
+          // Coincidencia por al menos dos partes
+          matches = allStudents.filter((s: any) => {
+            const sName = s.nombre.toUpperCase();
+            return parts.slice(0, 2).every((p: string) => sName.includes(p));
+          });
+        }
+
+        if (matches.length > 0) {
+          foundList.push({
+            targetName,
+            matches: matches.map((m: any) => ({
+              id: m.id,
+              nombre: m.nombre,
+              documento: m.documento,
+              tarjeta_numero: m.tarjeta_numero,
+              rfid_tag_uid: m.rfid_tag_uid,
+              grado: m.grado,
+              activo: m.activo,
+              group_id: m.group_id,
+              group_name: m.group_name,
+              is_in_target_group: m.group_name === 'II DIURNO A CB'
+            }))
+          });
+        } else {
+          notFoundList.push(targetName);
+        }
+      }
+
+      // Estudiantes actualmente matriculados en II DIURNO A CB
+      const currentInGroup = allStudents.filter((s: any) => s.group_name === 'II DIURNO A CB');
+
+      // Cuántos de los que están en el grupo NO están en la lista de los 21
+      const extraInGroup = currentInGroup.filter((s: any) => {
+        return !targetList.some(targetName => {
+          const parts = targetName.split(/\s+/);
+          return parts.every(p => s.nombre.toUpperCase().includes(p));
+        });
+      });
+
+      return NextResponse.json({
+        success: true,
+        targetGroupId,
+        totalTarget: targetList.length,
+        foundCount: foundList.length,
+        notFoundCount: notFoundList.length,
+        foundList,
+        notFoundList,
+        currentInGroupCount: currentInGroup.length,
+        extraInGroupCount: extraInGroup.length,
+        extraInGroup: extraInGroup.map((s: any) => ({
+          id: s.id,
+          nombre: s.nombre,
+          tarjeta: s.tarjeta_numero,
+          grado: s.grado
+        }))
+      });
+    }
+
+    if (body.action === 'set_exact_cb_group') {
+      const target21Names = [
+        "ABELLO FUENTES JUAN DAVID",
+        "ARBOLEDA CONDE LUZ ANDREA",
+        "ARIZA ARIZA KELLY JOHANA",
+        "COLMENARES CORTES CHAROL GISEHL",
+        "CUBIDES RONCANCIO NATALY PAOLA",
+        "GARZON RODRIGUEZ SARA VALENTINA",
+        "GUEVARA CASTRO SARAY VALENTINA",
+        "HUERTAS BELTRAN ANA SOFIA",
+        "MUNIVE RIVADENEIRA KAREN LORENA",
+        "NIEVES SANCHEZ ANGELICA ROCIO",
+        "NIEVES SANCHEZ PAULA ALEXANDRA",
+        "PARRA MONTAÑEZ MARIA CAMILA",
+        "RIVERA INCIARTE JUNIOR ALEJANDRO",
+        "RODRIGUEZ QUINTERO ASLY JULIETH",
+        "ROJAS CANTE HASBLEIDY",
+        "ROSERO CHILAMBO ANYI TATIANA",
+        "SERRANO BECERRA ANDRES CAMILO",
+        "TIBADUIZA APARICIO KARLA YESENIA",
+        "TRUJILLO MAYERLY",
+        "VELASQUEZ VELASQUEZ RENDYS OMAR",
+        "VILLALOBOS VELASQUEZ LAURA VALENTINA"
+      ];
+
+      // 1. Obtener grupos
+      const cbGroupRes = await sql`SELECT id FROM groups WHERE nombre = 'II DIURNO A CB' LIMIT 1`;
+      const regGroupRes = await sql`SELECT id FROM groups WHERE nombre = 'II DIURNO A' LIMIT 1`;
+      const cbGroupId = cbGroupRes[0]?.id;
+      const regGroupId = regGroupRes[0]?.id;
+
+      if (!cbGroupId) {
+        return NextResponse.json({ error: 'Grupo II DIURNO A CB no encontrado' }, { status: 404 });
+      }
+
+      // 2. Obtener todos los alumnos
+      const allStudents = await sql`
+        SELECT id, nombre, documento, tarjeta_numero, rfid_tag_uid, grado, activo
+        FROM students
+      `;
+
+      // 3. Identificar a los 21 IDs
+      const targetIds: string[] = [];
+      const targetDetails: any[] = [];
+
+      for (const name of target21Names) {
+        const parts = name.split(/\s+/);
+        let match = allStudents.find((s: any) => {
+          if (name === 'TRUJILLO MAYERLY') {
+            return s.nombre === 'TRUJILLO MAYERLY' && s.documento === '52840245';
+          }
+          const sName = s.nombre.toUpperCase();
+          return parts.every((p: string) => sName.includes(p));
+        });
+
+        if (match) {
+          targetIds.push(match.id);
+          targetDetails.push(match);
+        }
+      }
+
+      // 4. Matricular a los 21 en II DIURNO A CB y actualizar grado
+      for (const st of targetDetails) {
+        await sql`UPDATE students SET grado = 'II DIURNO A CB', activo = TRUE WHERE id = ${st.id}::uuid`;
+
+        // Desactivar otras matrículas activas del estudiante
+        await sql`
+          UPDATE enrollments 
+          SET activo = FALSE, fecha_fin = CURRENT_DATE 
+          WHERE student_id = ${st.id}::uuid AND group_id != ${cbGroupId}::uuid AND activo = TRUE
+        `;
+
+        // Asegurar matrícula en II DIURNO A CB
+        await sql`
+          INSERT INTO enrollments (id, student_id, group_id, activo, fecha_inicio, created_at)
+          VALUES (gen_random_uuid(), ${st.id}::uuid, ${cbGroupId}::uuid, TRUE, CURRENT_DATE, NOW())
+          ON CONFLICT (student_id, group_id)
+          DO UPDATE SET activo = TRUE, fecha_inicio = CURRENT_DATE, fecha_fin = NULL
+        `;
+      }
+
+      // 5. Para los demás que estaban matriculados en II DIURNO A CB y no están en los 21:
+      // Desactivar su matrícula en II DIURNO A CB
+      if (targetIds.length > 0) {
+        const currentEnrollments = await sql`
+          SELECT s.id, s.nombre, s.grado
+          FROM enrollments e
+          JOIN students s ON s.id = e.student_id
+          WHERE e.group_id = ${cbGroupId}::uuid AND e.activo = TRUE
+        `;
+
+        const targetIdSet = new Set(targetIds);
+        const extraStudents = currentEnrollments.filter((ex: any) => !targetIdSet.has(ex.id));
+
+        for (const ex of extraStudents) {
+          // Desactivar de II DIURNO A CB
+          await sql`
+            UPDATE enrollments 
+            SET activo = FALSE, fecha_fin = CURRENT_DATE
+            WHERE student_id = ${ex.id}::uuid AND group_id = ${cbGroupId}::uuid
+          `;
+
+          // Si pertenecían a la jornada diurna regular, asignarlos a II DIURNO A
+          if (regGroupId && (!ex.grado || ex.grado.includes('DIURNO') || ex.grado.includes('2'))) {
+            await sql`UPDATE students SET grado = 'II DIURNO A' WHERE id = ${ex.id}::uuid`;
+            await sql`
+              INSERT INTO enrollments (id, student_id, group_id, activo, fecha_inicio, created_at)
+              VALUES (gen_random_uuid(), ${ex.id}::uuid, ${regGroupId}::uuid, TRUE, CURRENT_DATE, NOW())
+              ON CONFLICT (student_id, group_id)
+              DO UPDATE SET activo = TRUE, fecha_inicio = CURRENT_DATE, fecha_fin = NULL
+            `;
+          }
+        }
+      }
+
+      // 6. Consultar estado final del grupo
+      const finalGroupStudents = await sql`
+        SELECT s.id, s.nombre, s.documento, s.tarjeta_numero, s.rfid_tag_uid, s.grado, e.activo as matricula_activa
+        FROM enrollments e
+        JOIN students s ON s.id = e.student_id
+        WHERE e.group_id = ${cbGroupId}::uuid AND e.activo = TRUE
+        ORDER BY s.nombre ASC
+      `;
+
+      return NextResponse.json({
+        success: true,
+        message: 'Grupo II DIURNO A CB configurado con éxito con exactamente los 21 estudiantes.',
+        cbGroupId,
+        finalCount: finalGroupStudents.length,
+        students: finalGroupStudents
+      });
+    }
+
     console.log('[UNIFICATION] Starting Canonical Student Unification in Production DB...');
 
     // 1. Ensure columns
