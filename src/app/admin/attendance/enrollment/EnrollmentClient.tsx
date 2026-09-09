@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { getAcademicGroupConfig } from '@/lib/academicCatalog';
 
 interface Student {
   id: string;
@@ -30,6 +31,7 @@ interface EnrollmentClientProps {
 export default function EnrollmentClient({ students, activeStudentId, pendingUid = '' }: EnrollmentClientProps) {
   const router = useRouter();
   const [search, setSearch] = useState('');
+  const [filterPrograma, setFilterPrograma] = useState('all');
   const [filterGrado, setFilterGrado] = useState('');
   const [manualUidMap, setManualUidMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState<Record<string, boolean>>({});
@@ -326,10 +328,15 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
     const matchesSearch = s.nombre.toLowerCase().includes(search.toLowerCase()) || 
                           (s.rfid_tag_uid && s.rfid_tag_uid.toLowerCase().includes(search.toLowerCase()));
     const matchesGrado = !filterGrado || s.grado === filterGrado;
+    const matchesPrograma = filterPrograma === 'all' || (() => {
+      const cfg = getAcademicGroupConfig(s.grado);
+      if (!cfg) return false;
+      return cfg.programCode === filterPrograma;
+    })();
     const matchesEstado = filterEstado === 'all' || 
                           (filterEstado === 'active' && s.activo) || 
                           (filterEstado === 'inactive' && !s.activo);
-    return matchesSearch && matchesGrado && matchesEstado;
+    return matchesSearch && matchesGrado && matchesPrograma && matchesEstado;
   });
 
   const grades = Array.from(new Set(students.map(s => s.grado))).sort();
@@ -435,14 +442,57 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
 
           <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100 w-full md:w-48">
             <select
+              value={filterPrograma}
+              onChange={e => {
+                setFilterPrograma(e.target.value);
+                setFilterGrado('');
+              }}
+              className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none w-full"
+            >
+              <option value="all">Todos los Programas</option>
+              <option value="TAE">🩺 Enfermería TAE</option>
+              <option value="AIPI">👶 Primera Infancia</option>
+              <option value="PREESCOLAR">🎒 Preescolar</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100 w-full md:w-48">
+            <select
               value={filterGrado}
               onChange={e => setFilterGrado(e.target.value)}
               className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none w-full"
             >
               <option value="">Todos los Grados/Turnos</option>
-              {grades.map(g => (
-                <option key={g} value={g}>{g}</option>
-              ))}
+              {filterPrograma === 'all' ? (
+                <>
+                  <optgroup label="🩺 Enfermería TAE">
+                    {grades.filter(g => getAcademicGroupConfig(g)?.programCode === 'TAE').map(g => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="👶 Primera Infancia AIPI">
+                    {grades.filter(g => getAcademicGroupConfig(g)?.programCode === 'AIPI').map(g => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🎒 Preescolar">
+                    {grades.filter(g => getAcademicGroupConfig(g)?.programCode === 'PREESCOLAR').map(g => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </optgroup>
+                  {grades.filter(g => !getAcademicGroupConfig(g)).length > 0 && (
+                    <optgroup label="Otros / Sin Clasificar">
+                      {grades.filter(g => !getAcademicGroupConfig(g)).map(g => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                </>
+              ) : (
+                grades
+                  .filter(g => getAcademicGroupConfig(g)?.programCode === filterPrograma)
+                  .map(g => <option key={g} value={g}>{g}</option>)
+              )}
             </select>
           </div>
 

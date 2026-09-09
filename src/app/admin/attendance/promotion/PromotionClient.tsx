@@ -209,6 +209,38 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
   const withdrawCount = Object.values(decisions).filter(d => d.action === 'withdraw').length;
   const transferCount = Object.values(decisions).filter(d => d.action === 'transfer').length;
 
+  const renderGroupOptions = (list: GroupItem[]) => {
+    const tae = list.filter(g => g.nombre.includes('DIURNO') || g.nombre.includes('NOCHE') || g.nombre.includes('SABADO'));
+    const aipi = list.filter(g => g.nombre.includes('AIPI'));
+    const preescolar = list.filter(g => g.nombre.includes('PREESCOLAR'));
+
+    return (
+      <>
+        <optgroup label="🩺 Técnico Auxiliar en Enfermería (TAE)">
+          {tae.map(g => (
+            <option key={g.id} value={g.id}>
+              {g.nombre} ({g.jornada} {g.tipo === 'CB' ? '• Calendario B' : ''})
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="👶 Primera Infancia (AIPI)">
+          {aipi.map(g => (
+            <option key={g.id} value={g.id}>
+              {g.nombre} (Diurno)
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="🎒 Técnico Auxiliar en Preescolar">
+          {preescolar.map(g => (
+            <option key={g.id} value={g.id}>
+              {g.nombre} (Diurno)
+            </option>
+          ))}
+        </optgroup>
+      </>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Alert Messages */}
@@ -236,11 +268,7 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
               onChange={e => setSelectedGroupId(e.target.value)}
               className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-sm font-bold text-fsm-blue focus:outline-none focus:ring-2 focus:ring-fsm-blue/20"
             >
-              {groups.map(g => (
-                <option key={g.id} value={g.id}>
-                  {g.nombre} ({g.jornada} • {g.tipo})
-                </option>
-              ))}
+              {renderGroupOptions(groups)}
             </select>
           </div>
 
@@ -271,11 +299,7 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
                 className="w-full bg-emerald-50/50 border border-emerald-300 rounded-xl px-4 py-3 text-sm font-bold text-emerald-950 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               >
                 <option value="">-- Seleccionar grupo siguiente --</option>
-                {allGroups.map(g => (
-                  <option key={g.id} value={g.id}>
-                    {g.nombre} ({g.jornada} • {g.tipo})
-                  </option>
-                ))}
+                {renderGroupOptions(allGroups)}
               </select>
             )}
           </div>
@@ -531,11 +555,7 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
                               className="w-full bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-lg p-1.5 text-[11px] font-bold"
                             >
                               <option value="">Seleccionar curso destino...</option>
-                              {allGroups.map(g => (
-                                <option key={g.id} value={g.id}>
-                                  {g.nombre} ({g.jornada})
-                                </option>
-                              ))}
+                              {renderGroupOptions(allGroups)}
                             </select>
                           </div>
                         )}

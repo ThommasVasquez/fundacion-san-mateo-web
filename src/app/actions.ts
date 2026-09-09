@@ -6,6 +6,7 @@ import { sql } from '@/lib/db';
 import { encrypt, decrypt } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 import { logAuditEvent } from '@/lib/auditLogger';
+import { getNextAcademicGroup, normalizeGroupName } from '@/lib/academicCatalog';
 
 export async function login(formData: FormData) {
   const email = (formData.get('email') as string)?.trim().toLowerCase();
@@ -2251,26 +2252,18 @@ export async function getGroupStudentsForPromotion(groupId: string) {
       ORDER BY s.nombre ASC
     `;
 
-    // Buscar grupo sucesor sugerido
-    const allGroups = await sql`SELECT id, nombre, jornada, tipo FROM groups ORDER BY nombre ASC`;
+    // Buscar grupo sucesor sugerido según catálogo institucional
+    const allGroups = await sql`
+      SELECT id, nombre, jornada, tipo, programa_codigo, programa_nombre, semestre_romano, modalidad 
+      FROM groups 
+      ORDER BY programa_nombre ASC, semestre_romano ASC, nombre ASC
+    `;
     let suggestedTargetGroup: any = null;
-    let isFinalSemester = false;
+    const { nextGroupName, isFinalSemester } = getNextAcademicGroup(group.nombre);
 
-    const currentName = group.nombre.toUpperCase();
-    let nextNamePrefix = '';
-
-    if (currentName.startsWith('I ') || currentName.startsWith('1 ')) {
-      nextNamePrefix = currentName.replace(/^(I|1)\s+/, 'II ');
-    } else if (currentName.startsWith('II ') || currentName.startsWith('2 ')) {
-      nextNamePrefix = currentName.replace(/^(II|2)\s+/, 'III ');
-    } else if (currentName.startsWith('III ') || currentName.startsWith('3 ')) {
-      isFinalSemester = true;
-    }
-
-    if (nextNamePrefix) {
+    if (nextGroupName && nextGroupName !== 'EGRESADO') {
       suggestedTargetGroup = allGroups.find((g: any) => 
-        g.nombre.toUpperCase().trim() === nextNamePrefix.trim() ||
-        g.nombre.toUpperCase().replace(/\s+/g, ' ') === nextNamePrefix.replace(/\s+/g, ' ')
+        g.nombre.toUpperCase().trim() === nextGroupName.toUpperCase().trim()
       );
     }
 

@@ -238,29 +238,96 @@ export async function POST(req: Request) {
       `;
     }
 
-    // 10. Auto-enroll students in their designated groups (e.g. I DIURNO A CB, I PREESCOLAR)
-    const cbGroupId = '32302dd7-a3be-4a01-9b6c-0b9ee963569b'; // I DIURNO A CB
-    const cbStudents = await sql`SELECT id, nombre FROM students WHERE grado ILIKE '%I%DIUR%CB%'`;
-    const cbSessions = await sql`SELECT id FROM class_sessions WHERE group_id = ${cbGroupId}::uuid`;
+    // 10. Sincronizar los 19 grupos oficiales con sus programas académicos
+    await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS programa_codigo VARCHAR(50);`;
+    await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS programa_nombre VARCHAR(100);`;
+    await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS semestre_romano VARCHAR(10);`;
+    await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS modalidad VARCHAR(20);`;
 
-    for (const st of cbStudents) {
-      // Remove any mismatch enrollment from fuzzy matching
-      await sql`DELETE FROM enrollments WHERE student_id = ${st.id}::uuid AND group_id != ${cbGroupId}::uuid`;
-      // Ensure enrolled in I DIURNO A CB
-      const existing = await sql`SELECT id FROM enrollments WHERE student_id = ${st.id}::uuid AND group_id = ${cbGroupId}::uuid LIMIT 1`;
-      if (existing.length === 0) {
+    // Renombrar nombres con variaciones para preservar IDs existentes y sesiones
+    await sql`UPDATE groups SET nombre = 'I DIURNO CB' WHERE nombre IN ('I DIURNO A CB');`;
+    await sql`UPDATE groups SET nombre = 'II DIURNO A CB' WHERE nombre IN ('I DIURNO B CB');`;
+    await sql`UPDATE groups SET nombre = 'II SABADO CB' WHERE nombre IN ('I SABADO CB');`;
+
+    // Sincronizar en students.grado las variaciones
+    await sql`UPDATE students SET grado = 'I DIURNO CB' WHERE grado IN ('I DIURNO A CB', 'I DIURRNO A CB', 'I DA CB');`;
+    await sql`UPDATE students SET grado = 'II DIURNO A CB' WHERE grado IN ('I DIURNO B CB', 'I DB CB');`;
+    await sql`UPDATE students SET grado = 'II SABADO CB' WHERE grado IN ('I SABADO CB', 'ISB CB');`;
+    await sql`UPDATE students SET grado = 'I NOCHE CB' WHERE grado IN ('I NOCHE A CB');`;
+
+    const officialGroupsList = [
+      { name: 'I PREESCOLAR', progCode: 'PREESCOLAR', progName: 'Preescolar', sem: 'I', shift: 'DIURNO', cal: 'REGULAR' },
+      { name: 'II PREESCOLAR', progCode: 'PREESCOLAR', progName: 'Preescolar', sem: 'II', shift: 'DIURNO', cal: 'REGULAR' },
+      { name: 'I AIPI', progCode: 'AIPI', progName: 'Primera Infancia AIPI', sem: 'I', shift: 'DIURNO', cal: 'REGULAR' },
+      { name: 'II AIPI', progCode: 'AIPI', progName: 'Primera Infancia AIPI', sem: 'II', shift: 'DIURNO', cal: 'REGULAR' },
+      { name: 'I DIURNO A', progCode: 'TAE', progName: 'Enfermería TAE', sem: 'I', shift: 'DIURNO', cal: 'REGULAR' },
+      { name: 'II DIURNO A', progCode: 'TAE', progName: 'Enfermería TAE', sem: 'II', shift: 'DIURNO', cal: 'REGULAR' },
+      { name: 'II DIURNO B', progCode: 'TAE', progName: 'Enfermería TAE', sem: 'II', shift: 'DIURNO', cal: 'REGULAR' },
+      { name: 'III DIURNO A', progCode: 'TAE', progName: 'Enfermería TAE', sem: 'III', shift: 'DIURNO', cal: 'REGULAR' },
+      { name: 'I DIURNO CB', progCode: 'TAE', progName: 'Enfermería TAE', sem: 'I', shift: 'DIURNO', cal: 'CB' },
+      { name: 'II DIURNO A CB', progCode: 'TAE', progName: 'Enfermería TAE', sem: 'II', shift: 'DIURNO', cal: 'CB' },
+      { name: 'I NOCHE A', progCode: 'TAE', progName: 'Enfermería TAE', sem: 'I', shift: 'NOCHE', cal: 'REGULAR' },
+      { name: 'II NOCHE A', progCode: 'TAE', progName: 'Enfermería TAE', sem: 'II', shift: 'NOCHE', cal: 'REGULAR' },
+      { name: 'III NOCHE A', progCode: 'TAE', progName: 'Enfermería TAE', sem: 'III', shift: 'NOCHE', cal: 'REGULAR' },
+      { name: 'I NOCHE CB', progCode: 'TAE', progName: 'Enfermería TAE', sem: 'I', shift: 'NOCHE', cal: 'CB' },
+      { name: 'I SABADO A', progCode: 'TAE', progName: 'Enfermería TAE', sem: 'I', shift: 'SABADO', cal: 'REGULAR' },
+      { name: 'II SABADO A', progCode: 'TAE', progName: 'Enfermería TAE', sem: 'II', shift: 'SABADO', cal: 'REGULAR' },
+      { name: 'III SABADO A', progCode: 'TAE', progName: 'Enfermería TAE', sem: 'III', shift: 'SABADO', cal: 'REGULAR' },
+      { name: 'III SABADO B', progCode: 'TAE', progName: 'Enfermería TAE', sem: 'III', shift: 'SABADO', cal: 'REGULAR' },
+      { name: 'II SABADO CB', progCode: 'TAE', progName: 'Enfermería TAE', sem: 'II', shift: 'SABADO', cal: 'CB' }
+    ];
+
+    for (const og of officialGroupsList) {
+      const clean = og.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const existing = await sql`SELECT id FROM groups WHERE UPPER(TRIM(nombre)) = ${og.name.toUpperCase()} LIMIT 1`;
+      if (existing.length > 0) {
         await sql`
-          INSERT INTO enrollments (id, student_id, group_id, activo, created_at)
-          VALUES (gen_random_uuid(), ${st.id}::uuid, ${cbGroupId}::uuid, true, NOW())
+          UPDATE groups SET
+            nombre = ${og.name},
+            nombre_clean = ${clean},
+            jornada = ${og.shift},
+            tipo = ${og.cal},
+            programa_codigo = ${og.progCode},
+            programa_nombre = ${og.progName},
+            semestre_romano = ${og.sem},
+            modalidad = ${og.cal}
+          WHERE id = ${existing[0].id}::uuid
+        `;
+      } else {
+        await sql`
+          INSERT INTO groups (id, nombre, nombre_clean, jornada, tipo, programa_codigo, programa_nombre, semestre_romano, modalidad, activo, created_at)
+          VALUES (gen_random_uuid(), ${og.name}, ${clean}, ${og.shift}, ${og.cal}, ${og.progCode}, ${og.progName}, ${og.sem}, ${og.cal}, true, NOW())
         `;
       }
-      // Ensure attendance records exist for all group sessions
-      for (const sess of cbSessions) {
-        await sql`
-          INSERT INTO attendance_records_normalized (id, student_id, session_id, estado, created_at, updated_at)
-          VALUES (gen_random_uuid(), ${st.id}::uuid, ${sess.id}::uuid, 'AUSENTE', NOW(), NOW())
-          ON CONFLICT DO NOTHING
-        `;
+    }
+
+    // Matricular alumnos de I DIURNO CB
+    const cbDiurnoG = await sql`SELECT id FROM groups WHERE nombre = 'I DIURNO CB' LIMIT 1`;
+    if (cbDiurnoG.length > 0) {
+      const cbAlumnos = await sql`SELECT id FROM students WHERE grado = 'I DIURNO CB'`;
+      for (const a of cbAlumnos) {
+        const enr = await sql`SELECT id FROM enrollments WHERE student_id = ${a.id}::uuid AND group_id = ${cbDiurnoG[0].id}::uuid LIMIT 1`;
+        if (enr.length === 0) {
+          await sql`
+            INSERT INTO enrollments (id, student_id, group_id, activo, created_at)
+            VALUES (gen_random_uuid(), ${a.id}::uuid, ${cbDiurnoG[0].id}::uuid, true, NOW())
+          `;
+        }
+      }
+    }
+
+    // Matricular alumnos de I NOCHE CB
+    const nocheCBGroup = await sql`SELECT id FROM groups WHERE nombre = 'I NOCHE CB' LIMIT 1`;
+    if (nocheCBGroup.length > 0) {
+      const nocheAlumnos = await sql`SELECT id FROM students WHERE grado = 'I NOCHE CB'`;
+      for (const a of nocheAlumnos) {
+        const enr = await sql`SELECT id FROM enrollments WHERE student_id = ${a.id}::uuid AND group_id = ${nocheCBGroup[0].id}::uuid LIMIT 1`;
+        if (enr.length === 0) {
+          await sql`
+            INSERT INTO enrollments (id, student_id, group_id, activo, created_at)
+            VALUES (gen_random_uuid(), ${a.id}::uuid, ${nocheCBGroup[0].id}::uuid, true, NOW())
+          `;
+        }
       }
     }
 
@@ -268,10 +335,10 @@ export async function POST(req: Request) {
     const check = await sql`
       SELECT 
         (SELECT count(*) FROM students) as total_students,
-        (SELECT count(*) FROM enrollments e JOIN students s ON s.id = e.student_id) as enrollments_on_students,
+        (SELECT count(*) FROM groups) as total_groups,
+        (SELECT count(*) FROM enrollments e JOIN students s ON s.id = e.student_id WHERE e.activo = TRUE) as enrollments_on_students,
         (SELECT count(*) FROM attendance_records_normalized arn JOIN students s ON s.id = arn.student_id) as matrix_on_students,
-        (SELECT count(*) FROM attendance_events ae JOIN students s ON s.id = ae.student_id) as events_on_students,
-        (SELECT count(*) FROM enrollments WHERE group_id = ${cbGroupId}::uuid) as cb_diurno_enrolled;
+        (SELECT count(*) FROM attendance_events ae JOIN students s ON s.id = ae.student_id) as events_on_students;
     `;
 
     console.log('[UNIFICATION] Completed successfully:', check[0]);
