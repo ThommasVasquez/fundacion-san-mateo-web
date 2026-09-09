@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { normalizeGroupName } from '@/lib/academicCatalog';
 
 export const dynamic = 'force-dynamic';
 
@@ -258,6 +259,75 @@ export async function POST(req: Request) {
         weekdayDatesCount: weekdayDatesRes.length,
         saturdayDatesCount: saturdayDatesRes.length,
         groups: results
+      });
+    }
+
+    if (body.action === 'sync_all_unregistered_enrollments') {
+      // 1. Obtener todos los grupos oficiales
+      const groups = await sql`SELECT id, nombre FROM groups`;
+      const groupMap = new Map<string, string>();
+      groups.forEach((g: any) => {
+        groupMap.set(g.nombre.toUpperCase(), g.id);
+      });
+
+      // 2. Obtener estudiantes que NO tienen matrícula activa en enrollments
+      const unenrolledStudents = await sql`
+        SELECT s.id, s.nombre, s.grado, s.documento
+        FROM students s
+        WHERE s.activo = TRUE
+          AND NOT EXISTS (
+            SELECT 1 FROM enrollments e 
+            WHERE e.student_id = s.id AND e.activo = TRUE
+          )
+      `;
+
+      const synced: any[] = [];
+      const notFoundGroup: any[] = [];
+
+      for (const st of unenrolledStudents) {
+        if (!st.grado) {
+          notFoundGroup.push({ ...st, reason: 'Sin grado asignado' });
+          continue;
+        }
+
+        const normalized = normalizeGroupName(st.grado);
+        let targetGroupId = groupMap.get(normalized.toUpperCase()) || groupMap.get(st.grado.toUpperCase());
+
+        if (!targetGroupId) {
+          // Búsqueda aproximada
+          for (const [gName, gId] of groupMap.entries()) {
+            if (gName.includes(normalized.toUpperCase()) || normalized.toUpperCase().includes(gName)) {
+              targetGroupId = gId;
+              break;
+            }
+          }
+        }
+
+        if (targetGroupId) {
+          await sql`
+            INSERT INTO enrollments (id, student_id, group_id, activo, fecha_inicio, created_at)
+            VALUES (gen_random_uuid(), ${st.id}::uuid, ${targetGroupId}::uuid, TRUE, CURRENT_DATE, NOW())
+            ON CONFLICT (student_id, group_id) DO UPDATE 
+            SET activo = TRUE, fecha_inicio = CURRENT_DATE, fecha_fin = NULL
+          `;
+          synced.push({
+            id: st.id,
+            nombre: st.nombre,
+            grado: st.grado,
+            targetGroupId
+          });
+        } else {
+          notFoundGroup.push({ ...st, reason: `No se encontró grupo oficial para "${st.grado}"` });
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        totalUnenrolled: unenrolledStudents.length,
+        syncedCount: synced.length,
+        notFoundGroupCount: notFoundGroup.length,
+        syncedSample: synced.slice(0, 20),
+        notFoundGroupSample: notFoundGroup.slice(0, 20)
       });
     }
 

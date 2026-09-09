@@ -4,11 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   setEnrollmentStudent, linkStudentTag, unlinkStudentTag, 
-  updateStudentDetails, createStudent, bulkUpdateStudentGrado, deleteStudent, recordManualAttendance 
+  updateStudentDetails, createStudent, bulkUpdateStudentGrado, deleteStudent, 
+  recordManualAttendance, ensureStudentEnrollment 
 } from '@/app/actions';
 import { 
   Tag, Search, AlertTriangle, ArrowLeft, RefreshCw, 
-  Check, X, Link as LinkIcon, AlertCircle, Plus, Edit2, Save, Trash2, Users, Layers, UserCheck
+  Check, X, Link as LinkIcon, AlertCircle, Plus, Edit2, Save, Trash2, Users, Layers, UserCheck, CheckCircle2, ShieldAlert
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -17,7 +18,9 @@ import { getAcademicGroupConfig, OFFICIAL_GROUPS } from '@/lib/academicCatalog';
 interface Student {
   id: string;
   nombre: string;
+  documento?: string | null;
   grado: string;
+  grupo_matriculado?: string | null;
   rfid_tag_uid: string | null;
   tarjeta_numero?: string | null;
   activo: boolean;
@@ -47,14 +50,18 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
   // Modal for Editing Student Details
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [editNombre, setEditNombre] = useState('');
+  const [editDocumento, setEditDocumento] = useState('');
   const [editGrado, setEditGrado] = useState('');
+  const [editTarjetaNumero, setEditTarjetaNumero] = useState('');
   const [editActivo, setEditActivo] = useState(true);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   // Modal for Creating New Student
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [newNombre, setNewNombre] = useState('');
+  const [newDocumento, setNewDocumento] = useState('');
   const [newGrado, setNewGrado] = useState('');
+  const [newTarjetaNumero, setNewTarjetaNumero] = useState('');
   const [newUid, setNewUid] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
@@ -162,7 +169,9 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
   const openEditModal = (student: Student) => {
     setEditingStudent(student);
     setEditNombre(student.nombre);
+    setEditDocumento(student.documento || '');
     setEditGrado(student.grado);
+    setEditTarjetaNumero(student.tarjeta_numero || '');
     setEditActivo(student.activo);
   };
 
@@ -173,6 +182,8 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
     const res = await updateStudentDetails(editingStudent.id, {
       nombre: editNombre,
       grado: editGrado,
+      documento: editDocumento,
+      tarjeta_numero: editTarjetaNumero,
       activo: editActivo,
     });
 
@@ -183,6 +194,19 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
       router.refresh();
     } else {
       showStatus(res.error || 'Error al actualizar estudiante', 'error');
+    }
+  };
+
+  const handleQuickEnroll = async (studentId: string) => {
+    setLoading(prev => ({ ...prev, [studentId]: true }));
+    const res = await ensureStudentEnrollment(studentId);
+    setLoading(prev => ({ ...prev, [studentId]: false }));
+
+    if (res.success) {
+      showStatus(`✓ Estudiante matriculado oficialmente en ${res.groupName}.`);
+      router.refresh();
+    } else {
+      showStatus(res.error || 'Error al matricular estudiante', 'error');
     }
   };
 
@@ -214,7 +238,7 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
 
   const handleCreateNewStudent = async () => {
     if (!newNombre.trim() || !newGrado.trim()) {
-      showStatus('Nombre y Grado son obligatorios.', 'error');
+      showStatus('Nombre y Grado/Curso son obligatorios.', 'error');
       return;
     }
 
@@ -222,15 +246,19 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
     const res = await createStudent({
       nombre: newNombre,
       grado: newGrado,
+      documento: newDocumento.trim() || undefined,
+      tarjeta_numero: newTarjetaNumero.trim() || undefined,
       rfid_tag_uid: newUid.trim() || undefined,
     });
 
     setIsCreating(false);
     if (res.success) {
-      showStatus(`Estudiante ${newNombre} creado con éxito.`);
+      showStatus(`✓ Estudiante ${newNombre} creado y matriculado con éxito.`);
       setCreateModalOpen(false);
       setNewNombre('');
+      setNewDocumento('');
       setNewGrado('');
+      setNewTarjetaNumero('');
       setNewUid('');
       router.refresh();
     } else {
@@ -327,6 +355,8 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
   // Filter students
   const filteredStudents = students.filter(s => {
     const matchesSearch = s.nombre.toLowerCase().includes(search.toLowerCase()) || 
+                          (s.documento && s.documento.includes(search)) ||
+                          (s.grado && s.grado.toLowerCase().includes(search.toLowerCase())) ||
                           (s.rfid_tag_uid && s.rfid_tag_uid.toLowerCase().includes(search.toLowerCase())) ||
                           (s.tarjeta_numero && s.tarjeta_numero.includes(search));
     const matchesGrado = !filterGrado || 
@@ -554,6 +584,25 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
                         <span className="text-[9px] font-black text-fsm-blue uppercase bg-fsm-blue/5 px-2 py-0.5 rounded">
                           Grado/Curso: {student.grado}
                         </span>
+                        {student.grupo_matriculado ? (
+                          <span className="text-[9px] font-black text-emerald-800 uppercase bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded flex items-center gap-1">
+                            <CheckCircle2 size={11} className="text-emerald-600" /> Grupo: {student.grupo_matriculado}
+                          </span>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <span className="text-[9px] font-black text-amber-800 uppercase bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded flex items-center gap-1" title="El estudiante no tiene matrícula activa en un grupo oficial">
+                              <ShieldAlert size={11} className="text-amber-600" /> Sin matrícula
+                            </span>
+                            <button
+                              onClick={() => handleQuickEnroll(student.id)}
+                              disabled={loading[student.id]}
+                              className="text-[9px] font-black uppercase tracking-wider bg-fsm-blue hover:bg-blue-900 text-white px-1.5 py-0.5 rounded transition-all active:scale-95 disabled:opacity-50"
+                              title={`Inscribir automáticamente al grupo oficial de ${student.grado}`}
+                            >
+                              Inscribir
+                            </button>
+                          </div>
+                        )}
                         {!student.activo ? (
                           <span className="text-[9px] font-black text-amber-800 uppercase bg-amber-100 border border-amber-200 px-2 py-0.5 rounded flex items-center gap-1">
                             ❄️ APLAZADO / CONGELADO
@@ -566,21 +615,26 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
                         <button 
                           onClick={() => openEditModal(student)}
                           className="text-gray-400 hover:text-fsm-blue transition-colors p-1"
-                          title="Editar Grado, Curso o Turno"
+                          title="Editar Datos, Documento o Curso"
                         >
                           <Edit2 size={13} />
                         </button>
                       </div>
                       <h4 className="text-lg font-black text-fsm-blue uppercase mt-1 leading-tight">{student.nombre}</h4>
-                      {hasCard ? (
-                        <p className="text-xs text-green-600 font-bold mt-1 flex items-center gap-1">
-                          <Check size={14} /> Tarjeta vinculada: <span className="font-mono bg-green-50 px-2 py-0.5 rounded text-[10px]">{student.tarjeta_numero ? `#${student.tarjeta_numero}` : student.rfid_tag_uid}</span>
-                        </p>
-                      ) : (
-                        <p className="text-xs text-gray-400 font-bold mt-1 flex items-center gap-1">
-                          <AlertTriangle size={14} className="text-gray-400" /> Sin tarjeta vinculada
-                        </p>
-                      )}
+                      <div className="flex flex-wrap items-center gap-3 mt-1">
+                        <span className="text-xs text-gray-600 font-bold flex items-center gap-1">
+                          📄 Cédula / Doc: <strong className="font-mono text-gray-900 bg-gray-100 px-1.5 py-0.5 rounded text-[11px]">{student.documento || 'SIN DOCUMENTO'}</strong>
+                        </span>
+                        {hasCard ? (
+                          <span className="text-xs text-green-600 font-bold flex items-center gap-1">
+                            <Check size={14} /> Tarjeta: <strong className="font-mono bg-green-50 px-1.5 py-0.5 rounded text-[11px]">{student.tarjeta_numero ? `#${student.tarjeta_numero}` : student.rfid_tag_uid}</strong>
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400 font-bold flex items-center gap-1">
+                            <AlertTriangle size={14} className="text-gray-400" /> Sin tarjeta
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -704,7 +758,18 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
 
             <div className="space-y-4">
               <div>
-                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Nombre Completo:</label>
+                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Cédula / Documento de Identidad:</label>
+                <input 
+                  type="text" 
+                  value={editDocumento}
+                  onChange={e => setEditDocumento(e.target.value)}
+                  placeholder="Ej: 1024567890 o TI / CC"
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Nombre Completo:*</label>
                 <input 
                   type="text" 
                   value={editNombre}
@@ -714,7 +779,7 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Curso / Carrera / Turno:</label>
+                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Curso / Carrera / Turno:*</label>
                 <select
                   value={OFFICIAL_GROUPS.some(g => g.name === editGrado) ? editGrado : ''}
                   onChange={e => {
@@ -744,6 +809,17 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
                   value={editGrado}
                   onChange={e => setEditGrado(e.target.value)}
                   placeholder="O escribe manualmente el curso aquí..."
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Número de Tarjeta Física (Opcional):</label>
+                <input 
+                  type="text" 
+                  value={editTarjetaNumero}
+                  onChange={e => setEditTarjetaNumero(e.target.value)}
+                  placeholder="Ej: 3056834"
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
                 />
               </div>
@@ -812,6 +888,17 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
 
             <div className="space-y-4">
               <div>
+                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Cédula / Documento de Identidad:</label>
+                <input 
+                  type="text" 
+                  placeholder="Ej: 1024567890 o TI / CC"
+                  value={newDocumento}
+                  onChange={e => setNewDocumento(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
+                />
+              </div>
+
+              <div>
                 <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Nombre Completo:*</label>
                 <input 
                   type="text" 
@@ -858,7 +945,18 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">UID Tarjeta RFID (Opcional):</label>
+                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Número de Tarjeta Física (Opcional):</label>
+                <input 
+                  type="text" 
+                  placeholder="Ej: 3056834"
+                  value={newTarjetaNumero}
+                  onChange={e => setNewTarjetaNumero(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">UID Tarjeta RFID / NFC (Opcional):</label>
                 <input 
                   type="text" 
                   placeholder="Ej: 5400357EAC"

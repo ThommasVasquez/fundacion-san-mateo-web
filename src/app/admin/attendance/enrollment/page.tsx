@@ -16,11 +16,14 @@ export default async function EnrollmentPage({ searchParams }: EnrollmentPagePro
   const params = await searchParams;
   const pendingUid = params.pendingUid || '';
 
-  // 1. Fetch all students
+  // 1. Fetch all students with their active group enrollment
   const students = await sql`
-    SELECT id, nombre, grado, rfid_tag_uid, tarjeta_numero, activo 
-    FROM students 
-    ORDER BY grado, nombre
+    SELECT s.id, s.nombre, s.documento, s.grado, s.rfid_tag_uid, s.tarjeta_numero, s.activo,
+           g.id as group_id, g.nombre as grupo_matriculado, e.activo as matricula_activa
+    FROM students s
+    LEFT JOIN enrollments e ON e.student_id = s.id AND e.activo = TRUE
+    LEFT JOIN groups g ON g.id = e.group_id
+    ORDER BY s.grado, s.nombre
   `;
 
   // 2. Fetch active enrollment student id
@@ -60,7 +63,9 @@ export default async function EnrollmentPage({ searchParams }: EnrollmentPagePro
         students={students.map((s: any) => ({
           id: s.id,
           nombre: s.nombre,
+          documento: s.documento || null,
           grado: s.grado,
+          grupo_matriculado: s.grupo_matriculado || null,
           rfid_tag_uid: s.rfid_tag_uid,
           tarjeta_numero: s.tarjeta_numero ? String(s.tarjeta_numero) : null,
           activo: s.activo

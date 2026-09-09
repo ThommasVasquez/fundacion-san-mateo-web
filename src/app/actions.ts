@@ -772,10 +772,21 @@ export async function unlinkStudentTag(studentId: string) {
   }
 }
 
-export async function updateStudentDetails(studentId: string, data: { nombre?: string; grado?: string; activo?: boolean }) {
+export async function updateStudentDetails(
+  studentId: string, 
+  data: { 
+    nombre?: string; 
+    grado?: string; 
+    documento?: string;
+    tarjeta_numero?: string;
+    activo?: boolean;
+  }
+) {
   try {
     const nombre = data.nombre?.trim() || null;
     const grado = data.grado?.trim() || null;
+    const documento = data.documento !== undefined ? (data.documento.trim() || null) : undefined;
+    const tarjetaNumero = data.tarjeta_numero !== undefined ? (data.tarjeta_numero.trim() || null) : undefined;
     const activo = data.activo ?? true;
 
     await sql`
@@ -783,6 +794,8 @@ export async function updateStudentDetails(studentId: string, data: { nombre?: s
       SET 
         nombre = COALESCE(${nombre}, nombre),
         grado = COALESCE(${grado}, grado),
+        documento = CASE WHEN ${documento !== undefined} THEN ${documento} ELSE documento END,
+        tarjeta_numero = CASE WHEN ${tarjetaNumero !== undefined} THEN ${tarjetaNumero} ELSE tarjeta_numero END,
         activo = ${activo}
       WHERE id = ${studentId}::uuid
     `;
@@ -811,6 +824,7 @@ export async function updateStudentDetails(studentId: string, data: { nombre?: s
       }
     }
 
+    revalidatePath('/admin/attendance/enrollment');
     return { success: true };
   } catch (error: any) {
     console.error('Error updating student details:', error);
@@ -818,10 +832,18 @@ export async function updateStudentDetails(studentId: string, data: { nombre?: s
   }
 }
 
-export async function createStudent(data: { nombre: string; grado: string; rfid_tag_uid?: string }) {
+export async function createStudent(data: { 
+  nombre: string; 
+  grado: string; 
+  documento?: string;
+  tarjeta_numero?: string;
+  rfid_tag_uid?: string;
+}) {
   try {
     const nombre = data.nombre.trim();
     const grado = data.grado.trim();
+    const documento = data.documento?.trim() || null;
+    const tarjetaNumero = data.tarjeta_numero?.trim() || null;
     const rfidTagUid = data.rfid_tag_uid?.trim() || null;
 
     if (!nombre || !grado) {
@@ -829,8 +851,8 @@ export async function createStudent(data: { nombre: string; grado: string; rfid_
     }
 
     const res = await sql`
-      INSERT INTO students (id, nombre, grado, rfid_tag_uid, activo)
-      VALUES (gen_random_uuid(), ${nombre}, ${grado}, ${rfidTagUid}, TRUE)
+      INSERT INTO students (id, nombre, grado, documento, tarjeta_numero, rfid_tag_uid, activo, created_at)
+      VALUES (gen_random_uuid(), ${nombre}, ${grado}, ${documento}, ${tarjetaNumero}, ${rfidTagUid}, TRUE, NOW())
       RETURNING id
     `;
     const studentId = res[0]?.id;
@@ -854,10 +876,52 @@ export async function createStudent(data: { nombre: string; grado: string; rfid_
       }
     }
 
-    return { success: true };
+    revalidatePath('/admin/attendance/enrollment');
+    return { success: true, studentId };
   } catch (error: any) {
     console.error('Error creating student:', error);
     return { error: error.message || 'Error al crear estudiante' };
+  }
+}
+
+export async function ensureStudentEnrollment(studentId: string) {
+  try {
+    const stRes = await sql`SELECT id, grado FROM students WHERE id = ${studentId}::uuid LIMIT 1`;
+    if (stRes.length === 0) return { error: 'Estudiante no encontrado' };
+
+    const { grado } = stRes[0];
+    if (!grado) return { error: 'El estudiante no tiene curso asignado' };
+
+    const normalized = normalizeGroupName(grado);
+    const targetGroup = await sql`
+      SELECT id, nombre FROM groups 
+      WHERE UPPER(TRIM(nombre)) = ${normalized.toUpperCase()} 
+         OR UPPER(TRIM(nombre)) = ${grado.toUpperCase()}
+      LIMIT 1
+    `;
+
+    if (targetGroup.length === 0) {
+      return { error: `No se encontró un grupo oficial para el curso "${grado}"` };
+    }
+
+    const gId = targetGroup[0].id;
+    await sql`
+      UPDATE enrollments 
+      SET activo = FALSE, fecha_fin = CURRENT_DATE 
+      WHERE student_id = ${studentId}::uuid AND group_id != ${gId}::uuid
+    `;
+    await sql`
+      INSERT INTO enrollments (id, student_id, group_id, activo, fecha_inicio, created_at)
+      VALUES (gen_random_uuid(), ${studentId}::uuid, ${gId}::uuid, TRUE, CURRENT_DATE, NOW())
+      ON CONFLICT (student_id, group_id) DO UPDATE 
+      SET activo = TRUE, fecha_inicio = CURRENT_DATE, fecha_fin = NULL
+    `;
+
+    revalidatePath('/admin/attendance/enrollment');
+    return { success: true, groupName: targetGroup[0].nombre };
+  } catch (error: any) {
+    console.error('Error ensuring student enrollment:', error);
+    return { error: error.message || 'Error al matricular estudiante' };
   }
 }
 
