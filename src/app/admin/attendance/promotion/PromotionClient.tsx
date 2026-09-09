@@ -8,6 +8,7 @@ import {
   Check, ChevronDown, Users, BookOpen
 } from 'lucide-react';
 import { getGroupStudentsForPromotion, executeSemesterPromotion, PromotionDecision } from '@/app/actions';
+import { getAcademicGroupConfig } from '@/lib/academicCatalog';
 
 interface GroupItem {
   id: string;
@@ -35,13 +36,37 @@ interface PromotionClientProps {
 }
 
 export default function PromotionClient({ groups }: PromotionClientProps) {
-  const [selectedGroupId, setSelectedGroupId] = useState<string>(groups[0]?.id || '');
+  const [selectedProgram, setSelectedProgram] = useState<'ALL' | 'TAE' | 'AIPI' | 'PREESCOLAR'>('TAE');
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [loadingGroup, setLoadingGroup] = useState<boolean>(false);
   const [groupData, setGroupData] = useState<any>(null);
   const [targetGroupId, setTargetGroupId] = useState<string>('');
   const [targetGrado, setTargetGrado] = useState<string>('');
   const [isFinalSemester, setIsFinalSemester] = useState<boolean>(false);
   const [allGroups, setAllGroups] = useState<GroupItem[]>(groups);
+
+  const getProgramOfGroup = (g: GroupItem): 'TAE' | 'AIPI' | 'PREESCOLAR' => {
+    const cfg = getAcademicGroupConfig(g.nombre);
+    if (cfg) return cfg.programCode;
+    if (g.nombre.toUpperCase().includes('AIPI')) return 'AIPI';
+    if (g.nombre.toUpperCase().includes('PREESCOLAR')) return 'PREESCOLAR';
+    return 'TAE';
+  };
+
+  const filteredSourceGroups = groups.filter(g => {
+    if (selectedProgram === 'ALL') return true;
+    return getProgramOfGroup(g) === selectedProgram;
+  });
+
+  // Auto-select initial group when program changes or on mount
+  useEffect(() => {
+    if (filteredSourceGroups.length > 0) {
+      const stillValid = filteredSourceGroups.some(g => g.id === selectedGroupId);
+      if (!stillValid) {
+        setSelectedGroupId(filteredSourceGroups[0].id);
+      }
+    }
+  }, [selectedProgram, groups]);
   
   // Decisions map: studentId -> decision
   const [decisions, setDecisions] = useState<Record<string, PromotionDecision>>({});
@@ -209,10 +234,71 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
   const withdrawCount = Object.values(decisions).filter(d => d.action === 'withdraw').length;
   const transferCount = Object.values(decisions).filter(d => d.action === 'transfer').length;
 
-  const renderGroupOptions = (list: GroupItem[]) => {
-    const tae = list.filter(g => g.nombre.includes('DIURNO') || g.nombre.includes('NOCHE') || g.nombre.includes('SABADO'));
-    const aipi = list.filter(g => g.nombre.includes('AIPI'));
-    const preescolar = list.filter(g => g.nombre.includes('PREESCOLAR'));
+  const renderGroupOptions = (list: GroupItem[], filterByProgram?: 'ALL' | 'TAE' | 'AIPI' | 'PREESCOLAR') => {
+    const activeFilter = filterByProgram || selectedProgram;
+
+    if (activeFilter === 'TAE') {
+      const taeDiurno = list.filter(g => getProgramOfGroup(g) === 'TAE' && (g.jornada === 'DIURNO' || g.nombre.includes('DIURNO')));
+      const taeNoche = list.filter(g => getProgramOfGroup(g) === 'TAE' && (g.jornada === 'NOCHE' || g.nombre.includes('NOCHE')));
+      const taeSabado = list.filter(g => getProgramOfGroup(g) === 'TAE' && (g.jornada === 'SABADO' || g.nombre.includes('SABADO')));
+
+      return (
+        <>
+          <optgroup label="☀️ Enfermería TAE - Jornada Diurna">
+            {taeDiurno.map(g => (
+              <option key={g.id} value={g.id}>
+                {g.nombre} {g.tipo === 'CB' ? '(Calendario B)' : ''}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="🌙 Enfermería TAE - Jornada Nocturna">
+            {taeNoche.map(g => (
+              <option key={g.id} value={g.id}>
+                {g.nombre} {g.tipo === 'CB' ? '(Calendario B)' : ''}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="📅 Enfermería TAE - Jornada Sabatina">
+            {taeSabado.map(g => (
+              <option key={g.id} value={g.id}>
+                {g.nombre} {g.tipo === 'CB' ? '(Calendario B)' : ''}
+              </option>
+            ))}
+          </optgroup>
+        </>
+      );
+    }
+
+    if (activeFilter === 'AIPI') {
+      const aipi = list.filter(g => getProgramOfGroup(g) === 'AIPI');
+      return (
+        <optgroup label="👶 Primera Infancia (AIPI)">
+          {aipi.map(g => (
+            <option key={g.id} value={g.id}>
+              {g.nombre} (Diurno)
+            </option>
+          ))}
+        </optgroup>
+      );
+    }
+
+    if (activeFilter === 'PREESCOLAR') {
+      const preescolar = list.filter(g => getProgramOfGroup(g) === 'PREESCOLAR');
+      return (
+        <optgroup label="🎒 Técnico Auxiliar en Preescolar">
+          {preescolar.map(g => (
+            <option key={g.id} value={g.id}>
+              {g.nombre} (Diurno)
+            </option>
+          ))}
+        </optgroup>
+      );
+    }
+
+    // ALL
+    const tae = list.filter(g => getProgramOfGroup(g) === 'TAE');
+    const aipi = list.filter(g => getProgramOfGroup(g) === 'AIPI');
+    const preescolar = list.filter(g => getProgramOfGroup(g) === 'PREESCOLAR');
 
     return (
       <>
@@ -257,25 +343,103 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
 
       {/* Top Configuration Card */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+        {/* Step 1: Select Academic Program Tabs */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-black tracking-wider uppercase text-gray-700 flex items-center gap-1.5">
+              <Filter size={15} className="text-fsm-blue" />
+              1. Selecciona el Programa Académico
+            </span>
+            <span className="text-xs text-gray-500 font-medium">
+              Filtra automáticamente los grupos de ese programa
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 bg-gray-100/90 p-1.5 rounded-2xl border border-gray-200">
+            <button
+              type="button"
+              onClick={() => setSelectedProgram('TAE')}
+              className={`flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                selectedProgram === 'TAE'
+                  ? 'bg-fsm-blue text-white shadow-md shadow-fsm-blue/20 scale-[1.01]'
+                  : 'text-gray-700 hover:text-gray-900 hover:bg-gray-200/70'
+              }`}
+            >
+              <span>🩺 Enfermería TAE</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                selectedProgram === 'TAE' ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'
+              }`}>
+                {groups.filter(g => getProgramOfGroup(g) === 'TAE').length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedProgram('AIPI')}
+              className={`flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                selectedProgram === 'AIPI'
+                  ? 'bg-fsm-blue text-white shadow-md shadow-fsm-blue/20 scale-[1.01]'
+                  : 'text-gray-700 hover:text-gray-900 hover:bg-gray-200/70'
+              }`}
+            >
+              <span>👶 Primera Infancia</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                selectedProgram === 'AIPI' ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'
+              }`}>
+                {groups.filter(g => getProgramOfGroup(g) === 'AIPI').length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedProgram('PREESCOLAR')}
+              className={`flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                selectedProgram === 'PREESCOLAR'
+                  ? 'bg-fsm-blue text-white shadow-md shadow-fsm-blue/20 scale-[1.01]'
+                  : 'text-gray-700 hover:text-gray-900 hover:bg-gray-200/70'
+              }`}
+            >
+              <span>🎒 Preescolar</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                selectedProgram === 'PREESCOLAR' ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'
+              }`}>
+                {groups.filter(g => getProgramOfGroup(g) === 'PREESCOLAR').length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedProgram('ALL')}
+              className={`flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                selectedProgram === 'ALL'
+                  ? 'bg-gray-900 text-white shadow-md scale-[1.01]'
+                  : 'text-gray-700 hover:text-gray-900 hover:bg-gray-200/70'
+              }`}
+            >
+              <span>🌐 Todos ({groups.length})</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start pt-2 border-t border-gray-100">
           {/* Source Group Selector */}
           <div>
             <label className="block text-xs font-black tracking-wider uppercase text-gray-800 mb-2">
-              1. Selecciona el Grupo a Cerrar / Promover
+              2. Selecciona el Grupo a Cerrar / Promover
             </label>
             <select
               value={selectedGroupId}
               onChange={e => setSelectedGroupId(e.target.value)}
               className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-sm font-bold text-fsm-blue focus:outline-none focus:ring-2 focus:ring-fsm-blue/20"
             >
-              {renderGroupOptions(groups)}
+              {renderGroupOptions(groups, selectedProgram)}
             </select>
           </div>
 
           {/* Destination / Successor Group Selector */}
           <div>
             <label className="block text-xs font-black tracking-wider uppercase text-gray-800 mb-2 flex items-center justify-between">
-              <span>2. Grupo Destino para Promovidos</span>
+              <span>3. Grupo Destino para Promovidos</span>
               {isFinalSemester && (
                 <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full font-black">
                   Último Semestre (Graduación)
@@ -299,7 +463,7 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
                 className="w-full bg-emerald-50/50 border border-emerald-300 rounded-xl px-4 py-3 text-sm font-bold text-emerald-950 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               >
                 <option value="">-- Seleccionar grupo siguiente --</option>
-                {renderGroupOptions(allGroups)}
+                {renderGroupOptions(allGroups, 'ALL')}
               </select>
             )}
           </div>
