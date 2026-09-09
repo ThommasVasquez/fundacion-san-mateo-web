@@ -21,7 +21,7 @@ interface StudentItem {
   id: string;
   nombre: string;
   documento: string | null;
-  tarjeta_numero: string | null;
+  tarjeta_numero: string | number | null;
   rfid_tag_uid: string | null;
   grado: string;
   activo: boolean;
@@ -72,7 +72,6 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
   const [decisions, setDecisions] = useState<Record<string, PromotionDecision>>({});
   const [search, setSearch] = useState<string>('');
   const [filterAction, setFilterAction] = useState<string>('all');
-  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
 
   // Modal confirmation
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -84,7 +83,6 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
     if (!selectedGroupId) return;
     setLoadingGroup(true);
     setStatusMsg({ text: '', type: '' });
-    setSelectedStudentIds(new Set());
 
     getGroupStudentsForPromotion(selectedGroupId)
       .then(res => {
@@ -141,39 +139,33 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
     }));
   };
 
-  const handleBulkAction = (action: 'promote' | 'repeat' | 'withdraw') => {
-    const targetIds = selectedStudentIds.size > 0 
-      ? Array.from(selectedStudentIds) 
-      : (groupData?.students || []).map((s: StudentItem) => s.id);
+  const togglePromoteStudent = (studentId: string) => {
+    setDecisions(prev => {
+      const currentAction = prev[studentId]?.action || 'promote';
+      const nextAction = currentAction === 'promote' ? 'repeat' : 'promote';
+      return {
+        ...prev,
+        [studentId]: {
+          studentId,
+          action: nextAction,
+          customTargetGroupId: undefined,
+          customTargetGrado: undefined
+        }
+      };
+    });
+  };
 
+  const handleSetAllPromote = (shouldPromote: boolean) => {
     setDecisions(prev => {
       const next = { ...prev };
-      targetIds.forEach((id: string) => {
-        next[id] = {
-          studentId: id,
-          action,
+      (groupData?.students || []).forEach((s: StudentItem) => {
+        next[s.id] = {
+          studentId: s.id,
+          action: shouldPromote ? 'promote' : 'repeat',
           customTargetGroupId: undefined,
           customTargetGrado: undefined
         };
       });
-      return next;
-    });
-  };
-
-  const toggleSelectAll = () => {
-    if (!groupData?.students) return;
-    if (selectedStudentIds.size === groupData.students.length) {
-      setSelectedStudentIds(new Set());
-    } else {
-      setSelectedStudentIds(new Set(groupData.students.map((s: StudentItem) => s.id)));
-    }
-  };
-
-  const toggleSelectStudent = (id: string) => {
-    setSelectedStudentIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
       return next;
     });
   };
@@ -220,6 +212,7 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
     const matchesSearch = !search || 
       s.nombre.toLowerCase().includes(search.toLowerCase()) ||
       (s.documento && s.documento.includes(search)) ||
+      (s.tarjeta_numero && String(s.tarjeta_numero).includes(search)) ||
       (s.rfid_tag_uid && s.rfid_tag_uid.toLowerCase().includes(search.toLowerCase()));
     
     const decision = decisions[s.id]?.action || 'promote';
@@ -233,6 +226,7 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
   const repeatCount = Object.values(decisions).filter(d => d.action === 'repeat').length;
   const withdrawCount = Object.values(decisions).filter(d => d.action === 'withdraw').length;
   const transferCount = Object.values(decisions).filter(d => d.action === 'transfer').length;
+  const allArePromoted = students.length > 0 && students.every(s => (decisions[s.id]?.action || 'promote') === 'promote');
 
   const renderGroupOptions = (list: GroupItem[], filterByProgram?: 'ALL' | 'TAE' | 'AIPI' | 'PREESCOLAR') => {
     const activeFilter = filterByProgram || selectedProgram;
@@ -509,30 +503,43 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
               <option value="withdraw">Solo Retirados</option>
               <option value="transfer">Solo Traslados</option>
             </select>
+
+            {/* Live Counter Badge */}
+            <div className="flex items-center gap-2">
+              <span className={`px-2.5 py-1 rounded-xl text-xs font-black border flex items-center gap-1.5 ${
+                promoteCount > 0 
+                  ? 'bg-emerald-100 text-emerald-950 border-emerald-300 shadow-2xs' 
+                  : 'bg-gray-100 text-gray-600 border-gray-200'
+              }`}>
+                <CheckCircle2 size={14} className={promoteCount > 0 ? 'text-emerald-700' : 'text-gray-400'} />
+                <span>{promoteCount} de {students.length} para Promover</span>
+              </span>
+              {repeatCount > 0 && (
+                <span className="px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-100 text-amber-950 border border-amber-300 flex items-center gap-1.5 shadow-2xs">
+                  <RotateCcw size={13} className="text-amber-700" />
+                  <span>{repeatCount} Repiten</span>
+                </span>
+              )}
+            </div>
           </div>
 
-          {/* Quick Bulk Actions */}
+          {/* Quick Bulk Select Buttons */}
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase text-gray-700 tracking-wider">
-              {selectedStudentIds.size > 0 ? `Para ${selectedStudentIds.size} seleccionados:` : 'Para todo el grupo:'}
-            </span>
             <button
-              onClick={() => handleBulkAction('promote')}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800 hover:bg-emerald-200 transition-colors flex items-center gap-1.5 shadow-2xs"
+              type="button"
+              onClick={() => handleSetAllPromote(true)}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              title="Marcar todos los estudiantes para promover"
             >
-              <CheckCircle2 size={13} /> Promover
+              <CheckCircle2 size={13} /> Promover Todos ({students.length})
             </button>
             <button
-              onClick={() => handleBulkAction('repeat')}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors flex items-center gap-1.5 shadow-2xs"
+              type="button"
+              onClick={() => handleSetAllPromote(false)}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-200 text-gray-800 hover:bg-gray-300 transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              title="Desmarcar todos para seleccionar solo los que pasan manualmente"
             >
-              <RotateCcw size={13} /> Repetir
-            </button>
-            <button
-              onClick={() => handleBulkAction('withdraw')}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-100 text-rose-800 hover:bg-rose-200 transition-colors flex items-center gap-1.5 shadow-2xs"
-            >
-              <UserX size={13} /> Retirar
+              <UserX size={13} /> Desmarcar Todos (0)
             </button>
           </div>
         </div>
@@ -542,18 +549,22 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-100/70 text-[11px] font-black tracking-wider uppercase text-gray-700">
-                <th className="p-3.5 w-10 text-center">
-                  <input
-                    type="checkbox"
-                    checked={students.length > 0 && selectedStudentIds.size === students.length}
-                    onChange={toggleSelectAll}
-                    className="rounded text-fsm-blue focus:ring-fsm-blue cursor-pointer"
-                  />
+                <th className="p-3 w-28 text-center border-r border-gray-200 bg-gray-50/80">
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[10px] font-black uppercase text-fsm-blue">¿Promover?</span>
+                    <input
+                      type="checkbox"
+                      checked={allArePromoted}
+                      onChange={e => handleSetAllPromote(e.target.checked)}
+                      title={allArePromoted ? 'Desmarcar todos (nadie promovido)' : 'Marcar todos para promover'}
+                      className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                    />
+                  </div>
                 </th>
                 <th className="p-3.5">Estudiante</th>
                 <th className="p-3.5">Identificación / Tarjeta</th>
                 <th className="p-3.5">Asistencia Semestral</th>
-                <th className="p-3.5 min-w-[240px]">Decisión para Siguiente Periodo</th>
+                <th className="p-3.5 min-w-[240px]">Acción Individual</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-xs">
@@ -572,7 +583,7 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
               ) : (
                 filteredStudents.map((s, idx) => {
                   const decision = decisions[s.id] || { studentId: s.id, action: 'promote' };
-                  const isSelected = selectedStudentIds.has(s.id);
+                  const isPromoted = decision.action === 'promote';
                   const pct = s.attendancePercentage;
 
                   return (
@@ -588,14 +599,25 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
                           : ''
                       }`}
                     >
-                      {/* Select Checkbox */}
-                      <td className="p-3.5 text-center">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleSelectStudent(s.id)}
-                          className="rounded text-fsm-blue focus:ring-fsm-blue cursor-pointer"
-                        />
+                      {/* Promover Checkbox */}
+                      <td className="p-3.5 text-center border-r border-gray-100">
+                        <label className="flex flex-col items-center gap-1 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={isPromoted}
+                            onChange={() => togglePromoteStudent(s.id)}
+                            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                          />
+                          <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                            decision.action === 'promote' 
+                              ? 'text-emerald-800 bg-emerald-100' 
+                              : decision.action === 'repeat'
+                              ? 'text-amber-800 bg-amber-100'
+                              : 'text-rose-800 bg-rose-100'
+                          }`}>
+                            {decision.action === 'promote' ? (isFinalSemester ? 'Egresa' : 'Promover') : decision.action === 'repeat' ? 'Repite' : decision.action}
+                          </span>
+                        </label>
                       </td>
 
                       {/* Student Info */}
@@ -613,18 +635,18 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
                         </div>
                       </td>
 
-                      {/* Document & RFID */}
+                      {/* Document & RFID / Tarjeta */}
                       <td className="p-3.5">
                         <div className="font-mono text-gray-700 text-[11px]">
                           Doc: {s.documento || 'Sin doc'}
                         </div>
-                        <div className="text-[10px] text-gray-600 flex items-center gap-1.5 mt-0.5">
-                          {s.rfid_tag_uid ? (
-                            <span className="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded font-mono font-bold">
-                              RFID: {s.rfid_tag_uid}
+                        <div className="text-[10px] text-gray-600 flex items-center gap-1.5 mt-1">
+                          {s.tarjeta_numero || s.rfid_tag_uid ? (
+                            <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded font-mono font-bold flex items-center gap-1">
+                              💳 Tarjeta: {s.tarjeta_numero ? `#${s.tarjeta_numero}` : s.rfid_tag_uid}
                             </span>
                           ) : (
-                            <span className="text-amber-600 font-medium">Sin tarjeta</span>
+                            <span className="text-amber-600 font-bold">Sin tarjeta</span>
                           )}
                         </div>
                       </td>
@@ -756,10 +778,10 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
             type="button"
             disabled={students.length === 0 || isPending}
             onClick={() => setIsModalOpen(true)}
-            className="px-6 py-2.5 rounded-xl font-black text-sm uppercase tracking-wider bg-fsm-blue text-white hover:bg-fsm-red transition-all shadow-md flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+            className="px-6 py-2.5 rounded-xl font-black text-sm uppercase tracking-wider bg-fsm-blue text-white hover:bg-emerald-600 transition-all shadow-md flex items-center gap-2 disabled:opacity-50 cursor-pointer"
           >
             <GraduationCap size={18} />
-            <span>Ejecutar Cierre y Promoción</span>
+            <span>Ejecutar Promoción ({promoteCount} a promover, {repeatCount} repiten)</span>
           </button>
         </div>
       </div>
@@ -780,25 +802,27 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
 
             <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 space-y-2 text-xs">
               <div className="flex justify-between py-1 border-b border-gray-200 font-bold">
-                <span className="text-gray-600">Total Estudiantes:</span>
+                <span className="text-gray-600">Total Estudiantes en el Grupo:</span>
                 <span className="text-gray-900">{students.length}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-gray-200 font-bold text-emerald-800">
                 <span>Promovidos a {targetGrado || 'Siguiente Semestre'}:</span>
-                <span>{promoteCount}</span>
+                <span className="text-sm font-black">{promoteCount} estudiante{promoteCount !== 1 ? 's' : ''}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-gray-200 font-bold text-amber-800">
-                <span>Repiten en {groupData?.group?.nombre}:</span>
-                <span>{repeatCount}</span>
+                <span>Repiten curso en {groupData?.group?.nombre}:</span>
+                <span className="text-sm font-black">{repeatCount} estudiante{repeatCount !== 1 ? 's' : ''}</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-gray-200 font-bold text-rose-800">
-                <span>Retirados (Acceso torniquete bloqueado):</span>
-                <span>{withdrawCount}</span>
-              </div>
+              {withdrawCount > 0 && (
+                <div className="flex justify-between py-1 border-b border-gray-200 font-bold text-rose-800">
+                  <span>Retirados (Acceso torniquete bloqueado):</span>
+                  <span className="text-sm font-black">{withdrawCount}</span>
+                </div>
+              )}
               {transferCount > 0 && (
                 <div className="flex justify-between py-1 font-bold text-indigo-800">
                   <span>Traslados a otros cursos:</span>
-                  <span>{transferCount}</span>
+                  <span className="text-sm font-black">{transferCount}</span>
                 </div>
               )}
             </div>

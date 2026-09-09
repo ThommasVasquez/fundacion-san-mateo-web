@@ -18,7 +18,7 @@ export default async function EnrollmentPage({ searchParams }: EnrollmentPagePro
 
   // 1. Fetch all students
   const students = await sql`
-    SELECT id, nombre, grado, rfid_tag_uid, activo 
+    SELECT id, nombre, grado, rfid_tag_uid, tarjeta_numero, activo 
     FROM students 
     ORDER BY grado, nombre
   `;
@@ -62,6 +62,7 @@ export default async function EnrollmentPage({ searchParams }: EnrollmentPagePro
           nombre: s.nombre,
           grado: s.grado,
           rfid_tag_uid: s.rfid_tag_uid,
+          tarjeta_numero: s.tarjeta_numero ? String(s.tarjeta_numero) : null,
           activo: s.activo
         }))} 
         activeStudentId={activeStudentId} 

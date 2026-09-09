@@ -19,6 +19,7 @@ interface Student {
   nombre: string;
   grado: string;
   rfid_tag_uid: string | null;
+  tarjeta_numero?: string | null;
   activo: boolean;
 }
 
@@ -326,7 +327,8 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
   // Filter students
   const filteredStudents = students.filter(s => {
     const matchesSearch = s.nombre.toLowerCase().includes(search.toLowerCase()) || 
-                          (s.rfid_tag_uid && s.rfid_tag_uid.toLowerCase().includes(search.toLowerCase()));
+                          (s.rfid_tag_uid && s.rfid_tag_uid.toLowerCase().includes(search.toLowerCase())) ||
+                          (s.tarjeta_numero && s.tarjeta_numero.includes(search));
     const matchesGrado = !filterGrado || s.grado === filterGrado;
     const matchesPrograma = filterPrograma === 'all' || (() => {
       const cfg = getAcademicGroupConfig(s.grado);
@@ -513,7 +515,6 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
           Estudiantes: {filteredStudents.length} / {students.length}
         </div>
       </div>
-
       {/* Student List */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {filteredStudents.length === 0 ? (
@@ -522,7 +523,8 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
           </div>
         ) : (
           filteredStudents.map(student => {
-            const isPendingLink = pendingUid && !student.rfid_tag_uid;
+            const hasCard = Boolean(student.rfid_tag_uid || student.tarjeta_numero);
+            const isPendingLink = pendingUid && !hasCard;
             const isSelected = selectedStudentIds.includes(student.id);
             
             return (
@@ -531,7 +533,7 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
                 className={`bg-white p-6 rounded-[2rem] border shadow-premium transition-all duration-300 flex flex-col justify-between gap-6 relative ${
                   !student.activo ? 'border-amber-200 bg-amber-50/20 opacity-85' :
                   isSelected ? 'border-purple-300 ring-2 ring-purple-100' :
-                  isPendingLink ? 'border-yellow-200 bg-yellow-50/10' : 'border-gray-100 hover:border-fsm-blue/20'
+                  isPendingLink ? 'border-yellow-400 ring-4 ring-yellow-100' : 'border-gray-100 hover:border-fsm-blue/20'
                 }`}
               >
                 <div className="flex justify-between items-start gap-4">
@@ -565,9 +567,9 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
                         </button>
                       </div>
                       <h4 className="text-lg font-black text-fsm-blue uppercase mt-1 leading-tight">{student.nombre}</h4>
-                      {student.rfid_tag_uid ? (
+                      {hasCard ? (
                         <p className="text-xs text-green-600 font-bold mt-1 flex items-center gap-1">
-                          <Check size={14} /> Tarjeta vinculada: <span className="font-mono bg-green-50 px-2 py-0.5 rounded text-[10px]">{student.rfid_tag_uid}</span>
+                          <Check size={14} /> Tarjeta vinculada: <span className="font-mono bg-green-50 px-2 py-0.5 rounded text-[10px]">{student.tarjeta_numero ? `#${student.tarjeta_numero}` : student.rfid_tag_uid}</span>
                         </p>
                       ) : (
                         <p className="text-xs text-gray-400 font-bold mt-1 flex items-center gap-1">
@@ -620,7 +622,7 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
                 </div>
 
                 <div className="flex flex-col gap-3 pt-4 border-t border-gray-50">
-                  {student.rfid_tag_uid ? (
+                  {hasCard ? (
                     <button
                       onClick={() => handleUnlink(student.id)}
                       disabled={loading[student.id]}
