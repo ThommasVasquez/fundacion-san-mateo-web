@@ -64,9 +64,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               <Link href="/admin/attendance/absences" className="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase bg-blue-50 text-fsm-blue hover:bg-fsm-blue hover:text-white transition-all border border-blue-200 shrink-0">
                 📋 Alertas
               </Link>
-             <Link href="/admin/attendance/enrollment" className="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase hover:bg-white transition-all text-fsm-blue shrink-0">
-               Matrícula
-             </Link>
+              <Link href="/admin/attendance/enrollment" className="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase hover:bg-white transition-all text-fsm-blue shrink-0">
+                Matrícula
+              </Link>
+              <Link href="/admin/attendance/promotion" className="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase bg-purple-50 text-purple-900 hover:bg-purple-700 hover:text-white transition-all border border-purple-200 shrink-0">
+                🎓 Promoción
+              </Link>
               <Link href="/admin/documents" className="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase bg-teal-50 text-teal-900 hover:bg-teal-700 hover:text-white transition-all border border-teal-200 shadow-2xs shrink-0 font-bold">
                 📜 Documentos y QR
               </Link>

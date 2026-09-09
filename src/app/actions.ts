@@ -2209,3 +2209,264 @@ export async function getAuditLogsAction(filters?: {
     return { error: error?.message || 'Error al consultar logs de auditoría', logs: [], total: 0 };
   }
 }
+
+/**
+ * Obtiene los estudiantes de un grupo con su balance de asistencia y la sugerencia del siguiente semestre
+ */
+export async function getGroupStudentsForPromotion(groupId: string) {
+  try {
+    const groupRes = await sql`
+      SELECT id, nombre, jornada, tipo
+      FROM groups
+      WHERE id = ${groupId}::uuid
+      LIMIT 1
+    `;
+    if (groupRes.length === 0) {
+      return { error: 'Grupo no encontrado' };
+    }
+    const group = groupRes[0];
+
+    // Estudiantes matriculados activos en este grupo
+    const students = await sql`
+      SELECT 
+        s.id, 
+        s.nombre, 
+        s.documento, 
+        s.tarjeta_numero, 
+        s.rfid_tag_uid, 
+        s.grado, 
+        s.activo,
+        e.id as enrollment_id,
+        COALESCE(SUM(CASE WHEN ar.estado = 'PRESENTE' THEN 1 ELSE 0 END), 0)::int as presentes,
+        COALESCE(SUM(CASE WHEN ar.estado = 'AUSENTE' THEN 1 ELSE 0 END), 0)::int as ausentes,
+        COALESCE(SUM(CASE WHEN ar.estado = 'EXCUSA' THEN 1 ELSE 0 END), 0)::int as excusas,
+        COUNT(ar.id)::int as total_registros
+      FROM students s
+      JOIN enrollments e ON e.student_id = s.id
+      LEFT JOIN attendance_records_normalized ar ON ar.student_id = s.id
+      LEFT JOIN class_sessions cs ON cs.id = ar.session_id AND cs.group_id = ${groupId}::uuid
+      WHERE e.group_id = ${groupId}::uuid
+        AND (e.activo IS NULL OR e.activo = TRUE)
+      GROUP BY s.id, s.nombre, s.documento, s.tarjeta_numero, s.rfid_tag_uid, s.grado, s.activo, e.id
+      ORDER BY s.nombre ASC
+    `;
+
+    // Buscar grupo sucesor sugerido
+    const allGroups = await sql`SELECT id, nombre, jornada, tipo FROM groups ORDER BY nombre ASC`;
+    let suggestedTargetGroup: any = null;
+    let isFinalSemester = false;
+
+    const currentName = group.nombre.toUpperCase();
+    let nextNamePrefix = '';
+
+    if (currentName.startsWith('I ') || currentName.startsWith('1 ')) {
+      nextNamePrefix = currentName.replace(/^(I|1)\s+/, 'II ');
+    } else if (currentName.startsWith('II ') || currentName.startsWith('2 ')) {
+      nextNamePrefix = currentName.replace(/^(II|2)\s+/, 'III ');
+    } else if (currentName.startsWith('III ') || currentName.startsWith('3 ')) {
+      isFinalSemester = true;
+    }
+
+    if (nextNamePrefix) {
+      suggestedTargetGroup = allGroups.find((g: any) => 
+        g.nombre.toUpperCase().trim() === nextNamePrefix.trim() ||
+        g.nombre.toUpperCase().replace(/\s+/g, ' ') === nextNamePrefix.replace(/\s+/g, ' ')
+      );
+    }
+
+    return {
+      success: true,
+      group,
+      students: students.map((s: any) => {
+        const total = s.presentes + s.ausentes + s.excusas;
+        const percentage = total > 0 ? Math.round((s.presentes / total) * 100) : 100;
+        return {
+          ...s,
+          attendancePercentage: percentage
+        };
+      }),
+      allGroups,
+      suggestedTargetGroup: suggestedTargetGroup || null,
+      isFinalSemester
+    };
+  } catch (error: any) {
+    console.error('Error in getGroupStudentsForPromotion:', error);
+    return { error: error?.message || 'Error al consultar datos del grupo' };
+  }
+}
+
+export interface PromotionDecision {
+  studentId: string;
+  action: 'promote' | 'repeat' | 'withdraw' | 'transfer';
+  customTargetGroupId?: string;
+  customTargetGrado?: string;
+}
+
+/**
+ * Ejecuta el cierre del periodo y la promoción, repitencia o retiro de los estudiantes
+ */
+export async function executeSemesterPromotion(
+  sourceGroupId: string,
+  targetGroupId: string | null,
+  targetGrado: string | null,
+  decisions: PromotionDecision[]
+) {
+  try {
+    // 1. Validar sesión
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session')?.value;
+    let adminEmail = 'admin@fundacionsanmateosoacha.edu.co';
+    let adminName = 'Administrador';
+
+    if (sessionToken) {
+      try {
+        const payload = await decrypt(sessionToken);
+        if (payload?.email) adminEmail = payload.email;
+        if (payload?.nombre) adminName = payload.nombre;
+      } catch {
+        // use defaults
+      }
+    }
+
+    const groupRes = await sql`SELECT id, nombre FROM groups WHERE id = ${sourceGroupId}::uuid LIMIT 1`;
+    if (groupRes.length === 0) {
+      return { error: 'Grupo origen no encontrado' };
+    }
+    const sourceGroupName = groupRes[0].nombre;
+
+    let targetGroupName = targetGrado || '';
+    let targetSessions: any[] = [];
+    if (targetGroupId) {
+      const tgRes = await sql`SELECT id, nombre FROM groups WHERE id = ${targetGroupId}::uuid LIMIT 1`;
+      if (tgRes.length > 0) {
+        targetGroupName = tgRes[0].nombre;
+        targetSessions = await sql`SELECT id FROM class_sessions WHERE group_id = ${targetGroupId}::uuid`;
+      }
+    }
+
+    let promotedCount = 0;
+    let repeatedCount = 0;
+    let withdrawnCount = 0;
+    let transferredCount = 0;
+
+    for (const d of decisions) {
+      const studentId = d.studentId;
+
+      // Cerrar matrícula en el grupo origen
+      await sql`
+        UPDATE enrollments 
+        SET activo = FALSE, fecha_fin = CURRENT_DATE 
+        WHERE student_id = ${studentId}::uuid AND group_id = ${sourceGroupId}::uuid
+      `;
+
+      if (d.action === 'promote') {
+        if (targetGrado === 'EGRESADO' || !targetGroupId) {
+          // Graduación / Egresado
+          await sql`
+            UPDATE students 
+            SET grado = 'EGRESADO', activo = FALSE 
+            WHERE id = ${studentId}::uuid
+          `;
+        } else {
+          // Promoción al nuevo grupo
+          await sql`
+            UPDATE students 
+            SET grado = ${targetGroupName}, activo = TRUE 
+            WHERE id = ${studentId}::uuid
+          `;
+          await sql`
+            INSERT INTO enrollments (id, student_id, group_id, activo, fecha_inicio, created_at)
+            VALUES (gen_random_uuid(), ${studentId}::uuid, ${targetGroupId}::uuid, TRUE, CURRENT_DATE, NOW())
+          `;
+          // Crear celdas de asistencia si el nuevo grupo tiene sesiones
+          for (const sess of targetSessions) {
+            await sql`
+              INSERT INTO attendance_records_normalized (id, student_id, session_id, estado, created_at, updated_at)
+              VALUES (gen_random_uuid(), ${studentId}::uuid, ${sess.id}::uuid, 'AUSENTE', NOW(), NOW())
+              ON CONFLICT DO NOTHING
+            `;
+          }
+        }
+        promotedCount++;
+      } else if (d.action === 'repeat') {
+        // Repite en el mismo grupo
+        await sql`
+          UPDATE students 
+          SET grado = ${sourceGroupName}, activo = TRUE 
+          WHERE id = ${studentId}::uuid
+        `;
+        await sql`
+          INSERT INTO enrollments (id, student_id, group_id, activo, fecha_inicio, created_at)
+          VALUES (gen_random_uuid(), ${studentId}::uuid, ${sourceGroupId}::uuid, TRUE, CURRENT_DATE, NOW())
+        `;
+        repeatedCount++;
+      } else if (d.action === 'withdraw') {
+        // Retiro / Deserción
+        await sql`
+          UPDATE students 
+          SET activo = FALSE 
+          WHERE id = ${studentId}::uuid
+        `;
+        withdrawnCount++;
+      } else if (d.action === 'transfer') {
+        // Traslado manual a otro grupo
+        const destGroupId = d.customTargetGroupId;
+        const destGrado = d.customTargetGrado || 'TRASLADADO';
+        if (destGroupId) {
+          await sql`
+            UPDATE students 
+            SET grado = ${destGrado}, activo = TRUE 
+            WHERE id = ${studentId}::uuid
+          `;
+          await sql`
+            INSERT INTO enrollments (id, student_id, group_id, activo, fecha_inicio, created_at)
+            VALUES (gen_random_uuid(), ${studentId}::uuid, ${destGroupId}::uuid, TRUE, CURRENT_DATE, NOW())
+          `;
+          const customSessions = await sql`SELECT id FROM class_sessions WHERE group_id = ${destGroupId}::uuid`;
+          for (const sess of customSessions) {
+            await sql`
+              INSERT INTO attendance_records_normalized (id, student_id, session_id, estado, created_at, updated_at)
+              VALUES (gen_random_uuid(), ${studentId}::uuid, ${sess.id}::uuid, 'AUSENTE', NOW(), NOW())
+              ON CONFLICT DO NOTHING
+            `;
+          }
+        }
+        transferredCount++;
+      }
+    }
+
+    // Registrar en auditoría
+    await logAuditEvent({
+      action: 'CIERRE_Y_PROMOCION_SEMESTRE',
+      category: 'ATTENDANCE',
+      details: `Cierre y promoción del grupo ${sourceGroupName}: ${promotedCount} promovidos, ${repeatedCount} repitieron, ${withdrawnCount} retirados, ${transferredCount} trasladados.`,
+      userEmail: adminEmail,
+      userName: adminName,
+    });
+
+    revalidatePath('/admin/attendance');
+    revalidatePath('/admin/attendance/enrollment');
+    revalidatePath('/admin/attendance/promotion');
+    revalidatePath(`/admin/attendance/group/${sourceGroupId}`);
+    if (targetGroupId) {
+      revalidatePath(`/admin/attendance/group/${targetGroupId}`);
+    }
+
+    return {
+      success: true,
+      summary: {
+        total: decisions.length,
+        promoted: promotedCount,
+        repeated: repeatedCount,
+        withdrawn: withdrawnCount,
+        transferred: transferredCount,
+        sourceGroup: sourceGroupName,
+        targetGroup: targetGroupName || 'N/A'
+      }
+    };
+  } catch (error: any) {
+    console.error('Error in executeSemesterPromotion:', error);
+    return { error: error?.message || 'Error al procesar la promoción de semestre' };
+  }
+}
+

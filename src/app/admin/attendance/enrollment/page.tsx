@@ -43,9 +43,17 @@ export default async function EnrollmentPage({ searchParams }: EnrollmentPagePro
         <span className="text-fsm-blue">Gestión de Estudiantes y Tarjetas</span>
       </div>
 
-      <div>
-        <h1 className="text-3xl font-black text-fsm-blue uppercase tracking-tighter mb-2">GESTIÓN DE ESTUDIANTES Y VINCULACIÓN DE TARJETAS</h1>
-        <p className="text-gray-900 font-medium">Modifica grados/cursos/turnos, crea nuevos estudiantes, o vincula tarjetas RFID y NFC.</p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-fsm-blue uppercase tracking-tighter mb-2">GESTIÓN DE ESTUDIANTES Y VINCULACIÓN DE TARJETAS</h1>
+          <p className="text-gray-900 font-medium">Modifica grados/cursos/turnos, crea nuevos estudiantes, o vincula tarjetas RFID y NFC.</p>
+        </div>
+        <Link
+          href="/admin/attendance/promotion"
+          className="px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider bg-purple-700 hover:bg-purple-800 text-white transition-all shadow-sm flex items-center gap-2 shrink-0"
+        >
+          <span>🎓 Promoción de Semestre</span>
+        </Link>
       </div>
 
       <EnrollmentClient 
