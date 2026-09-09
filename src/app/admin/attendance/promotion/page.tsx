@@ -7,11 +7,14 @@ import { ArrowLeft, ChevronRight, GraduationCap } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 export default async function PromotionPage() {
-  // 1. Consultar todos los grupos disponibles ordenados por nombre
+  // 1. Consultar todos los grupos disponibles con su conteo de estudiantes
   const groupsRes = await sql`
-    SELECT id, nombre, jornada, tipo
-    FROM groups
-    ORDER BY nombre ASC
+    SELECT g.id, g.nombre, g.jornada, g.tipo,
+           COUNT(e.id)::int as enrolled_count
+    FROM groups g
+    LEFT JOIN enrollments e ON e.group_id = g.id AND (e.activo IS NULL OR e.activo = TRUE)
+    GROUP BY g.id, g.nombre, g.jornada, g.tipo
+    ORDER BY g.nombre ASC
   `;
 
   return (
@@ -58,7 +61,8 @@ export default async function PromotionPage() {
         id: g.id,
         nombre: g.nombre,
         jornada: g.jornada,
-        tipo: g.tipo
+        tipo: g.tipo,
+        enrolled_count: Number(g.enrolled_count) || 0
       }))} />
     </div>
   );

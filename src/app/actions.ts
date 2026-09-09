@@ -2254,9 +2254,12 @@ export async function getGroupStudentsForPromotion(groupId: string) {
 
     // Buscar grupo sucesor sugerido según catálogo institucional
     const allGroups = await sql`
-      SELECT id, nombre, jornada, tipo, programa_codigo, programa_nombre, semestre_romano, modalidad 
-      FROM groups 
-      ORDER BY programa_nombre ASC, semestre_romano ASC, nombre ASC
+      SELECT g.id, g.nombre, g.jornada, g.tipo, g.programa_codigo, g.programa_nombre, g.semestre_romano, g.modalidad,
+             COUNT(e.id)::int as enrolled_count
+      FROM groups g
+      LEFT JOIN enrollments e ON e.group_id = g.id AND (e.activo IS NULL OR e.activo = TRUE)
+      GROUP BY g.id, g.nombre, g.jornada, g.tipo, g.programa_codigo, g.programa_nombre, g.semestre_romano, g.modalidad
+      ORDER BY g.programa_nombre ASC, g.semestre_romano ASC, g.nombre ASC
     `;
     let suggestedTargetGroup: any = null;
     const { nextGroupName, isFinalSemester } = getNextAcademicGroup(group.nombre);

@@ -329,7 +329,10 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
     const matchesSearch = s.nombre.toLowerCase().includes(search.toLowerCase()) || 
                           (s.rfid_tag_uid && s.rfid_tag_uid.toLowerCase().includes(search.toLowerCase())) ||
                           (s.tarjeta_numero && s.tarjeta_numero.includes(search));
-    const matchesGrado = !filterGrado || s.grado === filterGrado;
+    const matchesGrado = !filterGrado || 
+                         s.grado === filterGrado ||
+                         (filterGrado === 'II DIURNO A CB' && s.grado === 'II DIURNO CB') ||
+                         (filterGrado === 'II DIURNO CB' && s.grado === 'II DIURNO A CB');
     const matchesPrograma = filterPrograma === 'all' || (() => {
       const cfg = getAcademicGroupConfig(s.grado);
       if (!cfg) return false;
@@ -465,36 +468,38 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
               className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none w-full"
             >
               <option value="">Todos los Grados/Turnos</option>
-              {filterPrograma === 'all' ? (
-                <>
-                  <optgroup label="🩺 Enfermería TAE">
-                    {grades.filter(g => getAcademicGroupConfig(g)?.programCode === 'TAE').map(g => (
-                      <option key={g} value={g}>{g}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="👶 Primera Infancia AIPI">
-                    {grades.filter(g => getAcademicGroupConfig(g)?.programCode === 'AIPI').map(g => (
-                      <option key={g} value={g}>{g}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="🎒 Preescolar">
-                    {grades.filter(g => getAcademicGroupConfig(g)?.programCode === 'PREESCOLAR').map(g => (
-                      <option key={g} value={g}>{g}</option>
-                    ))}
-                  </optgroup>
-                  {grades.filter(g => !getAcademicGroupConfig(g)).length > 0 && (
-                    <optgroup label="Otros / Sin Clasificar">
-                      {grades.filter(g => !getAcademicGroupConfig(g)).map(g => (
-                        <option key={g} value={g}>{g}</option>
-                      ))}
-                    </optgroup>
-                  )}
-                </>
-              ) : (
-                grades
+              {(() => {
+                const renderGradeOption = (g: string) => {
+                  const count = students.filter(s => s.grado === g).length;
+                  const label = g === 'II DIURNO A CB' ? 'II DIURNO A CB [II DIURNO CB]' : g;
+                  return <option key={g} value={g}>{label} ({count})</option>;
+                };
+
+                if (filterPrograma === 'all') {
+                  return (
+                    <>
+                      <optgroup label="🩺 Enfermería TAE">
+                        {grades.filter(g => getAcademicGroupConfig(g)?.programCode === 'TAE').map(renderGradeOption)}
+                      </optgroup>
+                      <optgroup label="👶 Primera Infancia AIPI">
+                        {grades.filter(g => getAcademicGroupConfig(g)?.programCode === 'AIPI').map(renderGradeOption)}
+                      </optgroup>
+                      <optgroup label="🎒 Preescolar">
+                        {grades.filter(g => getAcademicGroupConfig(g)?.programCode === 'PREESCOLAR').map(renderGradeOption)}
+                      </optgroup>
+                      {grades.filter(g => !getAcademicGroupConfig(g)).length > 0 && (
+                        <optgroup label="Otros / Sin Clasificar">
+                          {grades.filter(g => !getAcademicGroupConfig(g)).map(renderGradeOption)}
+                        </optgroup>
+                      )}
+                    </>
+                  );
+                }
+
+                return grades
                   .filter(g => getAcademicGroupConfig(g)?.programCode === filterPrograma)
-                  .map(g => <option key={g} value={g}>{g}</option>)
-              )}
+                  .map(renderGradeOption);
+              })()}
             </select>
           </div>
 

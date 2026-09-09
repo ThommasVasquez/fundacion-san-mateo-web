@@ -15,6 +15,7 @@ interface GroupItem {
   nombre: string;
   jornada: string;
   tipo: string;
+  enrolled_count?: number;
 }
 
 interface StudentItem {
@@ -231,6 +232,13 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
   const renderGroupOptions = (list: GroupItem[], filterByProgram?: 'ALL' | 'TAE' | 'AIPI' | 'PREESCOLAR') => {
     const activeFilter = filterByProgram || selectedProgram;
 
+    const formatGroupLabel = (g: GroupItem, extra = '') => {
+      const countStr = g.enrolled_count !== undefined ? ` — (${g.enrolled_count} est.)` : '';
+      const cbStr = g.tipo === 'CB' ? ' • Calendario B' : '';
+      const aliasStr = g.nombre === 'II DIURNO A CB' ? ' [II DIURNO CB]' : '';
+      return `${g.nombre}${aliasStr}${cbStr}${extra}${countStr}`;
+    };
+
     if (activeFilter === 'TAE') {
       const taeDiurno = list.filter(g => getProgramOfGroup(g) === 'TAE' && (g.jornada === 'DIURNO' || g.nombre.includes('DIURNO')));
       const taeNoche = list.filter(g => getProgramOfGroup(g) === 'TAE' && (g.jornada === 'NOCHE' || g.nombre.includes('NOCHE')));
@@ -241,21 +249,21 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
           <optgroup label="☀️ Enfermería TAE - Jornada Diurna">
             {taeDiurno.map(g => (
               <option key={g.id} value={g.id}>
-                {g.nombre} {g.tipo === 'CB' ? '(Calendario B)' : ''}
+                {formatGroupLabel(g)}
               </option>
             ))}
           </optgroup>
           <optgroup label="🌙 Enfermería TAE - Jornada Nocturna">
             {taeNoche.map(g => (
               <option key={g.id} value={g.id}>
-                {g.nombre} {g.tipo === 'CB' ? '(Calendario B)' : ''}
+                {formatGroupLabel(g)}
               </option>
             ))}
           </optgroup>
           <optgroup label="📅 Enfermería TAE - Jornada Sabatina">
             {taeSabado.map(g => (
               <option key={g.id} value={g.id}>
-                {g.nombre} {g.tipo === 'CB' ? '(Calendario B)' : ''}
+                {formatGroupLabel(g)}
               </option>
             ))}
           </optgroup>
@@ -269,7 +277,7 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
         <optgroup label="👶 Primera Infancia (AIPI)">
           {aipi.map(g => (
             <option key={g.id} value={g.id}>
-              {g.nombre} (Diurno)
+              {formatGroupLabel(g, ' • Diurno')}
             </option>
           ))}
         </optgroup>
@@ -282,7 +290,7 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
         <optgroup label="🎒 Técnico Auxiliar en Preescolar">
           {preescolar.map(g => (
             <option key={g.id} value={g.id}>
-              {g.nombre} (Diurno)
+              {formatGroupLabel(g, ' • Diurno')}
             </option>
           ))}
         </optgroup>
@@ -299,21 +307,21 @@ export default function PromotionClient({ groups }: PromotionClientProps) {
         <optgroup label="🩺 Técnico Auxiliar en Enfermería (TAE)">
           {tae.map(g => (
             <option key={g.id} value={g.id}>
-              {g.nombre} ({g.jornada} {g.tipo === 'CB' ? '• Calendario B' : ''})
+              {formatGroupLabel(g, ` • ${g.jornada}`)}
             </option>
           ))}
         </optgroup>
         <optgroup label="👶 Primera Infancia (AIPI)">
           {aipi.map(g => (
             <option key={g.id} value={g.id}>
-              {g.nombre} (Diurno)
+              {formatGroupLabel(g, ' • Diurno')}
             </option>
           ))}
         </optgroup>
         <optgroup label="🎒 Técnico Auxiliar en Preescolar">
           {preescolar.map(g => (
             <option key={g.id} value={g.id}>
-              {g.nombre} (Diurno)
+              {formatGroupLabel(g, ' • Diurno')}
             </option>
           ))}
         </optgroup>

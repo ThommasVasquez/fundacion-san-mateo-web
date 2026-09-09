@@ -249,10 +249,10 @@ export function normalizeGroupName(rawName: string): string {
   const clean = rawName.toUpperCase().replace(/\s+/g, ' ').trim();
 
   // Mapeos de variaciones comunes
-  if (clean === 'I DIURNO A CB' || clean === 'I DIURRNO A CB' || clean === 'I DA CB') return 'I DIURNO CB';
-  if (clean === 'I DIURNO B CB' || clean === 'I DB CB') return 'II DIURNO A CB';
-  if (clean === 'I SABADO CB' || clean === 'ISB CB') return 'II SABADO CB';
-  if (clean === 'I NOCHE A CB') return 'I NOCHE CB';
+  if (clean === 'I DIURNO A CB' || clean === 'I DIURRNO A CB' || clean === 'I DA CB' || clean === '1 DIURNO CB' || clean === '1 DIURNO A CB') return 'I DIURNO CB';
+  if (clean === 'II DIURNO CB' || clean === '2 DIURNO CB' || clean === '2 DIURNO A CB' || clean === 'I DIURNO B CB' || clean === 'I DB CB' || clean === 'II DIURNO B CB') return 'II DIURNO A CB';
+  if (clean === 'I SABADO CB' || clean === 'ISB CB' || clean === '1 SABADO CB' || clean === 'ISCB') return 'II SABADO CB';
+  if (clean === 'I NOCHE A CB' || clean === '1 NOCHE CB') return 'I NOCHE CB';
   if (clean === '1 AIPI') return 'I AIPI';
   if (clean === '2 AIPI') return 'II AIPI';
   if (clean === '1 PREESCOLAR' || clean === '1 PREEESCOLAR') return 'I PREESCOLAR';

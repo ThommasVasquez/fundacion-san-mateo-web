@@ -228,12 +228,18 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
   // Filter in memory by search, degree, sede, and anomaly
   const searchLower = filterSearch.toLowerCase();
   let filteredEvents = rawEvents.filter((ev: any) => {
-    if (filterGrado && ev.student_grado !== filterGrado) return false;
+    if (filterGrado) {
+      const matchGrado = ev.student_grado === filterGrado ||
+        (filterGrado === 'II DIURNO CB' && ev.student_grado === 'II DIURNO A CB') ||
+        (filterGrado === 'II DIURNO A CB' && ev.student_grado === 'II DIURNO CB');
+      if (!matchGrado) return false;
+    }
     if (filterSede && (ev.sede || 'Sede 1') !== filterSede) return false;
     if (filterAnomalyOnly && !ev.isAnomaly) return false;
     if (filterSearch) {
       const nameMatch = (ev.student_name || 'Tarjeta no asignada').toLowerCase().includes(searchLower);
-      const gradoMatch = (ev.student_grado || '').toLowerCase().includes(searchLower);
+      const gradoMatch = (ev.student_grado || '').toLowerCase().includes(searchLower) ||
+        (searchLower.includes('ii diurno cb') && (ev.student_grado || '').toLowerCase().includes('ii diurno a cb'));
       const uidMatch = (ev.rfid_tag_uid || '').toLowerCase().includes(searchLower);
       const readerMatch = (ev.reader_name || ev.reader_id || '').toLowerCase().includes(searchLower);
       const sedeMatch = (ev.sede || 'Sede 1').toLowerCase().includes(searchLower);

@@ -87,6 +87,45 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const body = await req.json().catch(() => ({}));
+    if (body.action === 'inspect') {
+      const groups = await sql`
+        SELECT g.id, g.nombre, g.jornada, g.tipo, g.programa_nombre,
+               COUNT(e.id) as enrolled_count
+        FROM groups g
+        LEFT JOIN enrollments e ON e.group_id = g.id AND (e.activo IS NULL OR e.activo = TRUE)
+        GROUP BY g.id, g.nombre, g.jornada, g.tipo, g.programa_nombre
+        ORDER BY g.nombre ASC
+      `;
+
+      const studentGrades = await sql`
+        SELECT grado, count(*) as count
+        FROM students
+        GROUP BY grado
+        ORDER BY count DESC
+      `;
+
+      const cbStudents = await sql`
+        SELECT s.id, s.nombre, s.grado, s.tarjeta_numero, s.rfid_tag_uid, s.activo,
+               g.id as group_id, g.nombre as enrolled_group
+        FROM students s
+        LEFT JOIN enrollments e ON e.student_id = s.id AND (e.activo IS NULL OR e.activo = TRUE)
+        LEFT JOIN groups g ON g.id = e.group_id
+        WHERE s.grado ILIKE '%CB%' 
+           OR s.grado ILIKE '%DIURNO%' 
+           OR s.grado ILIKE '%1 DIURNO B%'
+           OR s.grado ILIKE '%II DIURNO%'
+        ORDER BY s.grado, s.nombre
+      `;
+
+      return NextResponse.json({
+        success: true,
+        groups,
+        studentGrades,
+        cbStudents
+      });
+    }
+
     console.log('[UNIFICATION] Starting Canonical Student Unification in Production DB...');
 
     // 1. Ensure columns
@@ -304,13 +343,28 @@ export async function POST(req: Request) {
     // Matricular alumnos de I DIURNO CB
     const cbDiurnoG = await sql`SELECT id FROM groups WHERE nombre = 'I DIURNO CB' LIMIT 1`;
     if (cbDiurnoG.length > 0) {
-      const cbAlumnos = await sql`SELECT id FROM students WHERE grado = 'I DIURNO CB'`;
+      const cbAlumnos = await sql`SELECT id FROM students WHERE grado IN ('I DIURNO CB', 'I DIURNO A CB')`;
       for (const a of cbAlumnos) {
         const enr = await sql`SELECT id FROM enrollments WHERE student_id = ${a.id}::uuid AND group_id = ${cbDiurnoG[0].id}::uuid LIMIT 1`;
         if (enr.length === 0) {
           await sql`
             INSERT INTO enrollments (id, student_id, group_id, activo, created_at)
             VALUES (gen_random_uuid(), ${a.id}::uuid, ${cbDiurnoG[0].id}::uuid, true, NOW())
+          `;
+        }
+      }
+    }
+
+    // Matricular alumnos de II DIURNO A CB (todos los que tengan grado II DIURNO A CB o II DIURNO CB o I DIURNO B CB)
+    const cbDiurno2G = await sql`SELECT id FROM groups WHERE nombre = 'II DIURNO A CB' LIMIT 1`;
+    if (cbDiurno2G.length > 0) {
+      const cb2Alumnos = await sql`SELECT id FROM students WHERE grado IN ('II DIURNO A CB', 'II DIURNO CB', 'I DIURNO B CB')`;
+      for (const a of cb2Alumnos) {
+        const enr = await sql`SELECT id FROM enrollments WHERE student_id = ${a.id}::uuid AND group_id = ${cbDiurno2G[0].id}::uuid LIMIT 1`;
+        if (enr.length === 0) {
+          await sql`
+            INSERT INTO enrollments (id, student_id, group_id, activo, created_at)
+            VALUES (gen_random_uuid(), ${a.id}::uuid, ${cbDiurno2G[0].id}::uuid, true, NOW())
           `;
         }
       }
@@ -326,6 +380,21 @@ export async function POST(req: Request) {
           await sql`
             INSERT INTO enrollments (id, student_id, group_id, activo, created_at)
             VALUES (gen_random_uuid(), ${a.id}::uuid, ${nocheCBGroup[0].id}::uuid, true, NOW())
+          `;
+        }
+      }
+    }
+
+    // Matricular alumnos de II SABADO CB
+    const sabadoCBGroup = await sql`SELECT id FROM groups WHERE nombre = 'II SABADO CB' LIMIT 1`;
+    if (sabadoCBGroup.length > 0) {
+      const sabadoCBAlumnos = await sql`SELECT id FROM students WHERE grado IN ('II SABADO CB', 'ISCB', 'I SABADO CB')`;
+      for (const a of sabadoCBAlumnos) {
+        const enr = await sql`SELECT id FROM enrollments WHERE student_id = ${a.id}::uuid AND group_id = ${sabadoCBGroup[0].id}::uuid LIMIT 1`;
+        if (enr.length === 0) {
+          await sql`
+            INSERT INTO enrollments (id, student_id, group_id, activo, created_at)
+            VALUES (gen_random_uuid(), ${a.id}::uuid, ${sabadoCBGroup[0].id}::uuid, true, NOW())
           `;
         }
       }

@@ -280,7 +280,7 @@ export default function AttendanceFilters({
               <option value="">Todos los Grados / Turnos</option>
               {grades.map((g) => (
                 <option key={g} value={g}>
-                  {g}
+                  {g === 'II DIURNO A CB' ? 'II DIURNO A CB [II DIURNO CB]' : g}
                 </option>
               ))}
             </select>
