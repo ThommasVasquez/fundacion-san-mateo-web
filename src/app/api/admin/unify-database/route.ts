@@ -238,13 +238,40 @@ export async function POST(req: Request) {
       `;
     }
 
-    // 10. Audit check
+    // 10. Auto-enroll students in their designated groups (e.g. I DIURNO A CB, I PREESCOLAR)
+    const cbGroupId = '32302dd7-a3be-4a01-9b6c-0b9ee963569b'; // I DIURNO A CB
+    const cbStudents = await sql`SELECT id, nombre FROM students WHERE grado ILIKE '%I%DIUR%CB%'`;
+    const cbSessions = await sql`SELECT id FROM class_sessions WHERE group_id = ${cbGroupId}::uuid`;
+
+    for (const st of cbStudents) {
+      // Remove any mismatch enrollment from fuzzy matching
+      await sql`DELETE FROM enrollments WHERE student_id = ${st.id}::uuid AND group_id != ${cbGroupId}::uuid`;
+      // Ensure enrolled in I DIURNO A CB
+      const existing = await sql`SELECT id FROM enrollments WHERE student_id = ${st.id}::uuid AND group_id = ${cbGroupId}::uuid LIMIT 1`;
+      if (existing.length === 0) {
+        await sql`
+          INSERT INTO enrollments (id, student_id, group_id, activo, created_at)
+          VALUES (gen_random_uuid(), ${st.id}::uuid, ${cbGroupId}::uuid, true, NOW())
+        `;
+      }
+      // Ensure attendance records exist for all group sessions
+      for (const sess of cbSessions) {
+        await sql`
+          INSERT INTO attendance_records_normalized (id, student_id, session_id, estado, created_at, updated_at)
+          VALUES (gen_random_uuid(), ${st.id}::uuid, ${sess.id}::uuid, 'AUSENTE', NOW(), NOW())
+          ON CONFLICT DO NOTHING
+        `;
+      }
+    }
+
+    // 11. Audit check
     const check = await sql`
       SELECT 
         (SELECT count(*) FROM students) as total_students,
         (SELECT count(*) FROM enrollments e JOIN students s ON s.id = e.student_id) as enrollments_on_students,
         (SELECT count(*) FROM attendance_records_normalized arn JOIN students s ON s.id = arn.student_id) as matrix_on_students,
-        (SELECT count(*) FROM attendance_events ae JOIN students s ON s.id = ae.student_id) as events_on_students;
+        (SELECT count(*) FROM attendance_events ae JOIN students s ON s.id = ae.student_id) as events_on_students,
+        (SELECT count(*) FROM enrollments WHERE group_id = ${cbGroupId}::uuid) as cb_diurno_enrolled;
     `;
 
     console.log('[UNIFICATION] Completed successfully:', check[0]);
