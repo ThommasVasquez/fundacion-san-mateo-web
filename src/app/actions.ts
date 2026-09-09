@@ -786,6 +786,31 @@ export async function updateStudentDetails(studentId: string, data: { nombre?: s
         activo = ${activo}
       WHERE id = ${studentId}::uuid
     `;
+
+    if (grado) {
+      const normalized = normalizeGroupName(grado);
+      const targetGroup = await sql`
+        SELECT id FROM groups 
+        WHERE UPPER(TRIM(nombre)) = ${normalized.toUpperCase()} 
+           OR UPPER(TRIM(nombre)) = ${grado.toUpperCase()}
+        LIMIT 1
+      `;
+      if (targetGroup.length > 0) {
+        const gId = targetGroup[0].id;
+        await sql`
+          UPDATE enrollments 
+          SET activo = FALSE, fecha_fin = CURRENT_DATE 
+          WHERE student_id = ${studentId}::uuid AND group_id != ${gId}::uuid
+        `;
+        await sql`
+          INSERT INTO enrollments (id, student_id, group_id, activo, fecha_inicio, created_at)
+          VALUES (gen_random_uuid(), ${studentId}::uuid, ${gId}::uuid, TRUE, CURRENT_DATE, NOW())
+          ON CONFLICT (student_id, group_id) DO UPDATE 
+          SET activo = TRUE, fecha_inicio = CURRENT_DATE, fecha_fin = NULL
+        `;
+      }
+    }
+
     return { success: true };
   } catch (error: any) {
     console.error('Error updating student details:', error);
@@ -803,10 +828,32 @@ export async function createStudent(data: { nombre: string; grado: string; rfid_
       return { error: 'Nombre y Grado son obligatorios' };
     }
 
-    await sql`
-      INSERT INTO students (nombre, grado, rfid_tag_uid, activo)
-      VALUES (${nombre}, ${grado}, ${rfidTagUid}, TRUE)
+    const res = await sql`
+      INSERT INTO students (id, nombre, grado, rfid_tag_uid, activo)
+      VALUES (gen_random_uuid(), ${nombre}, ${grado}, ${rfidTagUid}, TRUE)
+      RETURNING id
     `;
+    const studentId = res[0]?.id;
+
+    if (studentId && grado) {
+      const normalized = normalizeGroupName(grado);
+      const targetGroup = await sql`
+        SELECT id FROM groups 
+        WHERE UPPER(TRIM(nombre)) = ${normalized.toUpperCase()} 
+           OR UPPER(TRIM(nombre)) = ${grado.toUpperCase()}
+        LIMIT 1
+      `;
+      if (targetGroup.length > 0) {
+        const gId = targetGroup[0].id;
+        await sql`
+          INSERT INTO enrollments (id, student_id, group_id, activo, fecha_inicio, created_at)
+          VALUES (gen_random_uuid(), ${studentId}::uuid, ${gId}::uuid, TRUE, CURRENT_DATE, NOW())
+          ON CONFLICT (student_id, group_id) DO UPDATE 
+          SET activo = TRUE, fecha_inicio = CURRENT_DATE, fecha_fin = NULL
+        `;
+      }
+    }
+
     return { success: true };
   } catch (error: any) {
     console.error('Error creating student:', error);
@@ -826,6 +873,33 @@ export async function bulkUpdateStudentGrado(studentIds: string[], newGrado: str
       SET grado = ${trimmedGrado} 
       WHERE id = ANY(${studentIds}::uuid[])
     `;
+
+    if (trimmedGrado) {
+      const normalized = normalizeGroupName(trimmedGrado);
+      const targetGroup = await sql`
+        SELECT id FROM groups 
+        WHERE UPPER(TRIM(nombre)) = ${normalized.toUpperCase()} 
+           OR UPPER(TRIM(nombre)) = ${trimmedGrado.toUpperCase()}
+        LIMIT 1
+      `;
+      if (targetGroup.length > 0) {
+        const gId = targetGroup[0].id;
+        for (const sId of studentIds) {
+          await sql`
+            UPDATE enrollments 
+            SET activo = FALSE, fecha_fin = CURRENT_DATE 
+            WHERE student_id = ${sId}::uuid AND group_id != ${gId}::uuid
+          `;
+          await sql`
+            INSERT INTO enrollments (id, student_id, group_id, activo, fecha_inicio, created_at)
+            VALUES (gen_random_uuid(), ${sId}::uuid, ${gId}::uuid, TRUE, CURRENT_DATE, NOW())
+            ON CONFLICT (student_id, group_id) DO UPDATE 
+            SET activo = TRUE, fecha_inicio = CURRENT_DATE, fecha_fin = NULL
+          `;
+        }
+      }
+    }
+
     return { success: true, count: studentIds.length };
   } catch (error: any) {
     console.error('Error bulk updating student grado:', error);
@@ -2373,6 +2447,8 @@ export async function executeSemesterPromotion(
           await sql`
             INSERT INTO enrollments (id, student_id, group_id, activo, fecha_inicio, created_at)
             VALUES (gen_random_uuid(), ${studentId}::uuid, ${targetGroupId}::uuid, TRUE, CURRENT_DATE, NOW())
+            ON CONFLICT (student_id, group_id) DO UPDATE 
+            SET activo = TRUE, fecha_inicio = CURRENT_DATE, fecha_fin = NULL
           `;
           // Crear celdas de asistencia si el nuevo grupo tiene sesiones
           for (const sess of targetSessions) {
@@ -2394,6 +2470,8 @@ export async function executeSemesterPromotion(
         await sql`
           INSERT INTO enrollments (id, student_id, group_id, activo, fecha_inicio, created_at)
           VALUES (gen_random_uuid(), ${studentId}::uuid, ${sourceGroupId}::uuid, TRUE, CURRENT_DATE, NOW())
+          ON CONFLICT (student_id, group_id) DO UPDATE 
+          SET activo = TRUE, fecha_inicio = CURRENT_DATE, fecha_fin = NULL
         `;
         repeatedCount++;
       } else if (d.action === 'withdraw') {
@@ -2417,6 +2495,8 @@ export async function executeSemesterPromotion(
           await sql`
             INSERT INTO enrollments (id, student_id, group_id, activo, fecha_inicio, created_at)
             VALUES (gen_random_uuid(), ${studentId}::uuid, ${destGroupId}::uuid, TRUE, CURRENT_DATE, NOW())
+            ON CONFLICT (student_id, group_id) DO UPDATE 
+            SET activo = TRUE, fecha_inicio = CURRENT_DATE, fecha_fin = NULL
           `;
           const customSessions = await sql`SELECT id FROM class_sessions WHERE group_id = ${destGroupId}::uuid`;
           for (const sess of customSessions) {
