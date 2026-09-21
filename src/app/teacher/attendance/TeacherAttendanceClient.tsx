@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Radio, CheckCircle2, AlertCircle, XCircle, LogOut, 
-  Wifi, WifiOff, RefreshCw, Smartphone
+  Wifi, WifiOff, RefreshCw, Smartphone, Search, CreditCard, UserCheck, Hash
 } from 'lucide-react';
 
 interface Student {
@@ -76,6 +76,10 @@ export default function TeacherAttendanceClient({
 
   const ndefReaderRef = useRef<any>(null);
 
+  const [mode, setMode] = useState<'nfc' | 'manual'>('nfc');
+  const [manualInput, setManualInput] = useState('');
+  const [matchingStudents, setMatchingStudents] = useState<Student[]>([]);
+
   // 1. Detectar soporte y arrancar NFC automáticamente
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -89,6 +93,7 @@ export default function TeacherAttendanceClient({
       autoStartNfc();
     } else {
       setNfcSupported(false);
+      setMode('manual');
     }
 
     return () => {
@@ -135,6 +140,29 @@ export default function TeacherAttendanceClient({
 
   const manualStartNfc = async () => {
     await autoStartNfc();
+  };
+
+  const handleInputChange = (text: string) => {
+    setManualInput(text);
+    const query = text.trim().toLowerCase();
+    if (!query || query.length < 2) {
+      setMatchingStudents([]);
+      return;
+    }
+    const matches = students.filter(s => 
+      s.nombre.toLowerCase().includes(query) ||
+      (s.rfid_tag_uid && s.rfid_tag_uid.toLowerCase().includes(query))
+    ).slice(0, 5);
+    setMatchingStudents(matches);
+  };
+
+  const handleManualSubmit = async (e?: React.FormEvent, directUid?: string) => {
+    if (e) e.preventDefault();
+    const target = directUid || manualInput.trim();
+    if (!target) return;
+    setManualInput('');
+    setMatchingStudents([]);
+    await processCardScan(target);
   };
 
   // 2. Procesar lectura de tarjeta
@@ -248,51 +276,147 @@ export default function TeacherAttendanceClient({
         </button>
       </header>
 
-      {/* 2. Cuerpo Central: LECTOR NFC */}
+      {/* 2. Cuerpo Central: LECTOR NFC / REGISTRO MANUAL */}
       <main className="flex-1 p-6 flex flex-col justify-center items-center max-w-md mx-auto w-full space-y-6">
-        {/* Zona del Sensor NFC */}
-        {nfcSupported === false ? (
-          <div className="w-full p-6 rounded-3xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-center space-y-3">
-            <Smartphone size={36} className="mx-auto text-amber-400" />
-            <h3 className="font-black text-sm uppercase tracking-wide">NFC No Disponible</h3>
-            <p className="text-xs text-amber-200/80 leading-relaxed">
-              Tu navegador o dispositivo no tiene habilitada la lectura NFC en web. Requiere un celular Android con navegador Chrome y NFC encendido.
-            </p>
+        
+        {/* Selector de Modo si NFC está soportado */}
+        {nfcSupported !== false && (
+          <div className="w-full flex bg-slate-800/80 p-1 rounded-2xl border border-slate-700/60 mb-2">
+            <button
+              onClick={() => setMode('nfc')}
+              className={`flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                mode === 'nfc' 
+                  ? 'bg-emerald-600 text-white shadow-lg' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Radio size={14} /> Lector NFC
+            </button>
+            <button
+              onClick={() => setMode('manual')}
+              className={`flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                mode === 'manual' 
+                  ? 'bg-blue-600 text-white shadow-lg' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Search size={14} /> Manual / Cédula
+            </button>
           </div>
-        ) : (
-          <div className="w-full flex flex-col items-center text-center space-y-6">
-            {/* Animación del Sensor */}
-            <div className="relative flex items-center justify-center">
-              <div className={`absolute w-44 h-44 rounded-full transition-all duration-1000 ${
-                nfcActive 
-                  ? 'bg-emerald-500/20 animate-ping' 
-                  : 'bg-slate-800'
-              }`} />
-              <div className={`relative w-32 h-32 rounded-full flex flex-col items-center justify-center border-2 transition-all ${
-                nfcActive 
-                  ? 'bg-slate-800/90 border-emerald-500 text-emerald-400 shadow-[0_0_50px_rgba(16,185,129,0.3)]' 
-                  : 'bg-slate-800 border-slate-700 text-slate-400'
-              }`}>
-                <Radio size={42} className={nfcActive ? 'animate-pulse' : ''} />
-                <span className="text-[10px] font-black uppercase tracking-widest mt-1">
-                  {nfcActive ? 'NFC LISTO' : 'NFC PAUSADO'}
-                </span>
-              </div>
-            </div>
+        )}
 
-            {!nfcActive && (
+        {/* Zona del Sensor NFC (cuando modo NFC activo) */}
+        {mode === 'nfc' && (
+          nfcSupported === false ? (
+            <div className="w-full p-6 rounded-3xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-center space-y-3">
+              <Smartphone size={36} className="mx-auto text-amber-400" />
+              <h3 className="font-black text-sm uppercase tracking-wide">NFC Web No Disponible</h3>
+              <p className="text-xs text-amber-200/80 leading-relaxed">
+                La lectura NFC en navegador web requiere un celular Android con Google Chrome y sensor NFC encendido. En iPhone o PC puedes usar la entrada manual.
+              </p>
               <button
-                onClick={manualStartNfc}
-                className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95"
+                onClick={() => setMode('manual')}
+                className="mt-3 px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md"
               >
-                Activar Lector NFC
+                Usar Registro Manual
               </button>
+            </div>
+          ) : (
+            <div className="w-full flex flex-col items-center text-center space-y-6">
+              {/* Animación del Sensor */}
+              <div className="relative flex items-center justify-center">
+                <div className={`absolute w-44 h-44 rounded-full transition-all duration-1000 ${
+                  nfcActive 
+                    ? 'bg-emerald-500/20 animate-ping' 
+                    : 'bg-slate-800'
+                }`} />
+                <div className={`relative w-32 h-32 rounded-full flex flex-col items-center justify-center border-2 transition-all ${
+                  nfcActive 
+                    ? 'bg-slate-800/90 border-emerald-500 text-emerald-400 shadow-[0_0_50px_rgba(16,185,129,0.3)]' 
+                    : 'bg-slate-800 border-slate-700 text-slate-400'
+                }`}>
+                  <Radio size={42} className={nfcActive ? 'animate-pulse' : ''} />
+                  <span className="text-[10px] font-black uppercase tracking-widest mt-1">
+                    {nfcActive ? 'NFC LISTO' : 'NFC PAUSADO'}
+                  </span>
+                </div>
+              </div>
+
+              {!nfcActive && (
+                <button
+                  onClick={manualStartNfc}
+                  className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95"
+                >
+                  Activar Lector NFC
+                </button>
+              )}
+
+              {nfcActive && (
+                <p className="text-xs font-semibold text-slate-400 max-w-xs">
+                  Acerque la tarjeta o carnet del estudiante a la parte trasera del teléfono
+                </p>
+              )}
+            </div>
+          )
+        )}
+
+        {/* Modo Manual / Cédula / Tarjeta */}
+        {mode === 'manual' && (
+          <div className="w-full space-y-4">
+            {nfcSupported === false && (
+              <div className="p-3 bg-slate-800/80 border border-slate-700/60 rounded-2xl flex items-center gap-3">
+                <Smartphone size={20} className="text-amber-400 shrink-0" />
+                <p className="text-[11px] text-slate-300">
+                  <strong className="text-amber-400">Modo Manual Activo:</strong> Puedes marcar asistencia ingresando la cédula, número de tarjeta o nombre.
+                </p>
+              </div>
             )}
 
-            {nfcActive && (
-              <p className="text-xs font-semibold text-slate-400 max-w-xs">
-                Acerque la tarjeta o carnet del estudiante a la parte trasera del teléfono
-              </p>
+            <form onSubmit={(e) => handleManualSubmit(e)} className="space-y-3">
+              <div className="relative">
+                <Search size={18} className="absolute left-3.5 top-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  value={manualInput}
+                  onChange={(e) => handleInputChange(e.target.value)}
+                  placeholder="Buscar estudiante, cédula o tarjeta..."
+                  className="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-2xl text-sm font-semibold text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 transition-all"
+                  autoFocus
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={processing || !manualInput.trim()}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-lg active:scale-98 flex items-center justify-center gap-2"
+              >
+                <UserCheck size={16} /> Marcar Asistencia
+              </button>
+            </form>
+
+            {/* Sugerencias de Autocompletado */}
+            {matchingStudents.length > 0 && (
+              <div className="bg-slate-800/95 border border-slate-700 rounded-2xl p-2 space-y-1.5 shadow-xl">
+                <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-2 py-1">
+                  Coincidencias ({matchingStudents.length})
+                </div>
+                {matchingStudents.map(student => (
+                  <button
+                    key={student.id}
+                    onClick={() => handleManualSubmit(undefined, student.rfid_tag_uid || student.id)}
+                    disabled={processing}
+                    className="w-full p-2.5 rounded-xl bg-slate-900/60 hover:bg-blue-600/20 border border-slate-800 hover:border-blue-500/50 flex items-center justify-between text-left transition-all"
+                  >
+                    <div>
+                      <p className="text-xs font-black text-white uppercase">{student.nombre}</p>
+                      <p className="text-[10px] text-slate-400">{student.grado}</p>
+                    </div>
+                    <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 px-2 py-1 rounded-lg">
+                      Marcar
+                    </span>
+                  </button>
+                ))}
+              </div>
             )}
           </div>
         )}

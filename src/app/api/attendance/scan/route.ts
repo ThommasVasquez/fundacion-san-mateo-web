@@ -275,22 +275,18 @@ export async function POST(req: Request) {
       }
     }
 
-    // 3. Find student by tag_uid
-    // Dos formas de encontrar al mismo alumno, porque hay dos formas de que su
-    // tarjeta haya llegado hasta aquí:
-    //
-    //   rfid_tag_uid    la vinculó alguien desde la página de matrícula, con la
-    //                   tarjeta en la mano y el lector delante.
-    //   tarjeta_numero  vino en el padrón que exportó el terminal viejo, donde
-    //                   ya estaba asignada y solo consta su número en decimal.
-    //
-    // Se buscan las dos a la vez. Exigir la primera obligaría a re-matricular a
-    // mano a los seiscientos que ya tenían tarjeta.
+    // 3. Find student by tag_uid, tarjeta_numero or documento
+    const cleanDigits = tagHex.replace(/\D/g, '');
+    const directNumeric = cleanDigits.length > 0 && cleanDigits.length <= 15 ? cleanDigits : null;
+
     const students = await sql`
       SELECT id, nombre, grado, activo
       FROM students
-      WHERE (rfid_tag_uid = ${tagHex}
-             OR (${tarjetaNum}::bigint IS NOT NULL AND tarjeta_numero = ${tarjetaNum}::bigint))
+      WHERE (
+        rfid_tag_uid = ${tagHex}
+        OR (${tarjetaNum}::bigint IS NOT NULL AND tarjeta_numero = ${tarjetaNum}::bigint)
+        OR (${directNumeric}::bigint IS NOT NULL AND (tarjeta_numero = ${directNumeric}::bigint OR documento = ${cleanDigits}))
+      )
       LIMIT 1
     `;
 
