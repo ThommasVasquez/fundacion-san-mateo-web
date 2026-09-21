@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { User, Calendar, ArrowLeft, Filter, XCircle, CheckCircle } from 'lucide-react';
 import StudentHistoryClient from './StudentHistoryClient';
 import { sql } from '@/lib/db';
+import { isColombiaHoliday } from '@/lib/colombiaHolidays';
 
 
 export const revalidate = 0;
@@ -17,26 +18,26 @@ export default async function StudentAttendanceHistoryPage({
   const { studentId } = await params;
   const { filter } = await searchParams;
 
-  // Query student details from students_normalized or legacy students
+  // Query student details from canonical students table with fallback to students_normalized
   let student: any = null;
-  const normQuery = await sql`
-    SELECT id, nombre_original, nombre_normalizado, estado
-    FROM students_normalized
+  const canonicalQuery = await sql`
+    SELECT id, nombre as student_name, documento, grado, activo
+    FROM students
     WHERE id = ${studentId}::uuid
     LIMIT 1
   `;
 
-  if (normQuery.length > 0) {
-    student = normQuery[0];
+  if (canonicalQuery.length > 0) {
+    student = canonicalQuery[0];
   } else {
-    const legacyQuery = await sql`
-      SELECT id, nombre as nombre_original, nombre as nombre_normalizado, 'ACTIVO' as estado
-      FROM students
+    const normQuery = await sql`
+      SELECT id, COALESCE(nombre_original, nombre_normalizado) as student_name, documento, null as grado, true as activo
+      FROM students_normalized
       WHERE id = ${studentId}::uuid
       LIMIT 1
     `;
-    if (legacyQuery.length > 0) {
-      student = legacyQuery[0];
+    if (normQuery.length > 0) {
+      student = normQuery[0];
     }
   }
 
@@ -46,10 +47,11 @@ export default async function StudentAttendanceHistoryPage({
 
   // Query enrollments / groups
   const enrollmentsQuery = await sql`
-    SELECT g.id as group_id, g.nombre as group_name, g.jornada, g.tipo
+    SELECT g.id as group_id, g.nombre as group_name, g.jornada, g.tipo, e.fecha_inicio
     FROM enrollments e
     JOIN groups g ON g.id = e.group_id
     WHERE e.student_id = ${studentId}::uuid
+      AND (e.activo IS NULL OR e.activo = TRUE)
   `;
 
   // 1. Get class sessions for the student's group up to current date
@@ -59,11 +61,14 @@ export default async function StudentAttendanceHistoryPage({
       cs.fecha,
       cs.dia_semana_texto,
       g.nombre as group_name,
-      g.id as group_id
+      g.id as group_id,
+      g.tipo as group_tipo,
+      e.fecha_inicio as enrollment_fecha_inicio
     FROM class_sessions cs
     JOIN enrollments e ON e.group_id = cs.group_id
     JOIN groups g ON g.id = cs.group_id
     WHERE e.student_id = ${studentId}::uuid
+      AND (e.activo IS NULL OR e.activo = TRUE)
       AND cs.fecha <= CURRENT_DATE
     ORDER BY cs.fecha DESC
   `;
@@ -112,10 +117,19 @@ export default async function StudentAttendanceHistoryPage({
 
   // 4. Synthesize complete history per class session
   const historyRecords = sessionsQuery.map((sess: any) => {
-    const fStr = new Date(sess.fecha).toISOString().split('T')[0];
+    const fStr = typeof sess.fecha === 'string' ? sess.fecha.split('T')[0] : new Date(sess.fecha).toISOString().split('T')[0];
     const rfidScan = rfidMap.get(fStr);
     const override = overrideMap.get(sess.session_id);
     const followup = followupMap.get(fStr);
+
+    const isCB = (sess.group_name || '').toUpperCase().includes('CB') || (sess.group_tipo || '').toUpperCase().includes('CALENDARIO_B');
+    const isPreCB = isCB && fStr < '2026-09-01';
+    const holidayInfo = isColombiaHoliday(fStr);
+
+    const enrollmentStart = sess.enrollment_fecha_inicio 
+      ? (typeof sess.enrollment_fecha_inicio === 'string' ? sess.enrollment_fecha_inicio.split('T')[0] : new Date(sess.enrollment_fecha_inicio).toISOString().split('T')[0])
+      : null;
+    const isPreEnrollment = enrollmentStart && fStr < enrollmentStart;
 
     let estado = 'AUSENTE';
     let fuente = 'MANUAL';
@@ -123,9 +137,21 @@ export default async function StudentAttendanceHistoryPage({
     let observaciones = '';
     let scanTime = undefined;
 
-    if (override) {
+    if (isPreCB) {
+      estado = 'CALENDARIO_B';
+      fuente = 'CALENDARIO';
+      observaciones = 'Inicio oficial 1 Septiembre 2026';
+    } else if (holidayInfo.isHoliday) {
+      estado = 'FESTIVO';
+      fuente = 'CALENDARIO';
+      observaciones = `Festivo: ${holidayInfo.holidayName || 'Día festivo'}`;
+    } else if (isPreEnrollment) {
+      estado = 'NO_MATRICULADO';
+      fuente = 'SISTEMA';
+      observaciones = 'Sesión anterior a la fecha de matrícula';
+    } else if (override) {
       estado = override.estado;
-      fuente = override.fuente;
+      fuente = override.fuente || 'MANUAL';
       sede = override.sede || 'Sede 1';
       observaciones = override.observaciones || (followup?.comentarios ? `Llamada: ${followup.comentarios}` : '');
     } else if (rfidScan) {
@@ -139,6 +165,10 @@ export default async function StudentAttendanceHistoryPage({
       estado = 'EXCUSA_MEDICA';
       fuente = 'SEGUIMIENTO';
       observaciones = followup.comentarios;
+    } else if (fStr >= new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())) {
+      estado = 'PENDIENTE';
+      fuente = 'SISTEMA';
+      observaciones = 'Jornada en curso • En espera de asistencia';
     }
 
     return {
@@ -156,6 +186,11 @@ export default async function StudentAttendanceHistoryPage({
 
   // Statistics calculation
   const totalRecords = historyRecords.length;
+  // Sesiones computables para inasistencia:
+  // Se excluyen CALENDARIO_B, FESTIVO, NO_MATRICULADO
+  const computableRecords = historyRecords.filter((r: any) => !['CALENDARIO_B', 'FESTIVO', 'NO_MATRICULADO'].includes(r.estado));
+  const totalComputable = computableRecords.length;
+
   const statusCounts: Record<string, number> = {};
   historyRecords.forEach((r: any) => {
     statusCounts[r.estado] = (statusCounts[r.estado] || 0) + 1;
@@ -163,8 +198,8 @@ export default async function StudentAttendanceHistoryPage({
 
   const absents = statusCounts['AUSENTE'] || 0;
   const presents = statusCounts['PRESENTE'] || 0;
-  const absenceRate = totalRecords > 0 ? ((absents / totalRecords) * 100).toFixed(1) : '0.0';
-  const presenceRate = totalRecords > 0 ? ((presents / totalRecords) * 100).toFixed(1) : '0.0';
+  const absenceRate = totalComputable > 0 ? ((absents / totalComputable) * 100).toFixed(1) : '0.0';
+  const presenceRate = totalComputable > 0 ? ((presents / totalComputable) * 100).toFixed(1) : '0.0';
 
   // Filter records based on selected filter
   const currentFilter = filter ? filter.toUpperCase() : '';
@@ -189,7 +224,7 @@ export default async function StudentAttendanceHistoryPage({
             </div>
             <div>
               <h1 className="text-2xl font-black text-fsm-blue uppercase tracking-tight">
-                {student.nombre_original}
+                {student.student_name}
               </h1>
               <p className="text-xs text-gray-500 font-medium">
                 ID Estudiante: {student.id}

@@ -4,9 +4,34 @@ import { sql } from '@/lib/db';
 import PromotionClient from './PromotionClient';
 import { ArrowLeft, ChevronRight, GraduationCap } from 'lucide-react';
 
+import { cookies } from 'next/headers';
+import { decrypt } from '@/lib/auth';
+import { userHasPermission } from '@/lib/permissions';
+import { redirect } from 'next/navigation';
+
 export const dynamic = 'force-dynamic';
 
 export default async function PromotionPage() {
+  const sessionToken = (await cookies()).get('session')?.value;
+  let payload: any = null;
+  if (sessionToken) {
+    try {
+      payload = await decrypt(sessionToken);
+    } catch {
+      payload = null;
+    }
+  }
+
+  if (!payload || (!payload.adminId && !payload.teacherId)) {
+    redirect('/auth/login');
+  }
+
+  const userEmail = (payload.email || '').toLowerCase().trim();
+  const hasAccess = userHasPermission('students_manage', payload.role, payload.permissions, userEmail);
+  if (!hasAccess) {
+    redirect('/admin/attendance');
+  }
+
   // 1. Consultar todos los grupos disponibles con su conteo de estudiantes
   const groupsRes = await sql`
     SELECT g.id, g.nombre, g.jornada, g.tipo,

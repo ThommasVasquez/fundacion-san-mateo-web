@@ -1,20 +1,24 @@
 'use client';
 
-import React, { useState, useTransition, useMemo } from 'react';
+import React, { useState, useTransition, useMemo, useDeferredValue } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Calendar, Users, Download, Plus, CheckCircle2, XCircle, 
   Sparkles, Layers, Filter, Clock, Check, AlertCircle, RefreshCw,
   FileSpreadsheet, ShieldCheck, Lock, FileText, Search, ChevronLeft, ChevronRight,
-  Target, EyeOff, AlertTriangle
+  Target, EyeOff, AlertTriangle, Upload, Edit3, Settings
 } from 'lucide-react';
 import { 
   updateCellAttendanceAction, 
   bulkUpdateGroupSessionStateAction, 
-  bulkUpdateDateRangeGroupStateAction 
+  bulkUpdateDateRangeGroupStateAction,
+  syncGroupSessionsAction,
+  updateGroupTotalClassesAction
 } from '@/app/actions';
 import { formatDateDDMMYYYY } from '@/lib/dateUtils';
 import { isColombiaHoliday } from '@/lib/colombiaHolidays';
-import { exportGroupMatrixToExcel } from '@/lib/excelExportHelper';
+import GroupExcelImportModal from './GroupExcelImportModal';
+
 
 export interface StudentData {
   id: string;
@@ -47,6 +51,10 @@ interface GroupAttendanceMatrixProps {
   records: MatrixRecord[];
   canModifyAll: boolean;
   currentUserEmail?: string;
+  initialTotalClasses?: number | null;
+  defaultProgramTotalClasses?: number | null;
+  programName?: string;
+  canEditTotalClasses?: boolean;
 }
 
 const MONTH_NAMES: Record<string, string> = {
@@ -63,7 +71,9 @@ const STATUS_CONFIG: Record<string, { label: string; short: string; bg: string; 
   COMITE_ACADEMICO: { label: 'Comité Académico', short: 'C', bg: 'bg-amber-50 hover:bg-amber-100', text: 'text-amber-700 font-bold', border: 'border-amber-200' },
   PRACTICAS: { label: 'Prácticas Clínicas', short: 'PR', bg: 'bg-sky-50 hover:bg-sky-100', text: 'text-sky-700 font-bold', border: 'border-sky-200' },
   EXCUSA_MEDICA: { label: 'Excusa Médica', short: 'E', bg: 'bg-teal-50 hover:bg-teal-100', text: 'text-teal-700 font-bold', border: 'border-teal-200' },
+  EXCUSA_PRACTICAS_AIPI: { label: 'Excusa Prácticas AIPI', short: 'PA', bg: 'bg-fuchsia-50 hover:bg-fuchsia-100', text: 'text-fuchsia-700 font-bold', border: 'border-fuchsia-200' },
   CALENDARIO_B: { label: 'Calendario B', short: 'CB', bg: 'bg-purple-50 hover:bg-purple-100', text: 'text-purple-700 font-bold', border: 'border-purple-200' },
+  PENDIENTE: { label: 'Programada (Pendiente)', short: '-', bg: 'bg-gray-50/70 hover:bg-gray-100', text: 'text-gray-400 font-bold', border: 'border-gray-200' },
   NO_HUBO_CLASE: { label: 'No Hubo Clase', short: 'NHC', bg: 'bg-orange-50 hover:bg-orange-100', text: 'text-orange-700 font-bold', border: 'border-orange-200' },
   TERMINACION_DE_SEMESTRE: { label: 'Fin de Semestre', short: 'FIN', bg: 'bg-slate-100 hover:bg-slate-200', text: 'text-slate-600 font-bold', border: 'border-slate-300' },
   CONGELADO: { label: 'Congelado', short: 'CG', bg: 'bg-cyan-50 hover:bg-cyan-100', text: 'text-cyan-700 font-bold', border: 'border-cyan-200' },
@@ -79,7 +89,31 @@ export default function GroupAttendanceMatrix({
   records: initialRecords,
   canModifyAll,
   currentUserEmail = '',
+  initialTotalClasses = null,
+  defaultProgramTotalClasses = null,
+  programName = '',
+  canEditTotalClasses = false,
 }: GroupAttendanceMatrixProps) {
+  const router = useRouter();
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [groupTotalClasses, setGroupTotalClasses] = useState<number | null>(initialTotalClasses ?? null);
+  const [showTotalClassesModal, setShowTotalClassesModal] = useState(false);
+  const [inputTotalClasses, setInputTotalClasses] = useState<string>(
+    initialTotalClasses ? String(initialTotalClasses) : defaultProgramTotalClasses ? String(defaultProgramTotalClasses) : ''
+  );
+  const [isSavingTotalClasses, setIsSavingTotalClasses] = useState(false);
+
+  // Effective total classes: Group override > Program default > Sessions length
+  const effectiveTotalClasses = useMemo(() => {
+    if (groupTotalClasses !== null && groupTotalClasses > 0) {
+      return groupTotalClasses;
+    }
+    if (defaultProgramTotalClasses !== null && defaultProgramTotalClasses > 0) {
+      return defaultProgramTotalClasses;
+    }
+    return sessions.length > 0 ? sessions.length : 1;
+  }, [groupTotalClasses, defaultProgramTotalClasses, sessions.length]);
+
   const [records, setRecords] = useState<Record<string, { estado: string; observaciones?: string }>>(() => {
     const map: Record<string, { estado: string; observaciones?: string }> = {};
     initialRecords.forEach(r => {
@@ -99,7 +133,9 @@ export default function GroupAttendanceMatrix({
   } | null>(null);
 
   const [excuseObs, setExcuseObs] = useState('');
+  const [selectedExcuseType, setSelectedExcuseType] = useState<'EXCUSA_MEDICA' | 'EXCUSA_PRACTICAS_AIPI'>('EXCUSA_MEDICA');
   const [searchStudent, setSearchStudent] = useState('');
+  const deferredSearchStudent = useDeferredValue(searchStudent);
   
   // Spotlight / Row Focus mode state
   const [focusedStudentId, setFocusedStudentId] = useState<string | null>(null);
@@ -129,15 +165,22 @@ export default function GroupAttendanceMatrix({
     return sessions.filter(s => s.fecha.startsWith(selectedMonth));
   }, [sessions, selectedMonth]);
 
-  // Filtered students by search term
+  // Filtered students by search term (supports multi-word in any order)
   const displayedStudents = useMemo(() => {
-    if (!searchStudent.trim()) return students;
-    const q = searchStudent.toLowerCase().trim();
-    return students.filter(st => 
-      st.nombre_original.toLowerCase().includes(q) || 
-      (st.documento && st.documento.includes(q))
-    );
-  }, [students, searchStudent]);
+    if (!deferredSearchStudent.trim()) return students;
+    const terms = deferredSearchStudent.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    return students.filter(st => {
+      const full = `${st.nombre_original} ${st.documento || ''}`.toLowerCase();
+      return terms.every(t => full.includes(t));
+    });
+  }, [students, deferredSearchStudent]);
+
+  const todayStr = useMemo(() => new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Bogota',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date()), []);
 
   // Group summary metrics
   const groupMetrics = useMemo(() => {
@@ -151,12 +194,25 @@ export default function GroupAttendanceMatrix({
       let stLectivos = 0;
       sessions.forEach(s => {
         const record = records[`${st.id}_${s.id}`];
+        const isCB = (groupName || '').toUpperCase().includes('CB') || (tipo || '').toUpperCase().includes('CALENDARIO_B');
+        const isPreCB = isCB && s.fecha < '2026-09-01';
         const holidayInfo = isColombiaHoliday(s.fecha);
-        const estado = record?.estado || (holidayInfo.isHoliday ? 'FESTIVO' : 'PRESENTE');
+
+        let estado = record ? record.estado : (s.fecha >= todayStr ? 'PENDIENTE' : 'AUSENTE');
+        if (s.fecha === todayStr && (!record || record.estado === 'PENDIENTE')) {
+          estado = 'PENDIENTE';
+        } else if (isPreCB) {
+          estado = record?.estado && record.estado !== 'AUSENTE' ? record.estado : 'CALENDARIO_B';
+        } else if (holidayInfo.isHoliday) {
+          estado = record?.estado && record.estado !== 'AUSENTE' ? record.estado : 'FESTIVO';
+        } else if (s.fecha > todayStr && (!record || record.estado === 'PENDIENTE')) {
+          estado = 'PENDIENTE';
+        }
+
         if (estado === 'AUSENTE') {
           stAbsents++;
           stLectivos++;
-        } else if (estado === 'PRESENTE' || estado === 'EXCUSA_MEDICA') {
+        } else if (estado === 'PRESENTE' || estado === 'EXCUSA_MEDICA' || estado === 'EXCUSA_PRACTICAS_AIPI' || estado === 'PRACTICAS') {
           stLectivos++;
         }
       });
@@ -175,7 +231,27 @@ export default function GroupAttendanceMatrix({
       totalStudentsAtRisk,
       avgAttendance
     };
-  }, [students, sessions, records]);
+  }, [students, sessions, records, groupName, tipo, todayStr]);
+
+  // Handler to update group total classes
+  const handleSaveTotalClasses = async (val: number | null) => {
+    setIsSavingTotalClasses(true);
+    try {
+      const res = await updateGroupTotalClassesAction(groupId, val);
+      if (res.success) {
+        setGroupTotalClasses(res.totalClases ?? null);
+        showToast(`✓ Total de clases del grupo actualizado: ${res.totalClases ? `${res.totalClases} clases` : 'Modo automático'}`);
+        setShowTotalClassesModal(false);
+        router.refresh();
+      } else {
+        showToast(res.error || 'Error al actualizar clases totales', 'error');
+      }
+    } catch (err: any) {
+      showToast(err?.message || 'Error inesperado', 'error');
+    } finally {
+      setIsSavingTotalClasses(false);
+    }
+  };
   
   // Bulk modal state
   const [showBulkModal, setShowBulkModal] = useState(false);
@@ -194,12 +270,22 @@ export default function GroupAttendanceMatrix({
 
   // Cell click handler
   const handleCellClick = async (studentId: string, sessionId: string, studentName: string, fechaStr: string) => {
-    const current = records[`${studentId}_${sessionId}`]?.estado || 'PRESENTE';
-    const currentObs = records[`${studentId}_${sessionId}`]?.observaciones || '';
+    const isCB = (groupName || '').toUpperCase().includes('CB') || (tipo || '').toUpperCase().includes('CALENDARIO_B');
+    const isPreCB = isCB && fechaStr < '2026-09-01';
+    const holidayInfo = isColombiaHoliday(fechaStr);
+    const defaultState = isPreCB ? 'CALENDARIO_B' : holidayInfo.isHoliday ? 'FESTIVO' : fechaStr > todayStr ? 'PENDIENTE' : 'AUSENTE';
+
+    const currentRecord = records[`${studentId}_${sessionId}`];
+    let current = currentRecord?.estado || defaultState;
+    if (isPreCB && current === 'AUSENTE') current = 'CALENDARIO_B';
+    if (holidayInfo.isHoliday && current === 'AUSENTE') current = 'FESTIVO';
+
+    const currentObs = currentRecord?.observaciones || '';
 
     if (!canModifyAll) {
-      // Non-admins open the Excusa Médica modal
+      // Non-admins open the Excusa modal (Médica o Prácticas AIPI)
       setExcuseObs(currentObs);
+      setSelectedExcuseType(current === 'EXCUSA_PRACTICAS_AIPI' || groupName.toUpperCase().includes('AIPI') ? 'EXCUSA_PRACTICAS_AIPI' : 'EXCUSA_MEDICA');
       setSelectedCell({
         studentId,
         sessionId,
@@ -211,11 +297,15 @@ export default function GroupAttendanceMatrix({
       return;
     }
 
-    // Admin cycle: PRESENTE -> AUSENTE -> EXCUSA_MEDICA -> PRESENTE
+    // Admin cycle: PRESENTE -> AUSENTE -> EXCUSA_MEDICA -> (EXCUSA_PRACTICAS_AIPI si aplica) -> PRESENTE
     let nextState = 'AUSENTE';
-    if (current === 'AUSENTE') nextState = 'EXCUSA_MEDICA';
-    else if (current === 'EXCUSA_MEDICA') nextState = 'PRESENTE';
-    else if (current === 'PRESENTE') nextState = 'AUSENTE';
+    if (current === 'AUSENTE') nextState = 'PRESENTE';
+    else if (current === 'PRESENTE') nextState = 'EXCUSA_MEDICA';
+    else if (current === 'EXCUSA_MEDICA') {
+      nextState = groupName.toUpperCase().includes('AIPI') ? 'EXCUSA_PRACTICAS_AIPI' : 'AUSENTE';
+    }
+    else if (current === 'EXCUSA_PRACTICAS_AIPI') nextState = 'AUSENTE';
+    else if (current === 'PENDIENTE') nextState = 'PRESENTE';
     else nextState = 'PRESENTE';
 
     // Optimistic update
@@ -284,6 +374,30 @@ export default function GroupAttendanceMatrix({
     });
   };
 
+  const [isSyncingCalendar, setIsSyncingCalendar] = useState(false);
+
+  // Sync / Generate missing calendar sessions (e.g. September to December)
+  const handleSyncCalendar = async () => {
+    if (!canModifyAll) return;
+    if (!window.confirm(`¿Deseas generar y sincronizar las fechas de clase oficiales faltantes (Septiembre a Diciembre) para este grupo?`)) {
+      return;
+    }
+    setIsSyncingCalendar(true);
+    try {
+      const res = await syncGroupSessionsAction(groupId);
+      if (res.success) {
+        showToast(`✓ Se generaron ${res.addedCount} sesiones de clase exitosamente.`);
+        window.location.reload();
+      } else {
+        showToast(res.error || 'Error al generar sesiones', 'error');
+      }
+    } catch (err: any) {
+      showToast(err?.message || 'Error de conexión', 'error');
+    } finally {
+      setIsSyncingCalendar(false);
+    }
+  };
+
   // Export Matrix to Excel (XLSX) in official institutional layout with Logo and Colors
   const handleExportXLSX = async () => {
     try {
@@ -291,6 +405,7 @@ export default function GroupAttendanceMatrix({
         ? 'Semestre Completo' 
         : (availableMonths.find(m => m.key === selectedMonth)?.label || selectedMonth);
 
+      const { exportGroupMatrixToExcel } = await import('@/lib/excelExportHelper');
       await exportGroupMatrixToExcel({
         groupName,
         jornada,
@@ -298,10 +413,12 @@ export default function GroupAttendanceMatrix({
         periodoTitle: monthTitle,
         sessions: displayedSessions,
         students,
-        records
+        records,
+        totalClases: effectiveTotalClasses
       });
       showToast('✓ Archivo Excel institucional generado con éxito');
     } catch (err: any) {
+
       console.error('Error exporting Excel:', err);
       showToast('Error al exportar archivo Excel', 'error');
     }
@@ -386,8 +503,43 @@ export default function GroupAttendanceMatrix({
             <FileSpreadsheet size={16} />
             Exportar Matriz Excel
           </button>
+
+          {/* Import from Excel */}
+          <button
+            type="button"
+            onClick={() => setShowImportModal(true)}
+            className="px-4 py-2.5 bg-fsm-blue text-white hover:bg-fsm-red rounded-2xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+            title="Cargar listado de estudiantes en Excel para matricularlos en este curso"
+          >
+            <Upload size={16} />
+            Importar Estudiantes Excel
+          </button>
         </div>
       </div>
+
+      {/* Missing September Warning Banner */}
+      {!availableMonths.some(m => m.key >= '2026-09') && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-3xl flex flex-wrap items-center justify-between gap-4 text-amber-900 text-xs shadow-sm">
+          <div className="flex items-center gap-3">
+            <AlertTriangle size={22} className="text-amber-600 shrink-0" />
+            <div>
+              <p className="font-black text-sm text-amber-950">Aviso de Calendario: Sin sesiones en Septiembre 2026</p>
+              <p className="text-amber-800 font-medium">Este curso actualmente solo tiene programadas clases hasta {availableMonths[availableMonths.length - 1]?.label || 'meses anteriores'}. Puedes generar el calendario oficial de septiembre a diciembre con un solo clic.</p>
+            </div>
+          </div>
+          {canModifyAll && (
+            <button
+              type="button"
+              onClick={handleSyncCalendar}
+              disabled={isSyncingCalendar}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl font-bold transition-all flex items-center gap-2 shadow-sm disabled:opacity-50 shrink-0 cursor-pointer"
+            >
+              <Plus size={14} />
+              {isSyncingCalendar ? 'Generando sesiones...' : '📅 Generar Sesiones Septiembre - Diciembre'}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Month Selector Tabs & Student Search Bar */}
       <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-4">
@@ -434,6 +586,19 @@ export default function GroupAttendanceMatrix({
                   </button>
                 );
               })}
+
+              {canModifyAll && (
+                <button
+                  type="button"
+                  onClick={handleSyncCalendar}
+                  disabled={isSyncingCalendar}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-700 hover:bg-emerald-50 border border-dashed border-emerald-300 transition-all flex items-center gap-1 disabled:opacity-50 cursor-pointer ml-1"
+                  title="Sincronizar o generar meses faltantes"
+                >
+                  <Plus size={12} />
+                  <span>{isSyncingCalendar ? 'Generando...' : '➕ Meses Faltantes'}</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -496,7 +661,7 @@ export default function GroupAttendanceMatrix({
       )}
 
       {/* Group Attendance & Absenteeism Key Metrics */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div className="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-2xs">
           <span className="text-[10px] font-black uppercase text-gray-400 block tracking-wider">
             Matriculados
@@ -504,6 +669,40 @@ export default function GroupAttendanceMatrix({
           <span className="text-xl font-black text-fsm-blue mt-0.5 block">
             {students.length}
           </span>
+        </div>
+
+        {/* Clases Totales Card (Configurable) */}
+        <div className="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-2xs relative">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase text-gray-400 block tracking-wider">
+              Clases Totales
+            </span>
+            {canEditTotalClasses ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setInputTotalClasses(groupTotalClasses ? String(groupTotalClasses) : defaultProgramTotalClasses ? String(defaultProgramTotalClasses) : '');
+                  setShowTotalClassesModal(true);
+                }}
+                className="text-fsm-blue hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-lg text-[10px] font-black flex items-center gap-1 transition-all"
+                title="Modificar número total de clases/fechas del grupo"
+              >
+                <Edit3 size={11} /> Editar
+              </button>
+            ) : (
+              <span className="text-gray-300 text-[10px]" title="Solo lectura">
+                <Lock size={11} />
+              </span>
+            )}
+          </div>
+          <div className="flex items-baseline gap-1.5 mt-0.5">
+            <span className="text-xl font-black text-fsm-blue">
+              {effectiveTotalClasses}
+            </span>
+            <span className="text-[9px] font-bold text-gray-400 truncate max-w-[90px]" title={groupTotalClasses ? 'Total personalizado para este grupo' : defaultProgramTotalClasses ? `Heredado de ${programName || 'Oferta Educativa'}` : 'Sesiones en calendario'}>
+              {groupTotalClasses ? '• Personalizado' : defaultProgramTotalClasses ? '• Oferta' : '• Calendario'}
+            </span>
+          </div>
         </div>
 
         <div className="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-2xs">
@@ -605,8 +804,11 @@ export default function GroupAttendanceMatrix({
                 <th className="p-3.5 text-[10px] font-black uppercase text-center bg-red-950/80 text-red-200 border-l border-gray-800 min-w-[80px]">
                   Fallas
                 </th>
-                <th className="p-3.5 text-[10px] font-black uppercase text-center bg-emerald-950/80 text-emerald-200 min-w-[80px]">
-                  % Asist.
+                <th className="p-3.5 text-[10px] font-black uppercase text-center bg-emerald-950/80 text-emerald-200 min-w-[85px]">
+                  <div>% Asist.</div>
+                  <div className="text-[8px] font-normal text-emerald-300/80 normal-case tracking-normal">
+                    Base: {effectiveTotalClasses} cl.
+                  </div>
                 </th>
               </tr>
             </thead>
@@ -614,6 +816,7 @@ export default function GroupAttendanceMatrix({
               {displayedStudents.map((st, sIdx) => {
                 let totalAbsents = 0;
                 let totalLectivos = 0;
+                let validAttendances = 0;
                 const isFocused = focusedStudentId === st.id;
                 const isAnotherFocused = focusedStudentId !== null && !isFocused;
 
@@ -673,15 +876,29 @@ export default function GroupAttendanceMatrix({
                     {/* Session Cells */}
                     {displayedSessions.map(s => {
                       const record = records[`${st.id}_${s.id}`];
+                      const isCB = (groupName || '').toUpperCase().includes('CB') || (tipo || '').toUpperCase().includes('CALENDARIO_B');
+                      const isPreCB = isCB && s.fecha < '2026-09-01';
                       const holidayInfo = isColombiaHoliday(s.fecha);
-                      const estado = record?.estado || (holidayInfo.isHoliday ? 'FESTIVO' : 'PRESENTE');
-                      const cfg = STATUS_CONFIG[estado] || STATUS_CONFIG.PRESENTE;
+
+                      let estado = record ? record.estado : (s.fecha >= todayStr ? 'PENDIENTE' : 'AUSENTE');
+                      if (s.fecha === todayStr && (!record || record.estado === 'PENDIENTE')) {
+                        estado = 'PENDIENTE';
+                      } else if (isPreCB) {
+                        estado = record?.estado && record.estado !== 'AUSENTE' ? record.estado : 'CALENDARIO_B';
+                      } else if (holidayInfo.isHoliday) {
+                        estado = record?.estado && record.estado !== 'AUSENTE' ? record.estado : 'FESTIVO';
+                      } else if (s.fecha > todayStr && (!record || record.estado === 'PENDIENTE')) {
+                        estado = 'PENDIENTE';
+                      }
+
+                      const cfg = STATUS_CONFIG[estado] || STATUS_CONFIG.PENDIENTE || STATUS_CONFIG.PRESENTE;
 
                       if (estado === 'AUSENTE') {
                         totalAbsents++;
                         totalLectivos++;
-                      } else if (estado === 'PRESENTE' || estado === 'EXCUSA_MEDICA') {
+                      } else if (estado === 'PRESENTE' || estado === 'EXCUSA_MEDICA' || estado === 'EXCUSA_PRACTICAS_AIPI' || estado === 'PRACTICAS') {
                         totalLectivos++;
+                        validAttendances++;
                       }
 
                       return (
@@ -694,6 +911,7 @@ export default function GroupAttendanceMatrix({
                           onContextMenu={(e) => {
                             e.preventDefault();
                             setExcuseObs(record?.observaciones || '');
+                            setSelectedExcuseType(estado === 'EXCUSA_PRACTICAS_AIPI' || groupName.toUpperCase().includes('AIPI') ? 'EXCUSA_PRACTICAS_AIPI' : 'EXCUSA_MEDICA');
                             setSelectedCell({
                               studentId: st.id,
                               sessionId: s.id,
@@ -703,7 +921,7 @@ export default function GroupAttendanceMatrix({
                               observaciones: record?.observaciones,
                             });
                           }}
-                          title={`${st.nombre_original} - ${formatDateDDMMYYYY(s.fecha)}: ${cfg.label} ${record?.observaciones ? `(${record.observaciones})` : ''} ${!canModifyAll ? '• Clic para agregar excusa médica' : '• Clic para alternar'}`}
+                          title={`${st.nombre_original} - ${formatDateDDMMYYYY(s.fecha)}: ${cfg.label} ${record?.observaciones ? `(${record.observaciones})` : ''} ${!canModifyAll ? '• Clic para registrar excusa' : '• Clic para alternar'}`}
                         >
                           <div className={`w-full py-2 rounded-lg border font-black text-xs transition-all ${cfg.bg} ${cfg.text} ${cfg.border} shadow-2xs hover:scale-110 active:scale-95 ${
                             isFocused ? 'ring-1 ring-amber-300' : ''
@@ -736,15 +954,30 @@ export default function GroupAttendanceMatrix({
                     </td>
 
                     {/* Attendance Percentage */}
-                    <td className={`p-3 text-center font-black ${
-                      isFocused 
-                        ? 'bg-amber-100/90 text-emerald-900 text-sm' 
-                        : totalLectivos > 0 && Math.round(((totalLectivos - totalAbsents) / totalLectivos) * 100) < 80
-                          ? 'bg-red-50 text-red-700 font-black'
-                          : 'bg-emerald-50/40 text-emerald-700'
-                    }`}>
-                      {totalLectivos > 0 ? `${Math.round(((totalLectivos - totalAbsents) / totalLectivos) * 100)}%` : '100%'}
-                    </td>
+                    {(() => {
+                      const studentPct = effectiveTotalClasses > 0
+                        ? Math.min(100, Math.round((validAttendances / effectiveTotalClasses) * 100))
+                        : (totalLectivos > 0 ? Math.round(((totalLectivos - totalAbsents) / totalLectivos) * 100) : null);
+
+                      return (
+                        <td className={`p-3 text-center font-black ${
+                          isFocused 
+                            ? 'bg-amber-100/90 text-emerald-900 text-sm' 
+                            : studentPct !== null && studentPct < 80
+                              ? 'bg-red-50 text-red-700 font-black'
+                              : 'bg-emerald-50/40 text-emerald-700'
+                        }`}>
+                          {studentPct !== null ? (
+                            <div title={`${validAttendances} asistencias válidas sobre ${effectiveTotalClasses} clases totales`}>
+                              <span className="text-xs font-black">{studentPct}%</span>
+                              <span className="block text-[8px] font-semibold text-gray-400 mt-0.5">
+                                {validAttendances}/{effectiveTotalClasses} cl.
+                              </span>
+                            </div>
+                          ) : '—'}
+                        </td>
+                      );
+                    })()}
                   </tr>
                 );
               })}
@@ -759,7 +992,7 @@ export default function GroupAttendanceMatrix({
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-gray-100 space-y-4 animate-scale-up">
             <div className="border-b border-gray-100 pb-3">
               <h3 className="text-sm font-black text-fsm-blue uppercase">
-                {canModifyAll ? 'Modificar Asistencia' : 'Registrar Excusa Médica'}
+                {canModifyAll ? 'Modificar Asistencia' : 'Registrar Excusa'}
               </h3>
               <p className="text-xs text-gray-800 font-bold mt-0.5">{selectedCell.studentName}</p>
               <p className="text-[11px] text-gray-400">Fecha: {formatDateDDMMYYYY(selectedCell.fechaStr)}</p>
@@ -785,7 +1018,7 @@ export default function GroupAttendanceMatrix({
                   <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Observaciones / Justificación</label>
                   <input
                     type="text"
-                    placeholder="Ej. Incapacidad médica, calamidad..."
+                    placeholder="Ej. Incapacidad médica, práctica docente, calamidad..."
                     value={excuseObs}
                     onChange={(e) => setExcuseObs(e.target.value)}
                     className="w-full p-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-800 outline-none focus:border-fsm-blue"
@@ -794,14 +1027,47 @@ export default function GroupAttendanceMatrix({
               </>
             ) : (
               <div className="space-y-3">
-                <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-teal-900 text-xs font-medium">
-                  Estás registrando una <strong>Excusa Médica</strong> para este día.
+                <div className="p-3 bg-fuchsia-50 border border-fuchsia-200 rounded-xl text-fuchsia-950 text-xs font-medium">
+                  Selecciona el tipo de excusa para justificar esta inasistencia.
                 </div>
+
                 <div>
-                  <label className="text-[10px] font-black uppercase text-gray-500 block mb-1">Detalle de la Excusa / Incapacidad *</label>
+                  <label className="text-[10px] font-black uppercase text-gray-500 block mb-1.5">Tipo de Excusa / Novedad</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedExcuseType('EXCUSA_MEDICA')}
+                      className={`p-2.5 rounded-xl border text-xs font-bold text-center transition-all flex flex-col items-center gap-1 ${
+                        selectedExcuseType === 'EXCUSA_MEDICA' 
+                          ? 'bg-teal-600 text-white border-teal-700 shadow-sm' 
+                          : 'bg-teal-50 text-teal-800 border-teal-200 hover:bg-teal-100'
+                      }`}
+                    >
+                      <span className="text-sm">📋</span>
+                      <span>Médica (E)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedExcuseType('EXCUSA_PRACTICAS_AIPI')}
+                      className={`p-2.5 rounded-xl border text-xs font-bold text-center transition-all flex flex-col items-center gap-1 ${
+                        selectedExcuseType === 'EXCUSA_PRACTICAS_AIPI' 
+                          ? 'bg-fuchsia-600 text-white border-fuchsia-700 shadow-sm' 
+                          : 'bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200 hover:bg-fuchsia-100'
+                      }`}
+                    >
+                      <span className="text-sm">👶</span>
+                      <span>Prácticas AIPI (PA)</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-500 block mb-1">
+                    {selectedExcuseType === 'EXCUSA_PRACTICAS_AIPI' ? 'Detalle de Prácticas AIPI *' : 'Detalle de Incapacidad Médica *'}
+                  </label>
                   <textarea
                     rows={3}
-                    placeholder="Número de incapacidad EPS, motivo médico o justificación formal..."
+                    placeholder={selectedExcuseType === 'EXCUSA_PRACTICAS_AIPI' ? 'Jardín infantil, horas de práctica pedagógica, observación...' : 'Número de incapacidad EPS, motivo médico o justificación...'}
                     value={excuseObs}
                     onChange={(e) => setExcuseObs(e.target.value)}
                     required
@@ -811,11 +1077,15 @@ export default function GroupAttendanceMatrix({
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => handleSelectState('EXCUSA_MEDICA', excuseObs)}
+                    onClick={() => handleSelectState(selectedExcuseType, excuseObs)}
                     disabled={isPending}
-                    className="w-full py-2.5 bg-teal-600 text-white rounded-xl font-bold text-xs uppercase hover:bg-teal-700 transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                    className={`w-full py-2.5 text-white rounded-xl font-bold text-xs uppercase transition-all flex items-center justify-center gap-1.5 shadow-sm ${
+                      selectedExcuseType === 'EXCUSA_PRACTICAS_AIPI'
+                        ? 'bg-fuchsia-600 hover:bg-fuchsia-700'
+                        : 'bg-teal-600 hover:bg-teal-700'
+                    }`}
                   >
-                    <FileText size={14} /> Guardar Excusa Médica
+                    <FileText size={14} /> Guardar {selectedExcuseType === 'EXCUSA_PRACTICAS_AIPI' ? 'Excusa Prácticas AIPI' : 'Excusa Médica'}
                   </button>
                 </div>
               </div>
@@ -914,7 +1184,8 @@ export default function GroupAttendanceMatrix({
                 className="w-full p-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-800 outline-none focus:border-fsm-blue"
               >
                 <option value="FESTIVO">FESTIVO — Día Festivo Nacional</option>
-                <option value="PRACTICAS">PRACTICAS — Prácticas Clínicas / Formativas</option>
+                <option value="PRACTICAS">PRACTICAS — Prácticas Clínicas (Enfermería)</option>
+                <option value="EXCUSA_PRACTICAS_AIPI">EXCUSA_PRACTICAS_AIPI — Excusa de Prácticas AIPI</option>
                 <option value="COMITE_ACADEMICO">COMITE_ACADEMICO — Jornada Pedagógica / Comité</option>
                 <option value="LIBRE">LIBRE — Día Libre / No Lectivo</option>
                 <option value="PRESENTE">PRESENTE — Asistencia Completa del Grupo</option>
@@ -952,6 +1223,124 @@ export default function GroupAttendanceMatrix({
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Modal de Importación Excel Directo a Curso */}
+      <GroupExcelImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        groupId={groupId}
+        groupName={groupName}
+        onSuccess={(count) => {
+          showToast(`✓ Se matricularon exitosamente ${count} estudiantes en ${groupName}`);
+          router.refresh();
+        }}
+      />
+
+      {/* Modal para Modificar Clases Totales del Grupo */}
+      {showTotalClassesModal && canEditTotalClasses && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-gray-100 space-y-4 animate-scale-up">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-blue-50 text-fsm-blue rounded-xl">
+                  <Calendar size={20} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-fsm-blue uppercase">
+                    Configurar Clases Totales
+                  </h3>
+                  <p className="text-[11px] text-gray-500 font-medium">
+                    Grupo: <span className="font-bold text-gray-800">{groupName}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTotalClassesModal(false)}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-600 leading-relaxed">
+              Define la cantidad completa de fechas o clases en las que se basa el porcentaje de asistencia de este grupo (módulo o semestre).
+            </p>
+
+            {defaultProgramTotalClasses && (
+              <div className="p-3 bg-blue-50/70 border border-blue-200/60 rounded-2xl text-xs text-blue-950 flex items-start gap-2">
+                <span className="text-sm">ℹ️</span>
+                <div>
+                  <p className="font-bold">Valor por defecto de la oferta educativa:</p>
+                  <p className="text-[11px] text-blue-800 font-medium">
+                    {programName || 'Programa'}: <strong>{defaultProgramTotalClasses} clases</strong>
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-[11px] font-black uppercase tracking-wider text-gray-600 block">
+                Cantidad de Clases / Fechas Totales
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="1"
+                  max="365"
+                  placeholder={`Ej. 20, 32, 40 (Actual: ${effectiveTotalClasses})`}
+                  value={inputTotalClasses}
+                  onChange={(e) => setInputTotalClasses(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm font-black text-fsm-blue outline-none focus:border-fsm-blue focus:ring-2 focus:ring-blue-100 transition-all"
+                  autoFocus
+                />
+              </div>
+              <p className="text-[10px] text-gray-400">
+                Sesiones programadas actualmente en el calendario: <strong>{sessions.length}</strong>
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                type="button"
+                disabled={isSavingTotalClasses}
+                onClick={() => {
+                  const num = parseInt(inputTotalClasses, 10);
+                  if (isNaN(num) || num <= 0) {
+                    showToast('Ingresa un número válido mayor a 0', 'error');
+                    return;
+                  }
+                  handleSaveTotalClasses(num);
+                }}
+                className="w-full py-3 bg-fsm-blue text-white rounded-2xl font-black text-xs uppercase tracking-wider hover:bg-fsm-red transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-50"
+              >
+                {isSavingTotalClasses ? <RefreshCw size={14} className="animate-spin" /> : 'Guardar Total de Clases'}
+              </button>
+
+              {groupTotalClasses !== null && (
+                <button
+                  type="button"
+                  disabled={isSavingTotalClasses}
+                  onClick={() => {
+                    handleSaveTotalClasses(null);
+                  }}
+                  className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all"
+                >
+                  Restablecer a Modo Automático (Heredar)
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setShowTotalClassesModal(false)}
+                className="w-full py-2 text-gray-400 hover:text-gray-600 font-bold text-xs uppercase tracking-wider"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

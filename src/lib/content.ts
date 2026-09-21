@@ -22,9 +22,42 @@ function esSenalDeNext(e: unknown): boolean {
 // Simple cache to prevent hitting Neon constantly during a single page render
 const cache = new Map<string, string>();
 
+// Mapeo canónico de imágenes originales por programa y curso
+const DEFAULT_PROGRAM_IMAGES: Record<string, string> = {
+  '/programa-enfermeria': '/img/image21.jpg',
+  '/programa-primera-infancia': '/img/image25.jpg',
+  '/programa-sistemas': '/img/image8.jpg',
+  '/programa-contabilidad': '/img/servicio-al-cliente.jpg',
+  '/curso-soporte-vital-basico': '/img/curso-soporte-vital-basico.jpg',
+  '/curso-manejo-de-duelo': '/img/curso-manejo-de-duelo-2.jpg',
+  '/curso-pai-inyectologia': '/img/curso-pai-inyectologia.jpg',
+  '/curso-primeros-auxilios': '/img/curso-primeros-auxilios.jpg',
+  '/curso-suturas': '/img/curso-suturas.jpg',
+  '/curso-codigo-blanco-atencion-victimas': '/img/image17.jpg',
+  '/curso-socorrismo-y-rescate': '/img/image14.jpg',
+};
+
+function getOriginalProgramImage(href?: string | null, title?: string | null): string {
+  if (href && DEFAULT_PROGRAM_IMAGES[href]) {
+    return DEFAULT_PROGRAM_IMAGES[href];
+  }
+  const t = `${href || ''} ${title || ''}`.toLowerCase();
+  if (t.includes('enfermer')) return '/img/image21.jpg';
+  if (t.includes('infancia')) return '/img/image25.jpg';
+  if (t.includes('soporte') || t.includes('vital')) return '/img/curso-soporte-vital-basico.jpg';
+  if (t.includes('duelo')) return '/img/curso-manejo-de-duelo-2.jpg';
+  if (t.includes('pai') || t.includes('inyectolog')) return '/img/curso-pai-inyectologia.jpg';
+  if (t.includes('auxilio')) return '/img/curso-primeros-auxilios.jpg';
+  if (t.includes('sutura')) return '/img/curso-suturas.jpg';
+  if (t.includes('blanco') || t.includes('victima')) return '/img/image17.jpg';
+  if (t.includes('socorrismo') || t.includes('rescate')) return '/img/image14.jpg';
+  return '/img/banner6.jpg';
+}
+
 function sanitizeImageUrl(url: string | null | undefined, fallback: string = '/img/banner6.jpg'): string {
   if (!url) return fallback;
   if (url.startsWith('data:image/')) return fallback;
+  if (url === '/img/banner1.jpg' || url.endsWith('/banner1.jpg')) return fallback;
   return url;
 }
 
@@ -80,14 +113,16 @@ export async function getDirectoryItems() {
 }
 export async function getPrograms() {
   try {
+    await sql`ALTER TABLE academic_programs ADD COLUMN IF NOT EXISTS total_clases INTEGER;`.catch(() => []);
     const results = await sql`
-      SELECT id, title, subtitle, description, image_url, href, category, is_featured, order_index 
+      SELECT id, title, subtitle, description, image_url, href, category, is_featured, order_index, total_clases 
       FROM academic_programs 
       ORDER BY is_featured DESC, order_index ASC
     `;
     return results.map((p: any) => ({
       ...p,
-      image_url: sanitizeImageUrl(p.image_url, '/img/banner1.jpg')
+      total_clases: p.total_clases ? Number(p.total_clases) : null,
+      image_url: sanitizeImageUrl(p.image_url, getOriginalProgramImage(p.href, p.title))
     }));
   } catch (e) {
     if (esSenalDeNext(e)) throw e;
@@ -99,9 +134,10 @@ export async function getProgramByHref(href: string) {
   try {
     const results = await sql`SELECT * FROM academic_programs WHERE href = ${href} LIMIT 1`;
     if (results[0]) {
+      const defaultImg = getOriginalProgramImage(results[0].href, results[0].title);
       return {
         ...results[0],
-        image_url: sanitizeImageUrl(results[0].image_url, '/img/banner6.jpg')
+        image_url: sanitizeImageUrl(results[0].image_url, defaultImg)
       };
     }
     return null;

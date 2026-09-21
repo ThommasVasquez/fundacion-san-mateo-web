@@ -1,26 +1,44 @@
-import { Layout, FileText, HelpCircle, Users, Tag, FileCheck, QrCode, ShieldCheck, History } from 'lucide-react';
+import { Layout, FileText, HelpCircle, Users, Tag, FileCheck, QrCode, ShieldCheck, History, UserCheck } from 'lucide-react';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { decrypt } from '@/lib/auth';
+import { getEffectivePermissions, isSuperAdminEmail, getUserDefaultRoute } from '@/lib/permissions';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminDashboard() {
   const session = (await cookies()).get('session')?.value;
-  let parsed = null;
+  let parsed: any = null;
   if (session) {
     try {
       parsed = await decrypt(session);
     } catch {}
   }
 
-  if (parsed?.role === 'academic' || parsed?.email === 'sacademica@fundacionsanmateosoacha.edu.co') {
-    redirect('/admin/attendance');
+  if (!parsed || (!parsed.adminId && !parsed.teacherId)) {
+    redirect('/auth/login');
   }
 
   const userEmail = (parsed?.email || '').toLowerCase().trim();
-  const isSuperAdmin = userEmail === 'admin@fundacionsanmateo.edu.co' || userEmail === 'admin@fundacionsanmateosoacha.edu.co';
+  const userRole = (parsed?.role || 'custom').toLowerCase().trim();
+  const isSuperAdmin = isSuperAdminEmail(userEmail);
+  const isAdmin = userRole === 'admin' || isSuperAdmin;
+  const permissions = getEffectivePermissions(userRole, parsed?.permissions);
+
+  const canCms = isAdmin || permissions.includes('cms_manage');
+  const canAttendance = isAdmin || permissions.includes('attendance_view') || permissions.includes('attendance_edit');
+  const canStudents = isAdmin || permissions.includes('students_manage');
+  const canDocuments = isAdmin || permissions.includes('documents_manage');
+  const canUsers = isAdmin || permissions.includes('users_manage');
+
+  // Si no tiene permiso de CMS, redirigir a su módulo predeterminado
+  if (!canCms) {
+    const defaultRoute = getUserDefaultRoute(userRole, permissions, userEmail);
+    if (defaultRoute !== '/admin') {
+      redirect(defaultRoute);
+    }
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-12">
@@ -33,91 +51,119 @@ export default async function AdminDashboard() {
       
       <div className="pt-8 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* 1. Documentos y QR */}
-          <Link 
-            href="/admin/documents" 
-            className="flex items-center gap-4 bg-white p-6 rounded-[2rem] shadow-premium border-2 border-fsm-blue/20 hover:border-fsm-blue hover:shadow-xl transition-all group relative overflow-hidden"
-          >
-            <div className="absolute top-0 right-0 w-24 h-24 bg-fsm-blue/5 rounded-full blur-xl -mr-6 -mt-6"></div>
-            <div className="w-14 h-14 bg-fsm-blue text-white rounded-2xl flex items-center justify-center group-hover:bg-fsm-red transition-all shadow-md">
-              <QrCode size={28} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black tracking-widest text-fsm-red uppercase leading-none mb-1">Certificación Oficial</p>
-              <h3 className="text-lg font-black text-fsm-blue uppercase tracking-tight">Documentos y QR</h3>
-            </div>
-          </Link>
+          {canDocuments && (
+            <Link 
+              href="/admin/documents" 
+              className="flex items-center gap-4 bg-white p-6 rounded-[2rem] shadow-premium border-2 border-fsm-blue/20 hover:border-fsm-blue hover:shadow-xl transition-all group relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-24 h-24 bg-fsm-blue/5 rounded-full blur-xl -mr-6 -mt-6"></div>
+              <div className="w-14 h-14 bg-fsm-blue text-white rounded-2xl flex items-center justify-center group-hover:bg-fsm-red transition-all shadow-md">
+                <QrCode size={28} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black tracking-widest text-fsm-red uppercase leading-none mb-1">Certificación Oficial</p>
+                <h3 className="text-lg font-black text-fsm-blue uppercase tracking-tight">Documentos y QR</h3>
+              </div>
+            </Link>
+          )}
 
           {/* 2. Control de Asistencia */}
-          <Link 
-            href="/admin/attendance" 
-            className="flex items-center gap-4 bg-white p-6 rounded-[2rem] shadow-premium border border-gray-100 hover:border-fsm-red/20 transition-all group"
-          >
-            <div className="w-14 h-14 bg-fsm-blue/5 rounded-2xl flex items-center justify-center text-fsm-blue group-hover:bg-fsm-red group-hover:text-white transition-all">
-              <Users size={28} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black tracking-widest text-gray-500 uppercase leading-none mb-1">Control de Accesos</p>
-              <h3 className="text-lg font-black text-fsm-blue uppercase tracking-tight">Control de Asistencia</h3>
-            </div>
-          </Link>
+          {canAttendance && (
+            <Link 
+              href="/admin/attendance" 
+              className="flex items-center gap-4 bg-white p-6 rounded-[2rem] shadow-premium border border-gray-100 hover:border-fsm-red/20 transition-all group"
+            >
+              <div className="w-14 h-14 bg-fsm-blue/5 rounded-2xl flex items-center justify-center text-fsm-blue group-hover:bg-fsm-red group-hover:text-white transition-all">
+                <Users size={28} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black tracking-widest text-gray-500 uppercase leading-none mb-1">Control de Accesos</p>
+                <h3 className="text-lg font-black text-fsm-blue uppercase tracking-tight">Control de Asistencia</h3>
+              </div>
+            </Link>
+          )}
 
           {/* 3. Matrícula y Tarjetas */}
-          <Link 
-            href="/admin/attendance/enrollment" 
-            className="flex items-center gap-4 bg-white p-6 rounded-[2rem] shadow-premium border border-gray-100 hover:border-fsm-red/20 transition-all group"
-          >
-            <div className="w-14 h-14 bg-fsm-blue/5 rounded-2xl flex items-center justify-center text-fsm-blue group-hover:bg-fsm-red group-hover:text-white transition-all">
-              <Tag size={28} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black tracking-widest text-gray-500 uppercase leading-none mb-1">Registro NFC/RFID</p>
-              <h3 className="text-lg font-black text-fsm-blue uppercase tracking-tight">Matrícula y Alumnos</h3>
-            </div>
-          </Link>
+          {canStudents && (
+            <Link 
+              href="/admin/attendance/enrollment" 
+              className="flex items-center gap-4 bg-white p-6 rounded-[2rem] shadow-premium border border-gray-100 hover:border-fsm-red/20 transition-all group"
+            >
+              <div className="w-14 h-14 bg-fsm-blue/5 rounded-2xl flex items-center justify-center text-fsm-blue group-hover:bg-fsm-red group-hover:text-white transition-all">
+                <Tag size={28} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black tracking-widest text-gray-500 uppercase leading-none mb-1">Registro NFC/RFID</p>
+                <h3 className="text-lg font-black text-fsm-blue uppercase tracking-tight">Matrícula y Alumnos</h3>
+              </div>
+            </Link>
+          )}
 
           {/* 4. Gestor Global / Inicio */}
-          <Link 
-            href="/admin/pages/home" 
-            className="flex items-center gap-4 bg-white p-6 rounded-[2rem] shadow-premium border border-gray-100 hover:border-fsm-red/20 transition-all group"
-          >
-            <div className="w-14 h-14 bg-fsm-blue/5 rounded-2xl flex items-center justify-center text-fsm-blue group-hover:bg-fsm-red group-hover:text-white transition-all">
-              <Layout size={28} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black tracking-widest text-gray-500 uppercase leading-none mb-1">Editor Visual</p>
-              <h3 className="text-lg font-black text-fsm-blue uppercase tracking-tight">Gestor Global</h3>
-            </div>
-          </Link>
+          {canCms && (
+            <Link 
+              href="/admin/pages/home" 
+              className="flex items-center gap-4 bg-white p-6 rounded-[2rem] shadow-premium border border-gray-100 hover:border-fsm-red/20 transition-all group"
+            >
+              <div className="w-14 h-14 bg-fsm-blue/5 rounded-2xl flex items-center justify-center text-fsm-blue group-hover:bg-fsm-red group-hover:text-white transition-all">
+                <Layout size={28} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black tracking-widest text-gray-500 uppercase leading-none mb-1">Editor Visual</p>
+                <h3 className="text-lg font-black text-fsm-blue uppercase tracking-tight">Gestor Global</h3>
+              </div>
+            </Link>
+          )}
 
           {/* 5. Gestionar Blog */}
-          <Link 
-            href="/admin/blog" 
-            className="flex items-center gap-4 bg-white p-6 rounded-[2rem] shadow-premium border border-gray-100 hover:border-fsm-red/20 transition-all group"
-          >
-            <div className="w-14 h-14 bg-fsm-blue/5 rounded-2xl flex items-center justify-center text-fsm-blue group-hover:bg-fsm-red group-hover:text-white transition-all">
-              <FileText size={28} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black tracking-widest text-gray-500 uppercase leading-none mb-1">Publicaciones</p>
-              <h3 className="text-lg font-black text-fsm-blue uppercase tracking-tight">Gestionar Blog</h3>
-            </div>
-          </Link>
+          {canCms && (
+            <Link 
+              href="/admin/blog" 
+              className="flex items-center gap-4 bg-white p-6 rounded-[2rem] shadow-premium border border-gray-100 hover:border-fsm-red/20 transition-all group"
+            >
+              <div className="w-14 h-14 bg-fsm-blue/5 rounded-2xl flex items-center justify-center text-fsm-blue group-hover:bg-fsm-red group-hover:text-white transition-all">
+                <FileText size={28} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black tracking-widest text-gray-500 uppercase leading-none mb-1">Publicaciones</p>
+                <h3 className="text-lg font-black text-fsm-blue uppercase tracking-tight">Gestionar Blog</h3>
+              </div>
+            </Link>
+          )}
 
           {/* 6. Preguntas Frecuentes */}
-          <Link 
-            href="/admin/faqs" 
-            className="flex items-center gap-4 bg-white p-6 rounded-[2rem] shadow-premium border border-gray-100 hover:border-fsm-red/20 transition-all group"
-          >
-            <div className="w-14 h-14 bg-fsm-blue/5 rounded-2xl flex items-center justify-center text-fsm-blue group-hover:bg-fsm-red group-hover:text-white transition-all">
-              <HelpCircle size={28} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black tracking-widest text-gray-500 uppercase leading-none mb-1">Ayuda y Soporte</p>
-              <h3 className="text-lg font-black text-fsm-blue uppercase tracking-tight">Preguntas Frecuentes</h3>
-            </div>
-          </Link>
+          {canCms && (
+            <Link 
+              href="/admin/faqs" 
+              className="flex items-center gap-4 bg-white p-6 rounded-[2rem] shadow-premium border border-gray-100 hover:border-fsm-red/20 transition-all group"
+            >
+              <div className="w-14 h-14 bg-fsm-blue/5 rounded-2xl flex items-center justify-center text-fsm-blue group-hover:bg-fsm-red group-hover:text-white transition-all">
+                <HelpCircle size={28} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black tracking-widest text-gray-500 uppercase leading-none mb-1">Ayuda y Soporte</p>
+                <h3 className="text-lg font-black text-fsm-blue uppercase tracking-tight">Preguntas Frecuentes</h3>
+              </div>
+            </Link>
+          )}
 
-          {/* 7. SuperAdmin: LOGS y Auditoría */}
+          {/* 7. Gestión de Usuarios y Permisos */}
+          {canUsers && (
+            <Link 
+              href="/admin/users" 
+              className="flex items-center gap-4 bg-white p-6 rounded-[2rem] shadow-premium border-2 border-purple-200 hover:border-purple-600 transition-all group"
+            >
+              <div className="w-14 h-14 bg-purple-50 text-purple-800 rounded-2xl flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-all">
+                <UserCheck size={28} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black tracking-widest text-purple-700 uppercase leading-none mb-1">Control de Acceso</p>
+                <h3 className="text-lg font-black text-purple-950 uppercase tracking-tight">Usuarios & Permisos</h3>
+              </div>
+            </Link>
+          )}
+
+          {/* 8. SuperAdmin: LOGS y Auditoría */}
           {isSuperAdmin && (
             <Link 
               href="/admin/logs" 

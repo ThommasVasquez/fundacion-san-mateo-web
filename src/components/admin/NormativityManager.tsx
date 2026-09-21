@@ -74,17 +74,18 @@ export default function NormativityManager({ initialDocs, initialCategoriesJson 
     }
   };
   
+  const [newFile, setNewFile] = useState<File | null>(null);
+  const [editFiles, setEditFiles] = useState<Record<string, File>>({});
+
   const [newDoc, setNewDoc] = useState<{
     title: string;
     type: 'upload' | 'link';
     file_name: string;
-    file_base64: string;
     external_link: string;
   }>({
     title: '',
     type: 'upload',
     file_name: '',
-    file_base64: '',
     external_link: ''
   });
 
@@ -100,34 +101,43 @@ export default function NormativityManager({ initialDocs, initialCategoriesJson 
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert("El archivo supera el límite de 5MB permitido.");
+    if (file.size > 25 * 1024 * 1024) {
+      alert("El archivo supera el límite de 25MB permitido.");
       return;
     }
 
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = async (event) => {
-      const base64 = event.target?.result as string;
-      if (docId) {
-        // Edit existing document locally
-        handleUpdateLocal(docId, 'file_base64', base64);
-        handleUpdateLocal(docId, 'file_name', file.name);
-        handleUpdateLocal(docId, 'external_link', ''); // clear link when uploading file
-      } else {
-        // Add new document form
-        setNewDoc(prev => ({
-          ...prev,
-          file_name: file.name,
-          file_base64: base64,
-          external_link: ''
-        }));
-      }
-      toast.success(`Archivo "${file.name}" cargado localmente`);
-    };
-    reader.onerror = () => {
-      toast.error("Error al leer el archivo PDF");
-    };
+    const sizeFormatted = (file.size / (1024 * 1024)).toFixed(1);
+
+    if (docId) {
+      // Editar documento existente
+      setEditFiles(prev => ({ ...prev, [docId]: file }));
+      handleUpdateLocal(docId, 'file_name', file.name);
+      handleUpdateLocal(docId, 'external_link', '');
+      toast.success(`Archivo "${file.name}" (${sizeFormatted} MB) seleccionado para actualizar`);
+    } else {
+      // Crear nuevo documento
+      setNewFile(file);
+      setNewDoc(prev => ({
+        ...prev,
+        file_name: file.name,
+        external_link: ''
+      }));
+      toast.success(`Archivo "${file.name}" (${sizeFormatted} MB) seleccionado`);
+    }
+  };
+
+  const uploadDocFile = async (file: File): Promise<{ url: string; file_name: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch('/api/admin/documents/upload', {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Error al subir el archivo al almacenamiento institucional');
+    }
+    return { url: data.url, file_name: data.file_name };
   };
 
   const saveUpdate = async (id: string) => {
@@ -141,38 +151,48 @@ export default function NormativityManager({ initialDocs, initialCategoriesJson 
 
     setLoading(prev => ({ ...prev, [id]: true }));
     
-    // We send payload
-    const payload: any = {
-      title: doc.title,
-      category_key: doc.category_key,
-      order_index: doc.order_index || 0
-    };
+    try {
+      let finalLink = doc.external_link || undefined;
+      let finalFileName = doc.file_name || undefined;
 
-    if (doc.file_base64) {
-      payload.file_base64 = doc.file_base64;
-      payload.file_name = doc.file_name;
-      payload.external_link = null;
-    } else {
-      payload.external_link = doc.external_link || null;
-      if (payload.external_link) {
-        payload.file_name = null;
-        payload.file_base64 = null;
-      } else {
-        payload.file_name = doc.file_name || null;
+      // Si el usuario seleccionó un nuevo archivo PDF para este documento
+      if (editFiles[id]) {
+        toast.loading(`Subiendo archivo para "${doc.title}"...`, { id: `uploading-${id}` });
+        const uploaded = await uploadDocFile(editFiles[id]);
+        finalLink = uploaded.url;
+        finalFileName = uploaded.file_name;
+        toast.success("Archivo subido a almacenamiento institucional", { id: `uploading-${id}` });
       }
-    }
 
-    const res = await updateNormativityDocument(id, payload);
-    if (res.success) {
-      setSuccess(prev => ({ ...prev, [id]: true }));
-      // Clear local base64 to save memory
-      handleUpdateLocal(id, 'file_base64', undefined);
-      setTimeout(() => setSuccess(prev => ({ ...prev, [id]: false })), 3000);
-      toast.success("Documento actualizado con éxito");
-    } else {
-      toast.error(res.error || "Error al actualizar");
+      const payload: any = {
+        title: doc.title.trim(),
+        category_key: doc.category_key,
+        order_index: doc.order_index || 0,
+        file_name: finalFileName,
+        external_link: finalLink,
+      };
+
+      const res = await updateNormativityDocument(id, payload);
+      if (res.success) {
+        setSuccess(prev => ({ ...prev, [id]: true }));
+        // Limpiar archivo pendiente de edición
+        setEditFiles(prev => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+        if (finalFileName) handleUpdateLocal(id, 'file_name', finalFileName);
+        if (finalLink) handleUpdateLocal(id, 'external_link', finalLink);
+        setTimeout(() => setSuccess(prev => ({ ...prev, [id]: false })), 3000);
+        toast.success("Documento actualizado con éxito");
+      } else {
+        toast.error(res.error || "Error al actualizar");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Error al actualizar documento", { id: `uploading-${id}` });
+    } finally {
+      setLoading(prev => ({ ...prev, [id]: false }));
     }
-    setLoading(prev => ({ ...prev, [id]: false }));
   };
 
   const handleAdd = async () => {
@@ -181,7 +201,7 @@ export default function NormativityManager({ initialDocs, initialCategoriesJson 
       return;
     }
 
-    if (newDoc.type === 'upload' && !newDoc.file_base64) {
+    if (newDoc.type === 'upload' && !newFile) {
       toast.error("Debes seleccionar un archivo PDF");
       return;
     }
@@ -193,20 +213,35 @@ export default function NormativityManager({ initialDocs, initialCategoriesJson 
 
     setLoading(prev => ({ ...prev, 'adding': true }));
 
-    const payload = {
-      title: newDoc.title,
-      category_key: activeTab,
-      file_name: newDoc.type === 'upload' ? newDoc.file_name : undefined,
-      file_base64: newDoc.type === 'upload' ? newDoc.file_base64 : undefined,
-      external_link: newDoc.type === 'link' ? newDoc.external_link : undefined
-    };
+    try {
+      let finalLink = newDoc.type === 'link' ? newDoc.external_link.trim() : undefined;
+      let finalFileName = undefined;
 
-    const res = await addNormativityDocument(payload);
-    if (res.success) {
-      toast.success("Documento agregado con éxito");
-      window.location.reload();
-    } else {
-      toast.error(res.error || "Error al agregar");
+      if (newDoc.type === 'upload' && newFile) {
+        toast.loading("Subiendo documento al almacenamiento institucional...", { id: 'uploading-add' });
+        const uploaded = await uploadDocFile(newFile);
+        finalLink = uploaded.url;
+        finalFileName = uploaded.file_name;
+        toast.success("Documento almacenado correctamente", { id: 'uploading-add' });
+      }
+
+      const payload = {
+        title: newDoc.title.trim(),
+        category_key: activeTab,
+        file_name: finalFileName,
+        external_link: finalLink,
+      };
+
+      const res = await addNormativityDocument(payload);
+      if (res.success) {
+        toast.success("Documento agregado con éxito");
+        window.location.reload();
+      } else {
+        toast.error(res.error || "Error al agregar");
+        setLoading(prev => ({ ...prev, 'adding': false }));
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Error al subir el documento", { id: 'uploading-add' });
       setLoading(prev => ({ ...prev, 'adding': false }));
     }
   };
@@ -448,7 +483,8 @@ export default function NormativityManager({ initialDocs, initialCategoriesJson 
             <button
               onClick={() => {
                 setIsAdding(!isAdding);
-                setNewDoc({ title: '', type: 'upload', file_name: '', file_base64: '', external_link: '' });
+                setNewFile(null);
+                setNewDoc({ title: '', type: 'upload', file_name: '', external_link: '' });
               }}
               className="bg-fsm-red text-white px-5 py-3 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2 font-black text-[10px] tracking-widest uppercase"
             >
@@ -512,13 +548,13 @@ export default function NormativityManager({ initialDocs, initialCategoriesJson 
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-gray-700 uppercase tracking-widest">
-                    {newDoc.type === 'upload' ? 'Archivo PDF (Max 5MB)' : 'Enlace Web URL'}
+                    {newDoc.type === 'upload' ? 'Archivo PDF (Max 25MB)' : 'Enlace Web URL'}
                   </label>
 
                   {newDoc.type === 'upload' ? (
                     <div className="relative h-14 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-center overflow-hidden hover:border-fsm-blue transition-all cursor-pointer">
                       <span className="text-xs font-bold text-gray-500 px-4 truncate">
-                        {newDoc.file_name ? `✓ ${newDoc.file_name}` : "Seleccionar Archivo PDF"}
+                        {newFile ? `✓ ${newFile.name} (${(newFile.size / (1024 * 1024)).toFixed(1)} MB)` : "Seleccionar Archivo PDF"}
                       </span>
                       <input
                         type="file"
@@ -574,9 +610,9 @@ export default function NormativityManager({ initialDocs, initialCategoriesJson 
               </div>
             ) : (
               currentDocs.map((doc, idx) => {
-                const hasLocalUpload = !!doc.file_base64;
-                const isSavedFile = !!doc.file_name && !hasLocalUpload;
-                const isLink = !doc.file_name && !!doc.external_link;
+                const pendingFile = editFiles[doc.id];
+                const isSavedFile = !!doc.file_name && !pendingFile;
+                const isLink = !doc.file_name && !!doc.external_link && !doc.external_link.startsWith('/api/documents/file/');
 
                 return (
                   <div
@@ -618,8 +654,8 @@ export default function NormativityManager({ initialDocs, initialCategoriesJson 
                             <div className="flex items-center gap-3">
                               <div className="flex-1 relative h-[44px] bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center overflow-hidden hover:border-fsm-blue transition-all cursor-pointer">
                                 <span className="text-xs font-bold text-gray-500 truncate px-4 flex items-center gap-2">
-                                  {hasLocalUpload ? (
-                                    <><FileCheck className="text-green-500 animate-pulse" size={14} /> {doc.file_name} (Pendiente)</>
+                                  {pendingFile ? (
+                                    <><FileCheck className="text-green-500 animate-pulse" size={14} /> {pendingFile.name} ({(pendingFile.size / (1024 * 1024)).toFixed(1)} MB - Pendiente)</>
                                   ) : isSavedFile ? (
                                     <><FileCheck className="text-fsm-blue" size={14} /> {doc.file_name}</>
                                   ) : (

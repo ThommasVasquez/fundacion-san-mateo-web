@@ -10,6 +10,7 @@ import {
 } from '@/app/actions';
 import { formatDateDDMMYYYY } from '@/lib/dateUtils';
 import { useRouter } from 'next/navigation';
+import { AVAILABLE_PERMISSIONS } from '@/lib/permissions';
 
 export interface AdminUserItem {
   id: string;
@@ -20,16 +21,6 @@ export interface AdminUserItem {
   permissions: string[];
   created_at: string;
 }
-
-const AVAILABLE_PERMISSIONS = [
-  { key: 'mobile_attendance', label: '📱 Asistencia Móvil / App Profesor', desc: 'Permite registrar entradas, salidas y escaneo desde la App Móvil del Celular' },
-  { key: 'attendance_view', label: 'Ver Control de Asistencia', desc: 'Permite consultar escaneos, listas de asistencia e historiales' },
-  { key: 'attendance_edit', label: 'Editar Excusas y Asistencia', desc: 'Permite registrar excusas médicas, novedades y asistencias manuales' },
-  { key: 'students_manage', label: 'Matrícula y Alumnos (RFID)', desc: 'Permite matricular estudiantes, gestionar grupos y vincular tarjetas RFID' },
-  { key: 'documents_manage', label: 'Certificados y Código QR', desc: 'Permite expedir certificados de estudio, verificar y anular folios' },
-  { key: 'cms_manage', label: 'Gestión Web (CMS y Blog)', desc: 'Permite crear/editar publicaciones del blog, faqs e imágenes de inicio' },
-  { key: 'users_manage', label: 'Administrar Usuarios y Permisos', desc: 'Acceso total para crear nuevos usuarios y definir sus privilegios' }
-];
 
 const PRESET_ROLES = [
   { 
@@ -428,6 +419,7 @@ export default function UserManagerClient({ users = [], currentUserId }: { users
                     <input 
                       type="password" 
                       required 
+                      autoComplete="new-password"
                       placeholder="••••••••"
                       value={newPassword} 
                       onChange={e => setNewPassword(e.target.value)}
@@ -546,6 +538,7 @@ export default function UserManagerClient({ users = [], currentUserId }: { users
                     <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Cambiar Contraseña (Opcional):</label>
                     <input 
                       type="password" 
+                      autoComplete="current-password"
                       placeholder="Dejar en blanco para mantener"
                       value={editPassword} 
                       onChange={e => setEditPassword(e.target.value)}

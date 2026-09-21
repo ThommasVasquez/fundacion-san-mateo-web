@@ -12,6 +12,12 @@ import AttendanceFilters from './AttendanceFilters';
 import StudentHistoryModal from './StudentHistoryModal';
 import { getPendingAbsenceAlertsCount } from '@/app/actions';
 import { formatDateDDMMYYYY } from '@/lib/dateUtils';
+import { isColombiaHoliday } from '@/lib/colombiaHolidays';
+
+
+import { cookies } from 'next/headers';
+import { decrypt } from '@/lib/auth';
+import { userHasPermission } from '@/lib/permissions';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,6 +39,18 @@ interface AttendancePageProps {
 }
 
 export default async function AttendancePage({ searchParams }: AttendancePageProps) {
+  const sessionToken = (await cookies()).get('session')?.value;
+  let payload: any = null;
+  if (sessionToken) {
+    try {
+      payload = await decrypt(sessionToken);
+    } catch {}
+  }
+  const userRole = payload?.role || 'admin';
+  const userEmail = (payload?.email || '').toLowerCase().trim();
+  const canEditAttendance = userHasPermission('attendance_edit', userRole, payload?.permissions, userEmail);
+  const canManageStudents = userHasPermission('students_manage', userRole, payload?.permissions, userEmail);
+
   const params = await searchParams;
   const todayStr = new Intl.DateTimeFormat('en-CA', {
     timeZone: ZONA_HORARIA, year: 'numeric', month: '2-digit', day: '2-digit',
@@ -74,7 +92,8 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
   const currentHourBogota = parseInt(new Intl.DateTimeFormat('en-US', {
     timeZone: ZONA_HORARIA, hour: 'numeric', hour12: false
   }).format(new Date()), 10);
-  const isBeforeNightShift = currentHourBogota < 18;
+  // El turno nocturno concluye a las 10:00 PM (hora 22). No marcar ausencias nocturnas mientras el turno esté en curso.
+  const isNightShiftConcluded = currentHourBogota >= 22;
 
   // Parallel execution of all primary queries
   const [
@@ -95,70 +114,90 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         AND (timestamp AT TIME ZONE 'America/Bogota')::date <= ${filterEndDate}::date
     `,
     sql`
-      SELECT count(*) FROM attendance_events 
-      WHERE student_id IS NULL 
-        AND (timestamp AT TIME ZONE 'America/Bogota')::date >= ${filterStartDate}::date
-        AND (timestamp AT TIME ZONE 'America/Bogota')::date <= ${filterEndDate}::date
+      SELECT count(*) FROM attendance_events ae
+      LEFT JOIN students s ON (
+        ae.student_id = s.id 
+        OR (ae.student_id IS NULL AND ae.rfid_tag_uid IS NOT NULL AND s.rfid_tag_uid = ae.rfid_tag_uid)
+      )
+      WHERE ae.student_id IS NULL AND s.id IS NULL
+        AND (ae.timestamp AT TIME ZONE 'America/Bogota')::date >= ${filterStartDate}::date
+        AND (ae.timestamp AT TIME ZONE 'America/Bogota')::date <= ${filterEndDate}::date
     `,
     sql`
-      SELECT count(DISTINCT student_id) FROM attendance_events
-      WHERE student_id IS NOT NULL 
-        AND (timestamp AT TIME ZONE 'America/Bogota')::date >= ${filterStartDate}::date
-        AND (timestamp AT TIME ZONE 'America/Bogota')::date <= ${filterEndDate}::date
+      SELECT count(DISTINCT COALESCE(ae.student_id, s.id)) FROM attendance_events ae
+      LEFT JOIN students s ON (
+        ae.student_id = s.id 
+        OR (ae.student_id IS NULL AND ae.rfid_tag_uid IS NOT NULL AND s.rfid_tag_uid = ae.rfid_tag_uid)
+      )
+      WHERE (ae.student_id IS NOT NULL OR s.id IS NOT NULL)
+        AND (ae.timestamp AT TIME ZONE 'America/Bogota')::date >= ${filterStartDate}::date
+        AND (ae.timestamp AT TIME ZONE 'America/Bogota')::date <= ${filterEndDate}::date
     `,
     sql`SELECT count(*) FROM students WHERE activo = TRUE`,
     sql`SELECT DISTINCT grado FROM students WHERE grado IS NOT NULL ORDER BY grado`,
     sql`
       SELECT count(*) as count
-      FROM attendance_records_normalized ar
-      JOIN class_sessions cs ON cs.id = ar.session_id
-      JOIN students_normalized s ON s.id = ar.student_id
-      LEFT JOIN enrollments e ON e.student_id = s.id
-      LEFT JOIN groups g ON g.id = e.group_id
-      WHERE ar.estado = 'AUSENTE'
-        AND (s.estado IS NULL OR UPPER(s.estado) = 'ACTIVO')
-        AND (e.activo IS NULL OR e.activo = TRUE)
-        AND (cs.fecha >= '2026-09-01'::date OR g.nombre IS NULL OR UPPER(g.nombre) NOT LIKE '%CB%')
+      FROM students s
+      JOIN enrollments e ON e.student_id = s.id AND (e.activo IS NULL OR e.activo = TRUE)
+      JOIN groups g ON g.id = e.group_id
+      JOIN class_sessions cs ON cs.group_id = g.id
+      LEFT JOIN attendance_events ae ON ae.student_id = s.id 
+        AND (ae.timestamp AT TIME ZONE 'America/Bogota')::date = cs.fecha
+      LEFT JOIN attendance_records_normalized ar ON ar.session_id = cs.id AND ar.student_id = s.id
+      WHERE s.activo = TRUE
+        AND cs.fecha <= CURRENT_DATE
         AND cs.fecha >= ${filterStartDate}::date
         AND cs.fecha <= ${filterEndDate}::date
+        AND ae.id IS NULL
+        AND (ar.estado IS NULL OR ar.estado = 'AUSENTE')
+        AND (cs.fecha >= '2026-09-01'::date OR g.nombre IS NULL OR UPPER(g.nombre) NOT LIKE '%CB%')
+        AND (e.fecha_inicio IS NULL OR cs.fecha >= e.fecha_inicio)
         AND (
           cs.fecha < ${todayStr}::date 
-          OR (g.jornada != 'SABADO' AND (g.jornada != 'NOCHE' OR ${!isBeforeNightShift}))
+          OR (g.jornada != 'SABADO' AND (g.jornada != 'NOCHE' OR ${isNightShiftConcluded}))
         )
         ${filterGrado ? sql`AND g.nombre = ${filterGrado}` : sql``}
         ${filterSede ? sql`AND ar.sede = ${filterSede}` : sql``}
     `,
     filterAbsencesOnly ? sql`
       SELECT 
-        ar.id,
-        ar.student_id,
-        s.nombre_original as student_name,
-        g.nombre as student_grado,
+        concat(s.id, '_', cs.id) as id,
+        s.id as student_id,
+        s.nombre as student_name,
+        COALESCE(g.nombre, s.grado, 'Sin Grado') as student_grado,
         'sin_marcacion' as origen,
         'inasistencia' as tipo_evento,
         cs.fecha::text as timestamp,
-        ar.sede,
-        ar.observaciones,
-        ar.estado,
+        'Sede 1' as sede,
+        COALESCE(ar.observaciones, 'Sin marcación en torniquete') as observaciones,
+        'AUSENTE' as estado,
         'Sin marcación de entrada' as reader_name
-      FROM attendance_records_normalized ar
-      JOIN class_sessions cs ON cs.id = ar.session_id
-      JOIN students_normalized s ON s.id = ar.student_id
-      JOIN groups g ON g.id = cs.group_id
-      WHERE ar.estado = 'AUSENTE'
-        AND (s.estado IS NULL OR UPPER(s.estado) = 'ACTIVO')
-        AND (cs.fecha >= '2026-09-01'::date OR g.nombre IS NULL OR UPPER(g.nombre) NOT LIKE '%CB%')
+      FROM students s
+      JOIN enrollments e ON e.student_id = s.id AND (e.activo IS NULL OR e.activo = TRUE)
+      JOIN groups g ON g.id = e.group_id
+      JOIN class_sessions cs ON cs.group_id = g.id
+      LEFT JOIN attendance_events ae ON ae.student_id = s.id 
+        AND (ae.timestamp AT TIME ZONE 'America/Bogota')::date = cs.fecha
+      LEFT JOIN attendance_records_normalized ar ON ar.session_id = cs.id AND ar.student_id = s.id
+      WHERE s.activo = TRUE
+        AND cs.fecha <= CURRENT_DATE
         AND cs.fecha >= ${filterStartDate}::date
         AND cs.fecha <= ${filterEndDate}::date
+        AND ae.id IS NULL
+        AND (ar.estado IS NULL OR ar.estado = 'AUSENTE')
+        AND (cs.fecha >= '2026-09-01'::date OR g.nombre IS NULL OR UPPER(g.nombre) NOT LIKE '%CB%')
+        AND (e.fecha_inicio IS NULL OR cs.fecha >= e.fecha_inicio)
         AND (
           cs.fecha < ${todayStr}::date 
-          OR (g.jornada != 'SABADO' AND (g.jornada != 'NOCHE' OR ${!isBeforeNightShift}))
+          OR (g.jornada != 'SABADO' AND (g.jornada != 'NOCHE' OR ${isNightShiftConcluded}))
         )
-      ORDER BY cs.fecha DESC, s.nombre_original ASC
+        ${filterGrado ? sql`AND g.nombre = ${filterGrado}` : sql``}
+        ${filterSede ? sql`AND ar.sede = ${filterSede}` : sql``}
+      ORDER BY cs.fecha DESC, s.nombre ASC
     ` : sql`
       SELECT 
         ae.id,
-        ae.student_id,
+        COALESCE(ae.student_id, s.id) as student_id,
         ae.rfid_tag_uid,
         ae.reader_id,
         ae.tipo_evento,
@@ -170,11 +209,16 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         ae.sede,
         ae.observaciones,
         s.nombre as student_name, 
-        s.grado as student_grado, 
+        COALESCE(g.nombre, s.grado, 'Sin Grado') as student_grado, 
         r.ubicacion as reader_name,
         r.tipo as reader_tipo
       FROM attendance_events ae
-      LEFT JOIN students s ON ae.student_id = s.id
+      LEFT JOIN students s ON (
+        ae.student_id = s.id 
+        OR (ae.student_id IS NULL AND ae.rfid_tag_uid IS NOT NULL AND s.rfid_tag_uid = ae.rfid_tag_uid)
+      )
+      LEFT JOIN enrollments e ON e.student_id = s.id AND (e.activo IS NULL OR e.activo = TRUE)
+      LEFT JOIN groups g ON g.id = e.group_id
       LEFT JOIN readers r ON ae.reader_id = r.id
       WHERE (ae.timestamp AT TIME ZONE 'America/Bogota')::date >= ${filterStartDate}::date
         AND (ae.timestamp AT TIME ZONE 'America/Bogota')::date <= ${filterEndDate}::date
@@ -182,14 +226,15 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
     `,
     sql`
       SELECT 
-        sn.id, 
-        sn.nombre_original as nombre, 
-        COALESCE(g.nombre, 'Sin Grado') as grado,
-        (CASE WHEN sn.estado IS NULL OR UPPER(sn.estado) = 'ACTIVO' THEN TRUE ELSE FALSE END) as activo
-      FROM students_normalized sn
-      LEFT JOIN enrollments e ON e.student_id = sn.id
+        s.id, 
+        s.nombre, 
+        COALESCE(g.nombre, s.grado, 'Sin Grado') as grado,
+        s.activo
+      FROM students s
+      LEFT JOIN enrollments e ON e.student_id = s.id AND (e.activo IS NULL OR e.activo = TRUE)
       LEFT JOIN groups g ON g.id = e.group_id
-      ORDER BY sn.nombre_original ASC
+      WHERE s.activo = TRUE
+      ORDER BY s.nombre ASC
     `,
     sql`SELECT id, nombre, jornada FROM groups ORDER BY nombre`,
     getPendingAbsenceAlertsCount()
@@ -279,48 +324,29 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
   let historyStudent: any = null;
   let historyEvents: any[] = [];
   if (historyStudentId) {
-    // 1. Try querying students_normalized
-    const normRes = await sql`
+    const stRes = await sql`
       SELECT 
-        sn.id as norm_id, 
-        sn.id, 
-        sn.nombre_original as nombre, 
-        sn.rfid_tag_uid, 
-        sn.estado as norm_estado,
-        g.nombre as grado
-      FROM students_normalized sn
-      LEFT JOIN enrollments e ON e.student_id = sn.id
+        s.id, 
+        s.nombre, 
+        COALESCE(g.nombre, s.grado, 'Sin Grado') as grado, 
+        s.activo,
+        s.rfid_tag_uid,
+        g.id as group_id,
+        e.fecha_inicio as enrollment_fecha_inicio
+      FROM students s
+      LEFT JOIN enrollments e ON e.student_id = s.id AND (e.activo IS NULL OR e.activo = TRUE)
       LEFT JOIN groups g ON g.id = e.group_id
-      WHERE sn.id = ${historyStudentId}::uuid
+      WHERE s.id = ${historyStudentId}::uuid
       LIMIT 1
     `;
 
-    if (normRes.length > 0) {
-      historyStudent = normRes[0];
-    } else {
-      // 2. Fallback to legacy students table
-      const legacyRes = await sql`
-        SELECT 
-          s.id, 
-          s.nombre, 
-          s.grado, 
-          s.activo,
-          s.rfid_tag_uid, 
-          sn.id as norm_id,
-          sn.estado as norm_estado
-        FROM students s
-        LEFT JOIN students_normalized sn ON sn.nombre_normalizado = UPPER(TRIM(s.nombre))
-        WHERE s.id = ${historyStudentId}::uuid
-        LIMIT 1
-      `;
-      if (legacyRes.length > 0) {
-        historyStudent = legacyRes[0];
-      }
+    if (stRes.length > 0) {
+      historyStudent = stRes[0];
     }
 
     if (historyStudent) {
-      const targetStudentId = historyStudent.norm_id || historyStudent.id;
-      const isStudentFrozen = (historyStudent.norm_estado && historyStudent.norm_estado !== 'ACTIVO') || historyStudent.activo === false;
+      const targetStudentId = historyStudent.id;
+      const isStudentFrozen = historyStudent.activo === false;
 
       // 1. Query class sessions for the student's group
       const sessions = await sql`
@@ -334,6 +360,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         JOIN enrollments e ON e.group_id = cs.group_id
         JOIN groups g ON g.id = cs.group_id
         WHERE e.student_id = ${targetStudentId}::uuid
+          AND (e.activo IS NULL OR e.activo = TRUE)
           AND cs.fecha <= CURRENT_DATE
         ORDER BY cs.fecha DESC
         LIMIT 60
@@ -344,7 +371,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         SELECT ae.*, r.ubicacion as reader_name
         FROM attendance_events ae
         LEFT JOIN readers r ON ae.reader_id = r.id
-        WHERE ae.student_id = ${historyStudentId}::uuid OR ae.student_id = ${targetStudentId}::uuid
+        WHERE ae.student_id = ${targetStudentId}::uuid
         ORDER BY ae.timestamp DESC
       `;
 
@@ -373,13 +400,15 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
           const fStr = sess.fecha_text || (typeof sess.fecha === 'string' ? sess.fecha.split('T')[0] : new Date(sess.fecha).toISOString().split('T')[0]);
           const rfid = rfidMap.get(fStr);
           const ov = overrideMap.get(sess.session_id);
+          const holiday = isColombiaHoliday(fStr);
+          const isGroupCB = (sess.group_name || '').toUpperCase().includes('CB');
 
-          let estado = isStudentFrozen ? 'CONGELADO' : 'AUSENTE';
-          let tipo_evento = isStudentFrozen ? 'congelado' : 'inasistencia';
-          let reader_name = isStudentFrozen ? 'Estudiante en congelamiento' : 'Sin marcación de entrada';
-          let origen = 'Sistema';
+          let estado = isStudentFrozen ? 'CONGELADO' : (fStr > todayStr ? 'PENDIENTE' : 'AUSENTE');
+          let tipo_evento = isStudentFrozen ? 'congelado' : (fStr > todayStr ? 'pendiente' : 'inasistencia');
+          let reader_name = isStudentFrozen ? 'Estudiante en congelamiento' : (fStr > todayStr ? 'Sesión programada a futuro' : 'Sin marcación de entrada');
+          let origen = fStr > todayStr ? 'Calendario Institucional' : 'Sistema';
           let timestamp = fStr;
-          let observaciones = isStudentFrozen ? 'Estudiante congelado/inactivo' : '';
+          let observaciones = isStudentFrozen ? 'Estudiante congelado/inactivo' : (fStr > todayStr ? 'Programada' : '');
           let sede = 'Sede 1';
 
           if (ov) {
@@ -422,6 +451,18 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
               reader_name = 'Inasistencia a clase (Sin justificar)';
               origen = 'Planilla Docente';
             }
+          } else if (holiday.isHoliday) {
+            estado = 'FESTIVO';
+            tipo_evento = 'festivo';
+            reader_name = holiday.holidayName || 'Festivo Nacional';
+            origen = 'Calendario Nacional';
+            observaciones = holiday.holidayName || 'Festivo Nacional';
+          } else if (isGroupCB && fStr < '2026-09-01') {
+            estado = 'CALENDARIO_B';
+            tipo_evento = 'calendario_b';
+            reader_name = 'Calendario B (Inicio en Septiembre)';
+            origen = 'Calendario Institucional';
+            observaciones = 'Calendario B';
           } else if (rfid) {
             estado = 'PRESENTE';
             tipo_evento = rfid.tipo_evento;
@@ -477,33 +518,39 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
           <p className="text-gray-900 font-medium">Asistencia diaria y hora de entrada de los estudiantes.</p>
         </div>
         <div className="flex flex-wrap gap-3 items-center">
-          <ManualAttendanceModal 
-            students={allStudentsForManual.map((s: any) => ({
-              id: s.id,
-              nombre: s.nombre,
-              grado: s.grado,
-              activo: Boolean(s.activo)
-            }))} 
-          />
+          {canEditAttendance && (
+            <ManualAttendanceModal 
+              students={allStudentsForManual.map((s: any) => ({
+                id: s.id,
+                nombre: s.nombre,
+                grado: s.grado,
+                activo: Boolean(s.activo)
+              }))} 
+            />
+          )}
           <ExportCsvButton events={filteredEvents} startDate={filterStartDate} endDate={filterEndDate} />
-          <Link
-            href="/admin/attendance/import"
-            className="px-5 py-2.5 bg-white text-fsm-blue border border-fsm-blue/20 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-blue hover:text-white transition-all shadow-sm flex items-center gap-2"
-          >
-            <Upload size={14} /> Subir Alumnos
-          </Link>
+          {canManageStudents && (
+            <Link
+              href="/admin/attendance/import"
+              className="px-5 py-2.5 bg-white text-fsm-blue border border-fsm-blue/20 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-blue hover:text-white transition-all shadow-sm flex items-center gap-2"
+            >
+              <Upload size={14} /> Subir Alumnos
+            </Link>
+          )}
           <Link
             href="/admin/attendance/alerts"
             className="px-5 py-2.5 bg-amber-50 text-amber-950 border border-amber-300 hover:bg-amber-600 hover:text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-sm flex items-center gap-2"
           >
             <BookOpen size={14} /> Planillas y Alertas por Grupo
           </Link>
-          <Link
-            href="/admin/attendance/enrollment"
-            className="px-5 py-2.5 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all shadow-sm flex items-center gap-2"
-          >
-            <Users size={14} /> Gestión y Edición de Estudiantes
-          </Link>
+          {canManageStudents && (
+            <Link
+              href="/admin/attendance/enrollment"
+              className="px-5 py-2.5 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all shadow-sm flex items-center gap-2"
+            >
+              <Users size={14} /> Gestión y Edición de Estudiantes
+            </Link>
+          )}
         </div>
       </div>
 
@@ -687,13 +734,17 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                         >
                           Historial
                         </Link>
-                      ) : (
+                      ) : canManageStudents ? (
                         <Link 
                           href={`/admin/attendance/enrollment?pendingUid=${ev.rfid_tag_uid}`}
                           className="px-3 py-1.5 bg-yellow-50 text-yellow-700 border border-yellow-100 hover:bg-yellow-500 hover:text-white transition-all text-xs font-bold rounded-lg"
                         >
                           Asignar
                         </Link>
+                      ) : (
+                        <span className="px-2.5 py-1 text-gray-400 text-xs font-medium">
+                          Sin Asignar
+                        </span>
                       )}
                     </td>
                   </tr>

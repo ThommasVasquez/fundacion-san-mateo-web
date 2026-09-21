@@ -1,13 +1,17 @@
+import '@/lib/polyfill';
 import { sql } from '@/lib/db';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { BookOpen, Users, Calendar, ArrowLeft, ShieldCheck, Lock } from 'lucide-react';
 import { decrypt } from '@/lib/auth';
 import { isColombiaHoliday } from '@/lib/colombiaHolidays';
+import { userHasPermission, isSuperAdminEmail } from '@/lib/permissions';
 import GroupAttendanceMatrix, { StudentData, SessionData, MatrixRecord } from './GroupAttendanceMatrix';
 
+export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
 
 export default async function GroupAttendancePage({
   params,
@@ -21,20 +25,54 @@ export default async function GroupAttendancePage({
   const sessionToken = cookieStore.get('session')?.value;
   let currentUserEmail = '';
   let canModifyAll = false;
+  let canEditTotalClasses = false;
 
   if (sessionToken) {
     try {
       const payload = await decrypt(sessionToken);
       currentUserEmail = (payload?.email || '').toLowerCase().trim();
-      canModifyAll = !!(payload?.adminId || payload?.teacherId || currentUserEmail);
+      
+      const canView = (
+        isSuperAdminEmail(currentUserEmail) ||
+        payload?.role === 'admin' ||
+        (Array.isArray(payload?.permissions) && (
+          payload.permissions.includes('attendance_view') || 
+          payload.permissions.includes('attendance_edit')
+        )) ||
+        payload?.role === 'academic' ||
+        payload?.role === 'coordinator' ||
+        payload?.role === 'teacher'
+      );
+
+      if (!canView) {
+        redirect('/admin');
+      }
+
+      canModifyAll = (
+        isSuperAdminEmail(currentUserEmail) ||
+        payload?.role === 'admin' ||
+        (Array.isArray(payload?.permissions) && payload.permissions.includes('attendance_edit')) ||
+        (payload?.role === 'academic' && (!payload?.permissions || payload.permissions.includes('attendance_edit')))
+      );
+
+      canEditTotalClasses = (
+        isSuperAdminEmail(currentUserEmail) ||
+        payload?.role === 'admin' ||
+        userHasPermission('attendance_edit_total_classes', payload?.role, payload?.permissions, currentUserEmail)
+      );
     } catch {
       canModifyAll = false;
+      canEditTotalClasses = false;
     }
   }
 
+  // Asegurar columnas en BD si no existen
+  await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS total_clases INTEGER;`.catch(() => []);
+  await sql`ALTER TABLE academic_programs ADD COLUMN IF NOT EXISTS total_clases INTEGER;`.catch(() => []);
+
   // 2. Query group details
   const groupQuery = await sql`
-    SELECT id, nombre, jornada, tipo
+    SELECT id, nombre, jornada, tipo, programa_codigo, programa_nombre, total_clases
     FROM groups
     WHERE id = ${groupId}::uuid
     LIMIT 1
@@ -46,15 +84,56 @@ export default async function GroupAttendancePage({
 
   const group = groupQuery[0];
 
+  // 2.1 Query program default total classes if available
+  let defaultProgramTotalClasses: number | null = null;
+  let programTitle = group.programa_nombre || '';
+  if (group.programa_codigo || group.programa_nombre) {
+    try {
+      const progQuery = await sql`
+        SELECT id, title, total_clases 
+        FROM academic_programs 
+        WHERE (
+          UPPER(title) ILIKE ${'%' + (group.programa_nombre || group.programa_codigo) + '%'}
+          OR (details IS NOT NULL AND details::text ILIKE ${'%' + (group.programa_codigo || '') + '%'})
+        )
+        ORDER BY total_clases DESC NULLS LAST
+        LIMIT 1
+      `;
+      if (progQuery && progQuery.length > 0) {
+        if (progQuery[0].total_clases) {
+          defaultProgramTotalClasses = Number(progQuery[0].total_clases);
+        }
+        if (progQuery[0].title) {
+          programTitle = progQuery[0].title;
+        }
+      }
+    } catch (e) {
+      console.warn('Error fetching program total classes:', e);
+    }
+  }
+
   // 3. Query enrolled students in group
   const studentsQuery = await sql`
-    SELECT s.id, s.nombre_original, s.documento as documento, s.estado
-    FROM students_normalized s
-    JOIN enrollments e ON e.student_id = s.id
+    SELECT 
+      COALESCE(s.id, sn.id, e.student_id) as id,
+      COALESCE(s.nombre, sn.nombre_original, 'ESTUDIANTE') as nombre_original,
+      COALESCE(s.documento, sn.documento, '') as documento,
+      CASE 
+        WHEN s.id IS NOT NULL THEN (CASE WHEN s.activo IS FALSE THEN 'INACTIVO' ELSE 'ACTIVO' END)
+        WHEN sn.estado IS NOT NULL THEN sn.estado
+        ELSE 'ACTIVO'
+      END as estado
+    FROM enrollments e
+    LEFT JOIN students s ON s.id = e.student_id
+    LEFT JOIN students_normalized sn ON sn.id = e.student_id
     WHERE e.group_id = ${groupId}::uuid
       AND (e.activo IS NULL OR e.activo = TRUE)
-      AND (s.estado IS NULL OR UPPER(s.estado) = 'ACTIVO')
-    ORDER BY s.nombre_original ASC
+      AND (s.id IS NOT NULL OR sn.id IS NOT NULL)
+      AND (
+        (s.id IS NOT NULL AND (s.activo IS NULL OR s.activo = TRUE))
+        OR (s.id IS NULL AND (sn.estado IS NULL OR UPPER(sn.estado) = 'ACTIVO'))
+      )
+    ORDER BY COALESCE(s.nombre, sn.nombre_original) ASC
   `;
 
   // 4. Query all class sessions for this group (ordered chronologically)
@@ -76,16 +155,17 @@ export default async function GroupAttendancePage({
   // 6. Query real physical gate entries from attendance_events (torniquetes and RFID panel scans)
   const realScansQuery = await sql`
     SELECT 
-      sn.id as student_id,
+      ae.student_id::text as student_id,
       (ae.timestamp AT TIME ZONE 'America/Bogota')::date::text as fecha_bogota,
       COUNT(ae.id) as scan_count
     FROM attendance_events ae
-    LEFT JOIN students s ON s.id = ae.student_id
-    LEFT JOIN students_normalized sn ON sn.id = ae.student_id 
-      OR UPPER(REGEXP_REPLACE(TRIM(sn.nombre_original), '\\s+', ' ', 'g')) = UPPER(REGEXP_REPLACE(TRIM(s.nombre), '\\s+', ' ', 'g'))
-    JOIN enrollments e ON e.student_id = sn.id
-    WHERE e.group_id = ${groupId}::uuid
-    GROUP BY sn.id, (ae.timestamp AT TIME ZONE 'America/Bogota')::date::text
+    WHERE ae.student_id IN (
+      SELECT student_id 
+      FROM enrollments 
+      WHERE group_id = ${groupId}::uuid 
+        AND (activo IS NULL OR activo = TRUE)
+    )
+    GROUP BY ae.student_id, (ae.timestamp AT TIME ZONE 'America/Bogota')::date::text
   `;
 
   const realScansSet = new Set<string>();
@@ -139,6 +219,30 @@ export default async function GroupAttendancePage({
 
   const isGroupCB = (group.nombre || '').toUpperCase().includes('CB');
 
+  const currentHourBogota = parseInt(new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Bogota', hour: 'numeric', hour12: false
+  }).format(new Date()), 10);
+
+  const jName = (group.jornada || '').toUpperCase();
+  const isNight = jName.includes('NOCHE');
+  const isMorning = jName.includes('DIURN') || jName.includes('MAÑ');
+  const isAfternoon = jName.includes('TARD');
+  const isSaturday = jName.includes('SAB') || jName.includes('SÁB');
+
+  // Determinar si la jornada de hoy ya concluyó en su horario
+  let isShiftConcluded = false;
+  if (isNight) {
+    isShiftConcluded = currentHourBogota >= 22;
+  } else if (isMorning) {
+    isShiftConcluded = currentHourBogota >= 13; // Turno diurno concluye a la 1:00 PM
+  } else if (isAfternoon) {
+    isShiftConcluded = currentHourBogota >= 18;
+  } else if (isSaturday) {
+    isShiftConcluded = currentHourBogota >= 15;
+  } else {
+    isShiftConcluded = currentHourBogota >= 21;
+  }
+
   const records: MatrixRecord[] = [];
   students.forEach((st) => {
     sessions.forEach((sess) => {
@@ -149,17 +253,49 @@ export default async function GroupAttendancePage({
       let finalEstado = 'PRESENTE';
       let finalObs = '';
 
-      if (explicit) {
-        finalEstado = explicit.estado;
-        finalObs = explicit.observaciones || '';
-      } else if (holiday.isHoliday) {
-        finalEstado = 'FESTIVO';
-        finalObs = holiday.holidayName || 'Festivo Nacional';
-      } else if (isGroupCB && sess.fecha < '2026-09-01') {
-        finalEstado = 'CALENDARIO_B';
+      if (sess.fecha > todayStr) {
+        finalEstado = 'PENDIENTE';
+        finalObs = 'Clase programada a futuro';
+      } else if (sess.fecha === todayStr) {
+        // Día de hoy en curso: no asumir fallas mientras el turno no concluya
+        if (explicit && explicit.estado !== 'AUSENTE' && explicit.estado !== 'PRESENTE') {
+          finalEstado = explicit.estado;
+          finalObs = explicit.observaciones || '';
+        } else if (holiday.isHoliday) {
+          finalEstado = 'FESTIVO';
+          finalObs = holiday.holidayName || 'Festivo Nacional';
+        } else if (hasRealScan) {
+          finalEstado = 'PRESENTE';
+          finalObs = 'Ingreso registrado en torniquete';
+        } else if (explicit && explicit.observaciones && explicit.observaciones.trim() !== '') {
+          finalEstado = explicit.estado;
+          finalObs = explicit.observaciones;
+        } else if (!isShiftConcluded) {
+          finalEstado = 'PENDIENTE';
+          finalObs = isNight && currentHourBogota < 18 
+            ? 'Jornada nocturna pendiente de inicio (6:00 PM)' 
+            : 'Jornada en curso • En espera de asistencia';
+        } else {
+          finalEstado = 'AUSENTE';
+          finalObs = 'Sin registro de ingreso en torniquete';
+        }
       } else {
-        finalEstado = 'PRESENTE';
-        finalObs = '';
+        // Fechas pasadas (sess.fecha < todayStr)
+        if (explicit) {
+          finalEstado = explicit.estado;
+          finalObs = explicit.observaciones || '';
+        } else if (holiday.isHoliday) {
+          finalEstado = 'FESTIVO';
+          finalObs = holiday.holidayName || 'Festivo Nacional';
+        } else if (isGroupCB && sess.fecha < '2026-09-01') {
+          finalEstado = 'CALENDARIO_B';
+        } else if (hasRealScan) {
+          finalEstado = 'PRESENTE';
+          finalObs = 'Ingreso registrado en torniquete';
+        } else {
+          finalEstado = 'AUSENTE';
+          finalObs = 'Sin registro de ingreso en torniquete';
+        }
       }
 
       // If there was a phone followup registered for this student on this date, show it
@@ -235,6 +371,10 @@ export default async function GroupAttendancePage({
         records={records}
         canModifyAll={canModifyAll}
         currentUserEmail={currentUserEmail}
+        initialTotalClasses={group.total_clases ?? null}
+        defaultProgramTotalClasses={defaultProgramTotalClasses}
+        programName={programTitle}
+        canEditTotalClasses={canEditTotalClasses}
       />
     </div>
   );

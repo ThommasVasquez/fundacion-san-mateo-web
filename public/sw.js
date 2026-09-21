@@ -32,30 +32,54 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Don't cache server actions or api requests
+  // Solo procesar peticiones GET
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
+  let url;
+  try {
+    url = new URL(event.request.url);
+  } catch {
+    return;
+  }
+
+  // NUNCA interceptar panel administrativo, APIs, ni Server Actions de Next.js
   if (
-    event.request.url.includes('/api/') || 
-    event.request.method !== 'GET' ||
+    url.pathname.startsWith('/admin') || 
+    url.pathname.startsWith('/api') || 
     event.request.headers.get('next-action')
   ) {
+    return;
+  }
+
+  // Interceptar únicamente rutas de la PWA Docente y assets cacheados
+  const isPwaRoute = url.pathname.startsWith('/teacher') || url.pathname.startsWith('/auth/teacher-login');
+  const isAsset = ASSETS_TO_CACHE.includes(url.pathname);
+
+  if (!isPwaRoute && !isAsset) {
     return;
   }
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
-        // Return cached, but fetch fresh in background to update
+        // Devolver caché y revalidar en segundo plano
         fetch(event.request).then((response) => {
-          if (response.status === 200) {
+          if (response && response.status === 200) {
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(event.request, response);
             });
           }
-        }).catch(() => {/* Ignore network failures when offline */});
+        }).catch(() => {/* Silenciar fallos offline */});
         
         return cachedResponse;
       }
-      return fetch(event.request);
+      return fetch(event.request).catch((err) => {
+        return new Response('Offline', { status: 503, statusText: 'Offline' });
+      });
+    }).catch(() => {
+      return fetch(event.request).catch(() => new Response('Offline', { status: 503 }));
     })
   );
 });

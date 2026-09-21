@@ -15,6 +15,7 @@ interface Program {
   category: string;
   is_featured: boolean;
   details?: any;
+  total_clases?: number | null;
 }
 
 interface ProgramManagerProps {
@@ -34,7 +35,8 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
     image_url: '', 
     href: '', 
     category: 'tecnicos',
-    is_featured: false
+    is_featured: false,
+    total_clases: null as number | null
   });
 
   const handleUpdate = async (id: string, field: keyof Program, value: any) => {
@@ -55,7 +57,8 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
       href: program.href, 
       category: program.category,
       is_featured: program.is_featured,
-      details: program.details
+      details: program.details,
+      total_clases: program.total_clases ?? null
     });
     
     if (res.success) {
@@ -221,6 +224,17 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                 <option value="continua">Educación Continua</option>
               </select>
             </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-fsm-blue uppercase tracking-widest">📚 Clases Totales por Defecto</label>
+              <input 
+                type="number"
+                min="1"
+                placeholder="Ej. 32, 40 (Opcional)"
+                className="w-full px-4 py-4 bg-blue-50/50 rounded-xl border border-blue-200 outline-none focus:ring-2 focus:ring-fsm-blue font-bold text-sm text-fsm-blue"
+                value={newProgram.total_clases || ''}
+                onChange={e => setNewProgram({...newProgram, total_clases: e.target.value ? parseInt(e.target.value, 10) : null})}
+              />
+            </div>
             <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200 h-[60px] self-end">
               <input 
                 type="checkbox" 
@@ -315,6 +329,21 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                       className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-100 font-bold text-sm text-gray-500 focus:ring-2 focus:ring-fsm-blue outline-none"
                       value={p.href}
                       onChange={e => handleUpdate(p.id, 'href', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black text-fsm-blue uppercase tracking-widest ml-2">📚 Clases Totales (Planilla)</label>
+                    <input 
+                      type="number"
+                      min="1"
+                      placeholder="Ej. 32, 40"
+                      className="w-full px-4 py-3 bg-blue-50/50 rounded-xl border border-blue-100 font-black text-sm text-fsm-blue focus:ring-2 focus:ring-fsm-blue outline-none"
+                      value={p.total_clases || ''}
+                      onChange={e => {
+                        const val = e.target.value ? parseInt(e.target.value, 10) : null;
+                        handleUpdate(p.id, 'total_clases', val);
+                      }}
+                      title="Cantidad de fechas o clases totales por defecto para los grupos de esta oferta educativa"
                     />
                   </div>
                   <div className="flex items-center gap-3 pt-6">

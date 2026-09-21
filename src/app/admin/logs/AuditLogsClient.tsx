@@ -7,7 +7,7 @@ import {
   FileSpreadsheet, Sparkles, Smartphone, Laptop, Check, X
 } from 'lucide-react';
 import { getAuditLogsAction } from '@/app/actions';
-import { exportAuditLogsToExcel } from '@/lib/excelExportHelper';
+
 
 export interface AuditLogItem {
   id: string;
@@ -193,6 +193,7 @@ export default function AuditLogsClient({
 
   const handleExportExcel = async () => {
     try {
+      const { exportAuditLogsToExcel } = await import('@/lib/excelExportHelper');
       await exportAuditLogsToExcel(logs);
     } catch (err) {
       console.error('Error exporting audit logs Excel:', err);

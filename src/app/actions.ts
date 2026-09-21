@@ -6,7 +6,70 @@ import { sql } from '@/lib/db';
 import { encrypt, decrypt } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 import { logAuditEvent } from '@/lib/auditLogger';
-import { getNextAcademicGroup, normalizeGroupName } from '@/lib/academicCatalog';
+import { getNextAcademicGroup, normalizeGroupName, getAcademicGroupConfig } from '@/lib/academicCatalog';
+import { isColombiaHoliday } from '@/lib/colombiaHolidays';
+import { 
+  getEffectivePermissions, 
+  isSuperAdminEmail, 
+  getUserDefaultRoute, 
+  userHasPermission 
+} from '@/lib/permissions';
+
+/**
+ * Obtiene y valida la sesión actual desde las cookies en Server Actions.
+ */
+export async function getActionSession() {
+  try {
+    const cookieStore = await cookies();
+    const session = cookieStore.get('session')?.value;
+    if (!session) return null;
+    const payload = await decrypt(session);
+    if (!payload || (!payload.adminId && !payload.teacherId)) return null;
+
+    const email = (payload.email || '').toLowerCase().trim();
+    const role = (payload.role || 'custom').toLowerCase().trim();
+    const isSuperAdmin = isSuperAdminEmail(email);
+    const isAdmin = role === 'admin' || isSuperAdmin;
+    const permissions = getEffectivePermissions(role, payload.permissions);
+
+    return {
+      userId: payload.adminId || payload.teacherId || '',
+      email,
+      role,
+      permissions,
+      isAdmin,
+      isSuperAdmin,
+      hasPermission: (perm: string) => isAdmin || permissions.includes(perm)
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Asegura que el usuario de la sesión tenga el permiso requerido para ejecutar la Server Action.
+ */
+export async function assertActionPermission(requiredPerm: string, errorMsg?: string) {
+  const session = await getActionSession();
+  if (!session) {
+    return { authorized: false, error: 'Sesión no válida o expirada. Por favor inicie sesión nuevamente.', session: null };
+  }
+  if (!session.hasPermission(requiredPerm)) {
+    await logAuditEvent({
+      action: 'ACCESS_DENIED',
+      category: 'AUTH',
+      details: `Intento no autorizado de ejecutar acción que requiere el permiso [${requiredPerm}] por parte de ${session.email} (Rol: ${session.role})`,
+      userEmail: session.email,
+      userRole: session.role
+    });
+    return { 
+      authorized: false, 
+      error: errorMsg || `Permiso denegado: No tienes autorización para realizar esta acción (requiere '${requiredPerm}').`,
+      session 
+    };
+  }
+  return { authorized: true, error: null, session };
+}
 
 export async function login(formData: FormData) {
   const email = (formData.get('email') as string)?.trim().toLowerCase();
@@ -83,9 +146,7 @@ export async function login(formData: FormData) {
       metadata: { role: userRole, permissions }
     });
 
-    const redirectUrl = userRole === 'teacher' 
-      ? '/teacher/attendance' 
-      : (userRole === 'academic' ? '/admin/attendance' : '/admin');
+    const redirectUrl = getUserDefaultRoute(userRole, permissions, user.email);
 
     return { 
       success: true, 
@@ -107,6 +168,11 @@ export async function logout() {
 }
 
 export async function updateContent(contentKey: string, newValue: string, pagePath: string = '/', contentType: string = 'text') {
+  const auth = await assertActionPermission('cms_manage');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
+
   try {
     await sql`
       INSERT INTO site_content (content_key, value, page_path, content_type)
@@ -130,6 +196,11 @@ export async function upsertBlogPost(post: {
   image_base64?: string;
   published: boolean;
 }) {
+  const auth = await assertActionPermission('cms_manage');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
+
   try {
     if (post.id) {
       await sql`
@@ -158,6 +229,11 @@ export async function upsertBlogPost(post: {
 }
 
 export async function deleteBlogPost(id: string) {
+  const auth = await assertActionPermission('cms_manage');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
+
   try {
     await sql`DELETE FROM blog_posts WHERE id = ${id}`;
     return { success: true };
@@ -168,6 +244,11 @@ export async function deleteBlogPost(id: string) {
 }
 
 export async function updateTestimonial(id: string, data: { text: string; author: string; role: string }) {
+  const auth = await assertActionPermission('cms_manage');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
+
   try {
     await sql`
       UPDATE testimonials 
@@ -182,6 +263,11 @@ export async function updateTestimonial(id: string, data: { text: string; author
 }
 
 export async function addTestimonial(data: { text: string; author: string; role: string }) {
+  const auth = await assertActionPermission('cms_manage');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
+
   try {
     await sql`
       INSERT INTO testimonials (text, author, role)
@@ -195,6 +281,11 @@ export async function addTestimonial(data: { text: string; author: string; role:
 }
 
 export async function deleteTestimonial(id: string) {
+  const auth = await assertActionPermission('cms_manage');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
+
   try {
     await sql`DELETE FROM testimonials WHERE id = ${id}`;
     return { success: true };
@@ -240,22 +331,42 @@ export async function deleteDirectoryItem(id: string) {
   }
 }
 
-export async function updateProgram(id: string, data: { title: string; subtitle: string; description: string; image_url: string; href: string; category: string; is_featured: boolean; details?: any }) {
+export async function updateProgram(id: string, data: { title: string; subtitle: string; description: string; image_url: string; href: string; category: string; is_featured: boolean; details?: any; total_clases?: number | null }) {
   try {
     const detailsJson = data.details ? (typeof data.details === 'string' ? data.details : JSON.stringify(data.details)) : null;
-    await sql`
-      UPDATE academic_programs 
-      SET 
-        title = ${data.title}, 
-        subtitle = ${data.subtitle}, 
-        description = ${data.description}, 
-        image_url = ${data.image_url}, 
-        href = ${data.href}, 
-        category = ${data.category},
-        is_featured = ${data.is_featured},
-        details = ${detailsJson}::jsonb
-      WHERE id = ${id}
-    `;
+    await sql`ALTER TABLE academic_programs ADD COLUMN IF NOT EXISTS total_clases INTEGER;`.catch(() => []);
+    const tc = data.total_clases !== undefined ? (data.total_clases && data.total_clases > 0 ? Math.floor(data.total_clases) : null) : undefined;
+    
+    if (tc !== undefined) {
+      await sql`
+        UPDATE academic_programs 
+        SET 
+          title = ${data.title}, 
+          subtitle = ${data.subtitle}, 
+          description = ${data.description}, 
+          image_url = ${data.image_url}, 
+          href = ${data.href}, 
+          category = ${data.category},
+          is_featured = ${data.is_featured},
+          details = ${detailsJson}::jsonb,
+          total_clases = ${tc}
+        WHERE id = ${id}
+      `;
+    } else {
+      await sql`
+        UPDATE academic_programs 
+        SET 
+          title = ${data.title}, 
+          subtitle = ${data.subtitle}, 
+          description = ${data.description}, 
+          image_url = ${data.image_url}, 
+          href = ${data.href}, 
+          category = ${data.category},
+          is_featured = ${data.is_featured},
+          details = ${detailsJson}::jsonb
+        WHERE id = ${id}
+      `;
+    }
     return { success: true };
   } catch (error) {
     console.error('Update program error:', error);
@@ -263,12 +374,14 @@ export async function updateProgram(id: string, data: { title: string; subtitle:
   }
 }
 
-export async function addProgram(data: { title: string; subtitle: string; description: string; image_url: string; href: string; category: string; is_featured: boolean; details?: any }) {
+export async function addProgram(data: { title: string; subtitle: string; description: string; image_url: string; href: string; category: string; is_featured: boolean; details?: any; total_clases?: number | null }) {
   try {
     const detailsJson = data.details ? (typeof data.details === 'string' ? data.details : JSON.stringify(data.details)) : null;
+    await sql`ALTER TABLE academic_programs ADD COLUMN IF NOT EXISTS total_clases INTEGER;`.catch(() => []);
+    const tc = data.total_clases && data.total_clases > 0 ? Math.floor(data.total_clases) : null;
     await sql`
-      INSERT INTO academic_programs (title, subtitle, description, image_url, href, category, is_featured, details)
-      VALUES (${data.title}, ${data.subtitle}, ${data.description}, ${data.image_url}, ${data.href}, ${data.category}, ${data.is_featured}, ${detailsJson}::jsonb)
+      INSERT INTO academic_programs (title, subtitle, description, image_url, href, category, is_featured, details, total_clases)
+      VALUES (${data.title}, ${data.subtitle}, ${data.description}, ${data.image_url}, ${data.href}, ${data.category}, ${data.is_featured}, ${detailsJson}::jsonb, ${tc})
     `;
     return { success: true };
   } catch (error) {
@@ -495,9 +608,9 @@ export async function updateNormativityDocument(
   data: {
     title: string;
     category_key: string;
-    file_name?: string;
-    file_base64?: string;
-    external_link?: string;
+    file_name?: string | null;
+    file_base64?: string | null;
+    external_link?: string | null;
     order_index?: number;
   }
 ) {
@@ -507,9 +620,9 @@ export async function updateNormativityDocument(
       SET
         title = ${data.title},
         category_key = ${data.category_key},
-        file_name = ${data.file_name !== undefined ? data.file_name : null},
-        file_base64 = ${data.file_base64 !== undefined ? data.file_base64 : null},
-        external_link = ${data.external_link !== undefined ? data.external_link : null},
+        file_name = CASE WHEN ${data.file_name !== undefined} THEN ${data.file_name} ELSE file_name END,
+        file_base64 = CASE WHEN ${data.file_base64 !== undefined} THEN ${data.file_base64} ELSE file_base64 END,
+        external_link = CASE WHEN ${data.external_link !== undefined} THEN ${data.external_link} ELSE external_link END,
         order_index = ${data.order_index !== undefined ? data.order_index : 0},
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ${id}::uuid
@@ -727,6 +840,11 @@ export async function setEnrollmentStudent(studentId: string | null) {
 }
 
 export async function linkStudentTag(studentId: string, tagUid: string) {
+  const auth = await assertActionPermission('students_manage');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
+
   try {
     // Check if tag is already linked
     const existing = await sql`
@@ -759,10 +877,15 @@ export async function linkStudentTag(studentId: string, tagUid: string) {
 }
 
 export async function unlinkStudentTag(studentId: string) {
+  const auth = await assertActionPermission('students_manage');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
+
   try {
     await sql`
       UPDATE students 
-      SET rfid_tag_uid = NULL 
+      SET rfid_tag_uid = NULL, tarjeta_numero = NULL
       WHERE id = ${studentId}::uuid
     `;
     return { success: true };
@@ -777,28 +900,110 @@ export async function updateStudentDetails(
   data: { 
     nombre?: string; 
     grado?: string; 
-    documento?: string;
+    documento?: string; 
+    usuario_nro?: string;
+    departamento?: string;
+    sede?: number;
+    telefono?: string;
+    email?: string;
+    domicilio?: string;
     tarjeta_numero?: string;
+    rfid_tag_uid?: string;
+    cumpleanos?: string;
+    inicio_practicas?: string;
     activo?: boolean;
   }
 ) {
+  const auth = await assertActionPermission('students_manage');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
+
   try {
-    const nombre = data.nombre?.trim() || null;
+    const rawNombre = data.nombre?.trim();
+    const nombre = rawNombre ? rawNombre.toUpperCase() : null;
+    const nombreNormalizado = nombre
+      ? nombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9\s]/g, ' ').trim()
+      : null;
+
     const grado = data.grado?.trim() || null;
-    const documento = data.documento !== undefined ? (data.documento.trim() || null) : undefined;
-    const tarjetaNumero = data.tarjeta_numero !== undefined ? (data.tarjeta_numero.trim() || null) : undefined;
-    const activo = data.activo ?? true;
+    const rawDoc = data.documento !== undefined ? (data.documento.trim() || null) : undefined;
+    const documento = rawDoc !== undefined ? rawDoc : undefined;
+    const usuarioNro = data.usuario_nro !== undefined 
+      ? (data.usuario_nro.trim() || null) 
+      : (documento !== undefined ? documento : undefined);
+
+    let departamento = data.departamento !== undefined ? (data.departamento.trim() || null) : undefined;
+    if (grado && departamento === undefined) {
+      const cfg = getAcademicGroupConfig(grado);
+      if (cfg) {
+        departamento = cfg.programName;
+      } else if (grado.toUpperCase().includes('TAE') || grado.toUpperCase().includes('CB') || grado.toUpperCase().includes('ENFERM')) {
+        departamento = 'Técnico Auxiliar en Enfermería (TAE)';
+      } else if (grado.toUpperCase().includes('AIPI') || grado.toUpperCase().includes('INFANCIA')) {
+        departamento = 'Atención Integral a la Primera Infancia (AIPI)';
+      } else if (grado.toUpperCase().includes('PREESCOLAR')) {
+        departamento = 'Técnico Auxiliar en Preescolar';
+      }
+    }
+
+    const sede = data.sede !== undefined ? data.sede : undefined;
+    const telefono = data.telefono !== undefined ? (data.telefono.trim() || null) : undefined;
+    const email = data.email !== undefined ? (data.email.trim().toLowerCase() || null) : undefined;
+    const domicilio = data.domicilio !== undefined ? (data.domicilio.trim() || null) : undefined;
+
+    const rawTarjeta = data.tarjeta_numero !== undefined ? (data.tarjeta_numero.trim() || null) : undefined;
+    const tarjetaNumero = rawTarjeta !== undefined 
+      ? (rawTarjeta && !isNaN(Number(rawTarjeta)) ? Number(rawTarjeta) : null) 
+      : undefined;
+
+    const rawUid = data.rfid_tag_uid !== undefined ? (data.rfid_tag_uid.trim() || null) : undefined;
+    const rfidTagUid = rawUid !== undefined 
+      ? (rawUid ? rawUid.toUpperCase().replace(/[^A-F0-9]/g, '') : null) 
+      : undefined;
+
+    const cumpleanos = data.cumpleanos !== undefined ? (data.cumpleanos.trim() || null) : undefined;
+    const inicioPracticas = data.inicio_practicas !== undefined ? (data.inicio_practicas.trim() || null) : undefined;
+    const activo = data.activo !== undefined ? data.activo : true;
+
+    // Asegurar columna email preventiva
+    try {
+      await sql`ALTER TABLE students ADD COLUMN IF NOT EXISTS email TEXT`;
+    } catch {}
 
     await sql`
       UPDATE students 
       SET 
         nombre = COALESCE(${nombre}, nombre),
+        nombre_normalizado = CASE WHEN ${nombreNormalizado !== null} THEN ${nombreNormalizado} ELSE nombre_normalizado END,
         grado = COALESCE(${grado}, grado),
         documento = CASE WHEN ${documento !== undefined} THEN ${documento} ELSE documento END,
+        usuario_nro = CASE WHEN ${usuarioNro !== undefined} THEN ${usuarioNro} ELSE usuario_nro END,
+        departamento = CASE WHEN ${departamento !== undefined} THEN ${departamento} ELSE departamento END,
+        sede = CASE WHEN ${sede !== undefined} THEN ${sede} ELSE sede END,
+        telefono = CASE WHEN ${telefono !== undefined} THEN ${telefono} ELSE telefono END,
+        email = CASE WHEN ${email !== undefined} THEN ${email} ELSE email END,
+        domicilio = CASE WHEN ${domicilio !== undefined} THEN ${domicilio} ELSE domicilio END,
         tarjeta_numero = CASE WHEN ${tarjetaNumero !== undefined} THEN ${tarjetaNumero} ELSE tarjeta_numero END,
+        rfid_tag_uid = CASE WHEN ${rfidTagUid !== undefined} THEN ${rfidTagUid} ELSE rfid_tag_uid END,
+        cumpleanos = CASE WHEN ${cumpleanos !== undefined} THEN ${cumpleanos ? cumpleanos : null}::date ELSE cumpleanos END,
+        inicio_practicas = CASE WHEN ${inicioPracticas !== undefined} THEN ${inicioPracticas ? inicioPracticas : null}::date ELSE inicio_practicas END,
         activo = ${activo}
       WHERE id = ${studentId}::uuid
     `;
+
+    if (rfidTagUid) {
+      try {
+        await sql`
+          UPDATE attendance_events
+          SET student_id = ${studentId}::uuid
+          WHERE (rfid_tag_uid = ${rfidTagUid} OR rfid_tag_uid ILIKE ${rfidTagUid})
+            AND student_id IS NULL
+        `;
+      } catch (err) {
+        console.warn('Could not backfill attendance_events for student card:', err);
+      }
+    }
 
     if (grado) {
       const normalized = normalizeGroupName(grado);
@@ -825,6 +1030,8 @@ export async function updateStudentDetails(
     }
 
     revalidatePath('/admin/attendance/enrollment');
+    revalidatePath('/admin/attendance');
+    revalidatePath('/admin/attendance/promotion');
     return { success: true };
   } catch (error: any) {
     console.error('Error updating student details:', error);
@@ -836,23 +1043,91 @@ export async function createStudent(data: {
   nombre: string; 
   grado: string; 
   documento?: string;
+  usuario_nro?: string;
+  departamento?: string;
+  sede?: number;
+  telefono?: string;
+  email?: string;
+  domicilio?: string;
   tarjeta_numero?: string;
   rfid_tag_uid?: string;
+  cumpleanos?: string;
+  inicio_practicas?: string;
+  activo?: boolean;
 }) {
-  try {
-    const nombre = data.nombre.trim();
-    const grado = data.grado.trim();
-    const documento = data.documento?.trim() || null;
-    const tarjetaNumero = data.tarjeta_numero?.trim() || null;
-    const rfidTagUid = data.rfid_tag_uid?.trim() || null;
+  const auth = await assertActionPermission('students_manage');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
 
-    if (!nombre || !grado) {
-      return { error: 'Nombre y Grado son obligatorios' };
+  try {
+    const rawNombre = data.nombre.trim();
+    if (!rawNombre) {
+      return { error: 'El nombre completo del estudiante es obligatorio' };
+    }
+    const nombre = rawNombre.toUpperCase();
+    const nombreNormalizado = nombre
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^A-Z0-9\s]/g, ' ')
+      .trim();
+
+    const grado = data.grado.trim();
+    if (!grado) {
+      return { error: 'El curso/grado oficial es obligatorio' };
     }
 
+    const rawDoc = data.documento?.trim() || null;
+    const documento = rawDoc;
+    const usuarioNro = data.usuario_nro?.trim() || documento;
+
+    let departamento = data.departamento?.trim() || null;
+    if (!departamento) {
+      const cfg = getAcademicGroupConfig(grado);
+      if (cfg) {
+        departamento = cfg.programName;
+      } else if (grado.toUpperCase().includes('TAE') || grado.toUpperCase().includes('CB') || grado.toUpperCase().includes('ENFERM')) {
+        departamento = 'Técnico Auxiliar en Enfermería (TAE)';
+      } else if (grado.toUpperCase().includes('AIPI') || grado.toUpperCase().includes('INFANCIA')) {
+        departamento = 'Atención Integral a la Primera Infancia (AIPI)';
+      } else if (grado.toUpperCase().includes('PREESCOLAR')) {
+        departamento = 'Técnico Auxiliar en Preescolar';
+      }
+    }
+
+    const sede = data.sede ?? 1;
+    const telefono = data.telefono?.trim() || null;
+    const email = data.email?.trim().toLowerCase() || null;
+    const domicilio = data.domicilio?.trim() || null;
+
+    const rawTarjeta = data.tarjeta_numero?.trim() || null;
+    const tarjetaNumero = rawTarjeta && !isNaN(Number(rawTarjeta)) ? Number(rawTarjeta) : null;
+
+    const rawUid = data.rfid_tag_uid?.trim() || null;
+    const rfidTagUid = rawUid ? rawUid.toUpperCase().replace(/[^A-F0-9]/g, '') : null;
+
+    const cumpleanos = data.cumpleanos?.trim() || null;
+    const inicioPracticas = data.inicio_practicas?.trim() || null;
+    const activo = data.activo ?? true;
+
+    // Asegurar columna email si aún no existe
+    try {
+      await sql`ALTER TABLE students ADD COLUMN IF NOT EXISTS email TEXT`;
+    } catch {}
+
     const res = await sql`
-      INSERT INTO students (id, nombre, grado, documento, tarjeta_numero, rfid_tag_uid, activo, created_at)
-      VALUES (gen_random_uuid(), ${nombre}, ${grado}, ${documento}, ${tarjetaNumero}, ${rfidTagUid}, TRUE, NOW())
+      INSERT INTO students (
+        id, nombre, nombre_normalizado, documento, usuario_nro, grado, departamento,
+        tarjeta_numero, rfid_tag_uid, telefono, email, domicilio, sede, rol, activo,
+        cumpleanos, inicio_practicas, created_at
+      )
+      VALUES (
+        gen_random_uuid(), ${nombre}, ${nombreNormalizado}, ${documento}, ${usuarioNro}, ${grado}, ${departamento},
+        ${tarjetaNumero}, ${rfidTagUid}, ${telefono}, ${email}, ${domicilio}, ${sede}, 'Estudiante', ${activo},
+        ${cumpleanos ? cumpleanos : null}::date,
+        ${inicioPracticas ? inicioPracticas : null}::date,
+        NOW()
+      )
       RETURNING id
     `;
     const studentId = res[0]?.id;
@@ -877,6 +1152,8 @@ export async function createStudent(data: {
     }
 
     revalidatePath('/admin/attendance/enrollment');
+    revalidatePath('/admin/attendance');
+    revalidatePath('/admin/attendance/promotion');
     return { success: true, studentId };
   } catch (error: any) {
     console.error('Error creating student:', error);
@@ -885,6 +1162,11 @@ export async function createStudent(data: {
 }
 
 export async function ensureStudentEnrollment(studentId: string) {
+  const auth = await assertActionPermission('students_manage');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
+
   try {
     const stRes = await sql`SELECT id, grado FROM students WHERE id = ${studentId}::uuid LIMIT 1`;
     if (stRes.length === 0) return { error: 'Estudiante no encontrado' };
@@ -926,6 +1208,11 @@ export async function ensureStudentEnrollment(studentId: string) {
 }
 
 export async function bulkUpdateStudentGrado(studentIds: string[], newGrado: string) {
+  const auth = await assertActionPermission('students_manage');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
+
   try {
     if (!studentIds || studentIds.length === 0 || !newGrado) {
       return { error: 'Selecciona al menos un estudiante y un grado válido' };
@@ -972,6 +1259,11 @@ export async function bulkUpdateStudentGrado(studentIds: string[], newGrado: str
 }
 
 export async function deleteStudent(studentId: string) {
+  const auth = await assertActionPermission('students_manage');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
+
   try {
     await sql`DELETE FROM students WHERE id = ${studentId}::uuid`;
     return { success: true };
@@ -987,6 +1279,10 @@ export async function recordManualAttendance(
   sede: string = 'Sede 1',
   observaciones: string = ''
 ) {
+  const auth = await assertActionPermission('attendance_edit');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
   try {
     if (!studentId) {
       return { error: 'ID de estudiante no proporcionado' };
@@ -994,38 +1290,37 @@ export async function recordManualAttendance(
 
     let student: any = null;
 
-    const normRes = await sql`
-      SELECT sn.id, sn.nombre_original as nombre, sn.rfid_tag_uid, sn.estado as norm_estado, s.id as legacy_id
-      FROM students_normalized sn
-      LEFT JOIN students s ON UPPER(TRIM(s.nombre)) = UPPER(TRIM(sn.nombre_original)) OR s.id = sn.id
-      WHERE sn.id = ${studentId}::uuid OR s.id = ${studentId}::uuid
+    const studentRes = await sql`
+      SELECT s.id, s.nombre, s.rfid_tag_uid, s.activo 
+      FROM students s 
+      WHERE s.id = ${studentId}::uuid 
       LIMIT 1
     `;
 
-    if (normRes.length > 0) {
-      const row = normRes[0];
+    if (studentRes.length > 0) {
+      const row = studentRes[0];
       student = {
-        id: row.legacy_id || row.id,
+        id: row.id,
         student_id: row.id,
         nombre: row.nombre,
         rfid_tag_uid: row.rfid_tag_uid,
-        activo: row.norm_estado === 'ACTIVO' || row.norm_estado == null
+        activo: Boolean(row.activo)
       };
     } else {
-      const legacyRes = await sql`
-        SELECT id, nombre, rfid_tag_uid, activo 
-        FROM students 
-        WHERE id = ${studentId}::uuid 
+      const normRes = await sql`
+        SELECT sn.id, COALESCE(sn.nombre_original, sn.nombre_normalizado) as nombre, sn.rfid_tag_uid, sn.estado as norm_estado
+        FROM students_normalized sn
+        WHERE sn.id = ${studentId}::uuid
         LIMIT 1
       `;
-      if (legacyRes.length > 0) {
-        const row = legacyRes[0];
+      if (normRes.length > 0) {
+        const row = normRes[0];
         student = {
           id: row.id,
           student_id: row.id,
           nombre: row.nombre,
           rfid_tag_uid: row.rfid_tag_uid,
-          activo: Boolean(row.activo)
+          activo: row.norm_estado === 'ACTIVO' || row.norm_estado == null
         };
       }
     }
@@ -1102,20 +1397,27 @@ export async function updateStudentAbsenceExcuse(
     `;
 
     const stInfo = await sql`
-      SELECT sn.nombre_original, s.nombre 
-      FROM students_normalized sn 
-      LEFT JOIN students s ON s.id = sn.id
-      WHERE sn.id = ${studentId}::uuid OR s.id = ${studentId}::uuid
+      SELECT s.nombre, sn.nombre_original 
+      FROM students s 
+      LEFT JOIN students_normalized sn ON sn.id = s.id
+      WHERE s.id = ${studentId}::uuid OR sn.id = ${studentId}::uuid
       LIMIT 1
     `;
     const sessInfo = await sql`SELECT fecha FROM class_sessions WHERE id = ${sessionId}::uuid LIMIT 1`;
-    const stName = stInfo[0]?.nombre_original || stInfo[0]?.nombre || studentId;
+    const stName = stInfo[0]?.nombre || stInfo[0]?.nombre_original || studentId;
     const sessDate = sessInfo[0]?.fecha ? new Date(sessInfo[0].fecha).toISOString().split('T')[0] : sessionId;
 
+    const isExcusa = cleanEstado.startsWith('EXCUSA');
+    const excusaDesc = cleanEstado === 'EXCUSA_PRACTICAS_AIPI' 
+      ? 'Cargó excusa de prácticas AIPI' 
+      : cleanEstado === 'EXCUSA_MEDICA' 
+      ? 'Cargó excusa médica' 
+      : 'Modificó asistencia';
+
     await logAuditEvent({
-      action: cleanEstado === 'EXCUSA_MEDICA' ? 'EXCUSA_REGISTRADA' : 'ASISTENCIA_MODIFICADA',
+      action: isExcusa ? 'EXCUSA_REGISTRADA' : 'ASISTENCIA_MODIFICADA',
       category: 'ATTENDANCE',
-      details: `${cleanEstado === 'EXCUSA_MEDICA' ? 'Cargó excusa médica' : 'Modificó asistencia'} para ${stName} (Fecha ${sessDate}) a [${cleanEstado}]${cleanObs ? `: "${cleanObs}"` : ''}`,
+      details: `${excusaDesc} para ${stName} (Fecha ${sessDate}) a [${cleanEstado}]${cleanObs ? `: "${cleanObs}"` : ''}`,
       metadata: { studentId, sessionId, estudiante: stName, fecha: sessDate, estado: cleanEstado, observaciones: cleanObs }
     });
 
@@ -1136,32 +1438,69 @@ export async function teacherLogin(formData: FormData) {
   }
 
   try {
+    const cleanInput = email.trim().toLowerCase();
+    let teacherId = '';
+    let teacherNombre = '';
+    let passwordMatch = false;
+
+    // 1. Buscar en teachers
     const teachers = await sql`
-      SELECT id, password_hash 
+      SELECT id, nombre, email, password_hash 
       FROM teachers 
-      WHERE email = ${email} 
+      WHERE LOWER(email) = ${cleanInput} 
       LIMIT 1
     `;
-    if (teachers.length === 0) {
-      return { error: 'Credenciales inválidas' };
+    if (teachers.length > 0 && teachers[0].password_hash) {
+      passwordMatch = await bcrypt.compare(password, teachers[0].password_hash);
+      if (passwordMatch) {
+        teacherId = teachers[0].id;
+        teacherNombre = teachers[0].nombre || email;
+      }
     }
 
-    const teacher = teachers[0];
-    const passwordMatch = await bcrypt.compare(password, teacher.password_hash);
-
+    // 2. Si no coincide, buscar en admin_users
     if (!passwordMatch) {
+      const adminUsers = await sql`
+        SELECT id, nombre, email, password_hash, role, activo 
+        FROM admin_users 
+        WHERE LOWER(email) = ${cleanInput} 
+        LIMIT 1
+      `;
+      if (adminUsers.length > 0 && adminUsers[0].password_hash && adminUsers[0].activo !== false) {
+        passwordMatch = await bcrypt.compare(password, adminUsers[0].password_hash);
+        if (passwordMatch) {
+          teacherId = adminUsers[0].id;
+          teacherNombre = adminUsers[0].nombre || email;
+        }
+      }
+    }
+
+    if (!passwordMatch || !teacherId) {
       return { error: 'Credenciales inválidas' };
     }
+
+    // Provisionar lector móvil si no existe
+    const readerId = `movil-${teacherId.slice(0, 8)}`;
+    await sql`
+      INSERT INTO readers (id, ubicacion, tipo, teacher_id, sede)
+      VALUES (${readerId}, ${`Lector Móvil - ${teacherNombre}`}, 'mobile_nfc', ${teacherId}::uuid, 'Sede 1')
+      ON CONFLICT (id) DO UPDATE SET teacher_id = ${teacherId}::uuid
+    `;
 
     // Create session
-    const sessionToken = await encrypt({ teacherId: teacher.id });
+    const sessionToken = await encrypt({ 
+      teacherId, 
+      email: cleanInput, 
+      nombre: teacherNombre, 
+      role: 'teacher' 
+    });
     
     (await cookies()).set('session', sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24 // 24 hours
+      maxAge: 60 * 60 * 24 * 30 // 30 days
     });
 
     return { success: true };
@@ -1211,6 +1550,11 @@ export async function createIssuedDocument(data: {
   notas?: string;
   pdf_url?: string;
 }) {
+  const auth = await assertActionPermission('documents_manage');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
+
   try {
     const studentNombre = data.student_nombre.trim();
     const tipoDocumento = data.tipo_documento.trim();
@@ -1291,6 +1635,11 @@ export async function bulkCreateIssuedDocuments(items: Array<{
   notas?: string;
   pdf_url?: string;
 }>) {
+  const auth = await assertActionPermission('documents_manage');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
+
   try {
     if (!Array.isArray(items) || items.length === 0) {
       return { error: 'No se recibieron registros para importar.' };
@@ -1422,6 +1771,11 @@ export async function updateIssuedDocument(id: string, data: {
   notas?: string;
   pdf_url?: string;
 }) {
+  const auth = await assertActionPermission('documents_manage');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
+
   try {
     const studentNombre = data.student_nombre?.trim() || null;
     const tipoDocumento = data.tipo_documento?.trim() || null;
@@ -1433,7 +1787,8 @@ export async function updateIssuedDocument(id: string, data: {
     const libro = data.libro?.trim() || null;
     const estado = data.estado || null;
     const notas = data.notas?.trim() || null;
-    const pdfUrl = data.pdf_url?.trim() || null;
+    const hasPdfUrlKey = 'pdf_url' in data;
+    const pdfUrl = (data.pdf_url && data.pdf_url.trim()) || null;
 
     const currentDoc = await sql`SELECT tipo_documento, estado FROM issued_documents WHERE id = ${id}::uuid LIMIT 1`;
     if (currentDoc.length > 0) {
@@ -1454,23 +1809,42 @@ export async function updateIssuedDocument(id: string, data: {
       }
     }
 
-    await sql`
-      UPDATE issued_documents
-      SET 
-        consecutivo = COALESCE(${consecutivo}, consecutivo),
-        student_nombre = COALESCE(${studentNombre}, student_nombre),
-        student_documento = COALESCE(${studentDocumento}, student_documento),
-        tipo_documento = COALESCE(${tipoDocumento}, tipo_documento),
-        programa_curso = COALESCE(${programaCurso}, programa_curso),
-        fecha_expedicion = COALESCE(${fechaExpedicion}::date, fecha_expedicion),
-        folio = COALESCE(${folio}, folio),
-        libro = COALESCE(${libro}, libro),
-        estado = COALESCE(${estado}, estado),
-        notas = COALESCE(${notas}, notas),
-        pdf_url = COALESCE(${pdfUrl}, pdf_url),
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = ${id}::uuid
-    `;
+    if (hasPdfUrlKey) {
+      await sql`
+        UPDATE issued_documents
+        SET 
+          consecutivo = COALESCE(${consecutivo}, consecutivo),
+          student_nombre = COALESCE(${studentNombre}, student_nombre),
+          student_documento = COALESCE(${studentDocumento}, student_documento),
+          tipo_documento = COALESCE(${tipoDocumento}, tipo_documento),
+          programa_curso = COALESCE(${programaCurso}, programa_curso),
+          fecha_expedicion = COALESCE(${fechaExpedicion}::date, fecha_expedicion),
+          folio = COALESCE(${folio}, folio),
+          libro = COALESCE(${libro}, libro),
+          estado = COALESCE(${estado}, estado),
+          notas = COALESCE(${notas}, notas),
+          pdf_url = ${pdfUrl},
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${id}::uuid
+      `;
+    } else {
+      await sql`
+        UPDATE issued_documents
+        SET 
+          consecutivo = COALESCE(${consecutivo}, consecutivo),
+          student_nombre = COALESCE(${studentNombre}, student_nombre),
+          student_documento = COALESCE(${studentDocumento}, student_documento),
+          tipo_documento = COALESCE(${tipoDocumento}, tipo_documento),
+          programa_curso = COALESCE(${programaCurso}, programa_curso),
+          fecha_expedicion = COALESCE(${fechaExpedicion}::date, fecha_expedicion),
+          folio = COALESCE(${folio}, folio),
+          libro = COALESCE(${libro}, libro),
+          estado = COALESCE(${estado}, estado),
+          notas = COALESCE(${notas}, notas),
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${id}::uuid
+      `;
+    }
 
     await logAuditEvent({
       action: 'DOCUMENT_UPDATED',
@@ -1493,6 +1867,11 @@ export async function updateIssuedDocument(id: string, data: {
 }
 
 export async function toggleDocumentStatus(id: string, newEstado: string) {
+  const auth = await assertActionPermission('documents_manage');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
+
   try {
     const existing = await sql`SELECT consecutivo, student_nombre, tipo_documento FROM issued_documents WHERE id = ${id}::uuid LIMIT 1`;
     const docInfo = existing.length > 0 ? existing[0] : null;
@@ -1534,6 +1913,10 @@ export async function toggleDocumentStatus(id: string, newEstado: string) {
 }
 
 export async function deleteIssuedDocument(id: string) {
+  const auth = await assertActionPermission('documents_manage');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
   try {
     const existing = await sql`SELECT consecutivo, student_nombre, tipo_documento FROM issued_documents WHERE id = ${id}::uuid LIMIT 1`;
     const docInfo = existing.length > 0 ? existing[0] : null;
@@ -1615,19 +1998,42 @@ export async function getAbsentStudentsReport(targetDate?: string, targetShift?:
     const isSunday = dayOfWeek === 0;
     const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
 
-    // Fetch active students without attendance events on targetDate
+    // Check if targetDate is an official Colombian holiday
+    const holidayInfo = isColombiaHoliday(dateStr);
+    if (holidayInfo.isHoliday) {
+      return {
+        success: true,
+        date: dateStr,
+        totalScansOnDate: totalScans,
+        dayOfWeek,
+        isWeekday,
+        isSaturday,
+        isSunday,
+        isFutureOrZeroScan: true,
+        isHoliday: true,
+        holidayName: holidayInfo.holidayName,
+        activeCoursesScanned: [],
+        absentStudents: []
+      };
+    }
+
+    // Fetch active students without attendance events or override excuse on targetDate
     const rows = await sql`
       SELECT 
         s.id as student_id,
         s.nombre,
-        s.grado,
+        COALESCE(g.nombre, s.grado) as grado,
         s.telefono,
         s.rfid_tag_uid,
-        CASE 
-          WHEN UPPER(s.grado) LIKE '%NOCHE%' THEN 'NOCHE'
-          WHEN UPPER(s.grado) LIKE '%SABADO%' OR UPPER(s.grado) LIKE '%SB%' THEN 'SABADO'
-          ELSE 'DIURNO'
-        END as turno_calculado,
+        COALESCE(g.jornada, 
+          CASE 
+            WHEN UPPER(COALESCE(g.nombre, s.grado)) LIKE '%NOCHE%' THEN 'NOCHE'
+            WHEN UPPER(COALESCE(g.nombre, s.grado)) LIKE '%SABADO%' OR UPPER(COALESCE(g.nombre, s.grado)) LIKE '%SB%' THEN 'SABADO'
+            ELSE 'DIURNO'
+          END
+        ) as turno_calculado,
+        g.tipo as group_tipo,
+        e.fecha_inicio as enrollment_fecha_inicio,
         ae.id as event_id,
         ae.timestamp::text as hora_entrada,
         af.id as followup_id,
@@ -1636,13 +2042,20 @@ export async function getAbsentStudentsReport(targetDate?: string, targetShift?:
         af.comentarios,
         af.excusa_url,
         af.registrado_por,
-        af.updated_at::text as fecha_seguimiento
+        af.updated_at::text as fecha_seguimiento,
+        ar.estado as record_estado,
+        ar.observaciones as record_observaciones
       FROM students s
+      LEFT JOIN enrollments e ON e.student_id = s.id AND (e.activo IS NULL OR e.activo = TRUE)
+      LEFT JOIN groups g ON g.id = e.group_id
       LEFT JOIN attendance_events ae ON s.id = ae.student_id AND DATE(ae.timestamp AT TIME ZONE 'America/Bogota') = ${dateStr}::date
       LEFT JOIN absence_followups af ON s.id = af.student_id AND af.fecha = ${dateStr}::date
+      LEFT JOIN class_sessions cs ON cs.group_id = g.id AND cs.fecha = ${dateStr}::date
+      LEFT JOIN attendance_records_normalized ar ON ar.session_id = cs.id AND ar.student_id = s.id
       WHERE s.activo = TRUE
         AND ae.id IS NULL
-      ORDER BY turno_calculado, s.grado, s.nombre
+        AND (ar.estado IS NULL OR ar.estado = 'AUSENTE')
+      ORDER BY turno_calculado, grado, s.nombre
     `;
 
     // Strict day-of-week shift applicability & Calendario B exclusion:
@@ -1652,8 +2065,18 @@ export async function getAbsentStudentsReport(targetDate?: string, targetShift?:
     // 4. Sundays: No students have class.
     const isBeforeSept = dateStr < '2026-09-01';
     const validRows = rows.filter((r: any) => {
-      if (isBeforeSept && r.grado && r.grado.toUpperCase().includes('CB')) {
+      const isCB = (r.grado && r.grado.toUpperCase().includes('CB')) || (r.group_tipo && r.group_tipo.toUpperCase().includes('CALENDARIO_B'));
+      if (isBeforeSept && isCB) {
         return false; // Calendario B starts in September
+      }
+      // Pre-enrollment date exclusion
+      if (r.enrollment_fecha_inicio) {
+        const enrollDate = typeof r.enrollment_fecha_inicio === 'string' 
+          ? r.enrollment_fecha_inicio.split('T')[0] 
+          : new Date(r.enrollment_fecha_inicio).toISOString().split('T')[0];
+        if (dateStr < enrollDate) {
+          return false;
+        }
       }
       if (isWeekday) {
         return r.turno_calculado === 'DIURNO' || r.turno_calculado === 'NOCHE';
@@ -1679,9 +2102,11 @@ export async function getAbsentStudentsReport(targetDate?: string, targetShift?:
 
     // Get list of courses that had at least 1 attendance scan on targetDate
     const activeCoursesRes = await sql`
-      SELECT DISTINCT s.grado
+      SELECT DISTINCT COALESCE(g.nombre, s.grado) as grado
       FROM attendance_events ae
       JOIN students s ON ae.student_id = s.id
+      LEFT JOIN enrollments e ON e.student_id = s.id AND (e.activo IS NULL OR e.activo = TRUE)
+      LEFT JOIN groups g ON g.id = e.group_id
       WHERE DATE(ae.timestamp AT TIME ZONE 'America/Bogota') = ${dateStr}::date
     `;
     const activeCoursesScanned = activeCoursesRes.map((r: any) => r.grado);
@@ -1735,13 +2160,13 @@ export async function saveAbsenceFollowup(data: {
     `;
 
     const stInfo = await sql`
-      SELECT sn.nombre_original, s.nombre 
-      FROM students_normalized sn
-      LEFT JOIN students s ON s.id = sn.id
-      WHERE sn.id = ${data.studentId}::uuid OR s.id = ${data.studentId}::uuid
+      SELECT s.nombre, sn.nombre_original 
+      FROM students s
+      LEFT JOIN students_normalized sn ON sn.id = s.id
+      WHERE s.id = ${data.studentId}::uuid OR sn.id = ${data.studentId}::uuid
       LIMIT 1
     `;
-    const stName = stInfo[0]?.nombre_original || stInfo[0]?.nombre || data.studentId;
+    const stName = stInfo[0]?.nombre || stInfo[0]?.nombre_original || data.studentId;
 
     await logAuditEvent({
       action: 'SEGUIMIENTO_TELEFONICO',
@@ -1776,6 +2201,11 @@ export async function getPendingAbsenceAlertsCount() {
 }
 
 export async function getAdminUsersAction() {
+  const auth = await assertActionPermission('users_manage');
+  if (!auth.authorized) {
+    return [];
+  }
+
   try {
     const users = await sql`
       SELECT id, nombre, email, role, activo, permissions, created_at 
@@ -1790,6 +2220,11 @@ export async function getAdminUsersAction() {
 }
 
 export async function createAdminUserAction(formData: FormData) {
+  const auth = await assertActionPermission('users_manage');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
+
   const nombre = (formData.get('nombre') as string)?.trim();
   const email = (formData.get('email') as string)?.trim().toLowerCase();
   const password = formData.get('password') as string;
@@ -1847,6 +2282,11 @@ export async function createAdminUserAction(formData: FormData) {
 }
 
 export async function updateAdminUserAction(userIdOrFormData: string | FormData, maybeFormData?: FormData) {
+  const auth = await assertActionPermission('users_manage');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
+
   let userId = '';
   let formData: FormData;
 
@@ -1863,6 +2303,8 @@ export async function updateAdminUserAction(userIdOrFormData: string | FormData,
   const password = formData.get('password') as string;
   const role = (formData.get('role') as string) || 'admin';
   const permissionsJson = formData.get('permissions') as string;
+  const activoStr = formData.get('activo') as string;
+  const activo = activoStr !== null && activoStr !== undefined ? activoStr === 'true' : true;
 
   if (!userId || !email || !nombre) {
     return { error: 'ID de usuario, nombre y correo son obligatorios.' };
@@ -1885,7 +2327,8 @@ export async function updateAdminUserAction(userIdOrFormData: string | FormData,
           email = ${email},
           password_hash = ${passwordHash},
           role = ${role},
-          permissions = ${JSON.stringify(permissions)}::jsonb
+          permissions = ${JSON.stringify(permissions)}::jsonb,
+          activo = ${activo}
         WHERE id = ${userId}::uuid
       `;
     } else {
@@ -1895,22 +2338,45 @@ export async function updateAdminUserAction(userIdOrFormData: string | FormData,
           nombre = ${nombre},
           email = ${email},
           role = ${role},
-          permissions = ${JSON.stringify(permissions)}::jsonb
+          permissions = ${JSON.stringify(permissions)}::jsonb,
+          activo = ${activo}
         WHERE id = ${userId}::uuid
       `;
     }
 
-    if (role === 'teacher' || permissions.includes('mobile_attendance')) {
+    if ((role === 'teacher' || permissions.includes('mobile_attendance')) && activo) {
       await sql`
-        INSERT INTO teachers (id, nombre, email)
-        VALUES (${userId}::uuid, ${nombre}, ${email})
-        ON CONFLICT (id) DO UPDATE SET nombre = ${nombre}, email = ${email}
+        INSERT INTO teachers (id, nombre, email, password_hash)
+        SELECT 
+          id, 
+          ${nombre}, 
+          ${email}, 
+          COALESCE(password_hash, '')
+        FROM admin_users
+        WHERE id = ${userId}::uuid
+        ON CONFLICT (id) DO UPDATE SET 
+          nombre = EXCLUDED.nombre, 
+          email = EXCLUDED.email,
+          password_hash = CASE 
+            WHEN EXCLUDED.password_hash != '' THEN EXCLUDED.password_hash 
+            ELSE teachers.password_hash 
+          END
       `;
       const readerId = `movil-${userId.slice(0, 8)}`;
       await sql`
         INSERT INTO readers (id, ubicacion, tipo, teacher_id, sede)
         VALUES (${readerId}, ${`Lector Móvil - ${nombre}`}, 'mobile_nfc', ${userId}::uuid, 'Sede 1')
         ON CONFLICT (id) DO UPDATE SET teacher_id = ${userId}::uuid, ubicacion = ${`Lector Móvil - ${nombre}`}
+      `;
+    } else {
+      // Si el rol ya no es docente o el usuario está inactivo, revocar acceso en teachers y lectores móviles
+      await sql`
+        DELETE FROM teachers 
+        WHERE id = ${userId}::uuid
+      `;
+      await sql`
+        DELETE FROM readers 
+        WHERE teacher_id = ${userId}::uuid AND tipo = 'mobile_nfc'
       `;
     }
 
@@ -1930,17 +2396,48 @@ export async function updateAdminUserAction(userIdOrFormData: string | FormData,
 }
 
 export async function toggleAdminUserStatusAction(userId: string, newStatus: boolean) {
+  const auth = await assertActionPermission('users_manage');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
+
   try {
     await sql`
       UPDATE admin_users
       SET activo = ${newStatus}
       WHERE id = ${userId}::uuid
     `;
-    await sql`
-      UPDATE teachers
-      SET activo = ${newStatus}
-      WHERE id = ${userId}::uuid
-    `;
+
+    if (!newStatus) {
+      // Al desactivar cuenta, revocar en teachers y lectores móviles
+      await sql`DELETE FROM teachers WHERE id = ${userId}::uuid`;
+      await sql`DELETE FROM readers WHERE teacher_id = ${userId}::uuid AND tipo = 'mobile_nfc'`;
+    } else {
+      // Al reactivar cuenta, restaurar en teachers si corresponde a rol docente
+      const u = await sql`SELECT role, permissions, nombre, email, password_hash FROM admin_users WHERE id = ${userId}::uuid LIMIT 1`;
+      if (u.length > 0) {
+        const role = u[0].role;
+        const permissions = Array.isArray(u[0].permissions) ? u[0].permissions : [];
+        if (role === 'teacher' || permissions.includes('mobile_attendance')) {
+          await sql`
+            INSERT INTO teachers (id, nombre, email, password_hash)
+            VALUES (${userId}::uuid, ${u[0].nombre}, ${u[0].email}, ${u[0].password_hash})
+            ON CONFLICT (id) DO UPDATE SET 
+              nombre = EXCLUDED.nombre, 
+              email = EXCLUDED.email, 
+              password_hash = EXCLUDED.password_hash
+          `;
+          const readerId = `movil-${userId.slice(0, 8)}`;
+          await sql`
+            INSERT INTO readers (id, ubicacion, tipo, teacher_id, sede)
+            VALUES (${readerId}, ${`Lector Móvil - ${u[0].nombre}`}, 'mobile_nfc', ${userId}::uuid, 'Sede 1')
+            ON CONFLICT (id) DO UPDATE SET 
+              teacher_id = ${userId}::uuid, 
+              ubicacion = ${`Lector Móvil - ${u[0].nombre}`}
+          `;
+        }
+      }
+    }
 
     await logAuditEvent({
       action: 'ESTADO_USUARIO_CAMBIADO',
@@ -1958,6 +2455,10 @@ export async function toggleAdminUserStatusAction(userId: string, newStatus: boo
 }
 
 export async function deleteAdminUserAction(userId: string) {
+  const auth = await assertActionPermission('users_manage');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
   try {
     const userToDel = await sql`SELECT nombre, email FROM admin_users WHERE id = ${userId}::uuid LIMIT 1`;
     const totalUsers = await sql`SELECT count(*) FROM admin_users`;
@@ -2010,19 +2511,14 @@ export async function updateCellAttendanceAction(
   estado: string,
   observaciones: string = ''
 ) {
+  const auth = await assertActionPermission('attendance_edit');
+  if (!auth.authorized) {
+    return { error: auth.error };
+  }
+
   try {
     if (!studentId || !sessionId || !estado) {
       return { error: 'Parámetros incompletos' };
-    }
-
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get('session')?.value;
-    if (!sessionToken) {
-      return { error: 'No autorizado: debes iniciar sesión en la plataforma institucional.' };
-    }
-    const payload = await decrypt(sessionToken);
-    if (!payload || (!payload.adminId && !payload.teacherId && !payload.email)) {
-      return { error: 'No autorizado: sesión inválida o expirada.' };
     }
 
     const cleanEstado = estado.trim().toUpperCase();
@@ -2039,10 +2535,10 @@ export async function updateCellAttendanceAction(
     `;
 
     const stInfo = await sql`
-      SELECT sn.nombre_original, s.nombre 
-      FROM students_normalized sn
-      LEFT JOIN students s ON s.id = sn.id
-      WHERE sn.id = ${studentId}::uuid OR s.id = ${studentId}::uuid
+      SELECT s.nombre, sn.nombre_original 
+      FROM students s
+      LEFT JOIN students_normalized sn ON sn.id = s.id
+      WHERE s.id = ${studentId}::uuid OR sn.id = ${studentId}::uuid
       LIMIT 1
     `;
     const sessInfo = await sql`
@@ -2053,14 +2549,21 @@ export async function updateCellAttendanceAction(
       LIMIT 1
     `;
 
-    const stName = stInfo[0]?.nombre_original || stInfo[0]?.nombre || studentId;
+    const stName = stInfo[0]?.nombre || stInfo[0]?.nombre_original || studentId;
     const sessDate = sessInfo[0]?.fecha ? new Date(sessInfo[0].fecha).toISOString().split('T')[0] : sessionId;
     const grpName = sessInfo[0]?.grupo_nombre || '';
 
+    const isExcusa = cleanEstado.startsWith('EXCUSA');
+    const excusaDesc = cleanEstado === 'EXCUSA_PRACTICAS_AIPI' 
+      ? 'Registró excusa de prácticas AIPI' 
+      : cleanEstado === 'EXCUSA_MEDICA' 
+      ? 'Registró excusa médica' 
+      : 'Modificó asistencia';
+
     await logAuditEvent({
-      action: cleanEstado === 'EXCUSA_MEDICA' ? 'EXCUSA_REGISTRADA' : 'ASISTENCIA_MODIFICADA',
+      action: isExcusa ? 'EXCUSA_REGISTRADA' : 'ASISTENCIA_MODIFICADA',
       category: 'ATTENDANCE',
-      details: `${cleanEstado === 'EXCUSA_MEDICA' ? 'Registró excusa médica' : 'Modificó asistencia'} para ${stName} ${grpName ? `(${grpName})` : ''} en fecha ${sessDate} a estado [${cleanEstado}]${cleanObs ? ` (Obs: "${cleanObs}")` : ''}`,
+      details: `${excusaDesc} para ${stName} ${grpName ? `(${grpName})` : ''} en fecha ${sessDate} a estado [${cleanEstado}]${cleanObs ? ` (Obs: "${cleanObs}")` : ''}`,
       metadata: { studentId, sessionId, estudiante: stName, grupo: grpName, fecha: sessDate, estado: cleanEstado, observaciones: cleanObs }
     });
 
@@ -2121,11 +2624,11 @@ export async function bulkUpdateGroupSessionStateAction(
     // 2. Fetch all active enrolled students in this group
     const enrolledStudents = await sql`
       SELECT s.id 
-      FROM students_normalized s
+      FROM students s
       JOIN enrollments e ON e.student_id = s.id
       WHERE e.group_id = ${groupId}::uuid
         AND (e.activo IS NULL OR e.activo = TRUE)
-        AND (s.estado IS NULL OR UPPER(s.estado) = 'ACTIVO')
+        AND (s.activo IS NULL OR s.activo = TRUE)
     `;
 
     if (enrolledStudents.length === 0) {
@@ -2219,6 +2722,93 @@ export async function bulkUpdateDateRangeGroupStateAction(
     return { error: error?.message || 'Error al procesar rango de fechas' };
   }
 }
+
+/**
+ * Sincroniza o genera las sesiones de clase faltantes para un grupo (ej. septiembre a diciembre).
+ * Toma las fechas de referencia oficiales del calendario del colegio según la jornada (lunes a viernes o sábados).
+ */
+export async function syncGroupSessionsAction(groupId: string) {
+  try {
+    if (!groupId) return { error: 'ID de grupo requerido' };
+
+    const { isAdmin } = await checkIsAdminFull();
+    if (!isAdmin) {
+      return { error: 'Permiso denegado: Operación reservada para administradores.' };
+    }
+
+    const grpInfo = await sql`SELECT id, nombre, jornada FROM groups WHERE id = ${groupId}::uuid LIMIT 1`;
+    if (grpInfo.length === 0) return { error: 'Grupo no encontrado' };
+    const grp = grpInfo[0];
+
+    const isSaturday = grp.jornada === 'SABADO' || grp.nombre.toUpperCase().includes('SABADO');
+
+    let refDates: { fecha: string; dia_semana_texto: string }[] = [];
+    if (isSaturday) {
+      refDates = await sql`
+        SELECT DISTINCT fecha::text as fecha, dia_semana_texto
+        FROM class_sessions
+        WHERE group_id IN (SELECT id FROM groups WHERE nombre IN ('I SABADO A', 'II SABADO A', 'III SABADO A'))
+        ORDER BY fecha ASC
+      `;
+    } else {
+      refDates = await sql`
+        SELECT DISTINCT fecha::text as fecha, dia_semana_texto
+        FROM class_sessions
+        WHERE group_id IN (SELECT id FROM groups WHERE nombre IN ('I DIURNO A', 'II DIURNO A', 'II DIURNO A CB'))
+        ORDER BY fecha ASC
+      `;
+    }
+
+    if (refDates.length === 0) {
+      const diasNombres = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
+      const start = new Date('2026-09-01T12:00:00Z');
+      const end = new Date('2026-12-15T12:00:00Z');
+      const daysToInclude = isSaturday ? [6] : [1, 2, 3, 4, 5];
+      const curr = new Date(start);
+      while (curr <= end) {
+        const dayOfWeek = curr.getUTCDay();
+        if (daysToInclude.includes(dayOfWeek)) {
+          refDates.push({
+            fecha: curr.toISOString().split('T')[0],
+            dia_semana_texto: diasNombres[dayOfWeek]
+          });
+        }
+        curr.setUTCDate(curr.getUTCDate() + 1);
+      }
+    }
+
+    let addedCount = 0;
+    for (const d of refDates) {
+      const exists = await sql`
+        SELECT id FROM class_sessions 
+        WHERE group_id = ${groupId}::uuid AND fecha = ${d.fecha}::date 
+        LIMIT 1
+      `;
+      if (exists.length === 0) {
+        await sql`
+          INSERT INTO class_sessions (id, group_id, fecha, dia_semana_texto, dia_semana_calculado, activa, created_at)
+          VALUES (gen_random_uuid(), ${groupId}::uuid, ${d.fecha}::date, ${d.dia_semana_texto}, ${d.dia_semana_texto}, TRUE, NOW())
+        `;
+        addedCount++;
+      }
+    }
+
+    await logAuditEvent({
+      action: 'GENERAR_SESIONES_CALENDARIO',
+      category: 'COURSES',
+      details: `Generó ${addedCount} sesiones de clase oficiales para el grupo ${grp.nombre}.`,
+      metadata: { groupId, grupo: grp.nombre, addedCount }
+    });
+
+    revalidatePath(`/admin/attendance/group/${groupId}`);
+    revalidatePath('/admin/attendance');
+    return { success: true, addedCount, totalRef: refDates.length };
+  } catch (error: any) {
+    console.error('Error syncing group sessions:', error);
+    return { error: error?.message || 'Error al generar sesiones del calendario' };
+  }
+}
+
 
 /**
  * Superadmin Audit Logs Query Action
@@ -2445,22 +3035,14 @@ export async function executeSemesterPromotion(
   targetGrado: string | null,
   decisions: PromotionDecision[]
 ) {
-  try {
-    // 1. Validar sesión
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get('session')?.value;
-    let adminEmail = 'admin@fundacionsanmateosoacha.edu.co';
-    let adminName = 'Administrador';
+  const auth = await assertActionPermission('students_manage');
+  if (!auth.authorized || !auth.session) {
+    return { error: auth.error };
+  }
 
-    if (sessionToken) {
-      try {
-        const payload = await decrypt(sessionToken);
-        if (payload?.email) adminEmail = payload.email;
-        if (payload?.nombre) adminName = payload.nombre;
-      } catch {
-        // use defaults
-      }
-    }
+  try {
+    const adminEmail = auth.session.email;
+    const adminName = auth.session.email;
 
     const groupRes = await sql`SELECT id, nombre FROM groups WHERE id = ${sourceGroupId}::uuid LIMIT 1`;
     if (groupRes.length === 0) {
@@ -2514,14 +3096,6 @@ export async function executeSemesterPromotion(
             ON CONFLICT (student_id, group_id) DO UPDATE 
             SET activo = TRUE, fecha_inicio = CURRENT_DATE, fecha_fin = NULL
           `;
-          // Crear celdas de asistencia si el nuevo grupo tiene sesiones
-          for (const sess of targetSessions) {
-            await sql`
-              INSERT INTO attendance_records_normalized (id, student_id, session_id, estado, created_at, updated_at)
-              VALUES (gen_random_uuid(), ${studentId}::uuid, ${sess.id}::uuid, 'AUSENTE', NOW(), NOW())
-              ON CONFLICT DO NOTHING
-            `;
-          }
         }
         promotedCount++;
       } else if (d.action === 'repeat') {
@@ -2562,14 +3136,6 @@ export async function executeSemesterPromotion(
             ON CONFLICT (student_id, group_id) DO UPDATE 
             SET activo = TRUE, fecha_inicio = CURRENT_DATE, fecha_fin = NULL
           `;
-          const customSessions = await sql`SELECT id FROM class_sessions WHERE group_id = ${destGroupId}::uuid`;
-          for (const sess of customSessions) {
-            await sql`
-              INSERT INTO attendance_records_normalized (id, student_id, session_id, estado, created_at, updated_at)
-              VALUES (gen_random_uuid(), ${studentId}::uuid, ${sess.id}::uuid, 'AUSENTE', NOW(), NOW())
-              ON CONFLICT DO NOTHING
-            `;
-          }
         }
         transferredCount++;
       }
@@ -2609,4 +3175,640 @@ export async function executeSemesterPromotion(
     return { error: error?.message || 'Error al procesar la promoción de semestre' };
   }
 }
+
+export async function removeStudentEnrollment(studentId: string, enrollmentId: string) {
+  try {
+    if (!studentId || !enrollmentId) {
+      return { error: 'ID de estudiante y matrícula requeridos' };
+    }
+
+    // 1. Obtener info de la matrícula que se eliminará
+    const enrInfo = await sql`
+      SELECT e.id, e.group_id, g.nombre as group_name
+      FROM enrollments e
+      JOIN groups g ON g.id = e.group_id
+      WHERE e.id = ${enrollmentId}::uuid
+      LIMIT 1
+    `;
+    const deletedGroupName = enrInfo.length > 0 ? enrInfo[0].group_name : 'desconocido';
+
+    // 2. Eliminar la matrícula de enrollments
+    await sql`DELETE FROM enrollments WHERE id = ${enrollmentId}::uuid`;
+
+    // 3. Revisar qué matrículas activas le quedan al estudiante
+    const remaining = await sql`
+      SELECT e.id, g.nombre as group_name
+      FROM enrollments e
+      JOIN groups g ON g.id = e.group_id
+      WHERE e.student_id = ${studentId}::uuid AND (e.activo IS NULL OR e.activo = TRUE)
+      ORDER BY e.created_at DESC
+    `;
+
+    // 4. Si le queda al menos 1 matrícula, sincronizar students.grado con la principal
+    if (remaining.length > 0) {
+      const primaryGroup = remaining[0].group_name;
+      await sql`
+        UPDATE students 
+        SET grado = ${primaryGroup} 
+        WHERE id = ${studentId}::uuid
+      `;
+    }
+
+    await logAuditEvent({
+      action: 'STUDENT_ENROLLMENT_REMOVE',
+      category: 'STUDENTS',
+      details: `Se eliminó la matrícula del estudiante en el curso ${deletedGroupName}`,
+      metadata: { studentId, enrollmentId, deletedGroupName, remainingCount: remaining.length }
+    });
+
+    revalidatePath('/admin/attendance/alerts');
+    revalidatePath('/admin/attendance/enrollment');
+    revalidatePath('/admin/attendance');
+    return { success: true, remainingCount: remaining.length };
+  } catch (error: any) {
+    console.error('Error in removeStudentEnrollment:', error);
+    return { error: error?.message || 'Error al eliminar la matrícula' };
+  }
+}
+
+export async function updateStudentEnrollment(studentId: string, enrollmentId: string, newGroupId: string) {
+  try {
+    if (!studentId || !enrollmentId || !newGroupId) {
+      return { error: 'Datos incompletos para actualizar la matrícula' };
+    }
+
+    // 1. Obtener el nombre y datos del nuevo grupo
+    const newGrp = await sql`
+      SELECT id, nombre, jornada, tipo, programa_nombre
+      FROM groups
+      WHERE id = ${newGroupId}::uuid
+      LIMIT 1
+    `;
+    if (newGrp.length === 0) {
+      return { error: 'Grupo de destino no encontrado' };
+    }
+    const newGroupName = newGrp[0].nombre;
+
+    // 2. Verificar si el alumno ya está matriculado en el grupo de destino (evitar duplicar)
+    const existing = await sql`
+      SELECT id FROM enrollments 
+      WHERE student_id = ${studentId}::uuid 
+        AND group_id = ${newGroupId}::uuid 
+        AND id != ${enrollmentId}::uuid
+      LIMIT 1
+    `;
+    if (existing.length > 0) {
+      // Ya tenía matrícula en el nuevo grupo, así que eliminamos la vieja para no duplicar
+      await sql`DELETE FROM enrollments WHERE id = ${enrollmentId}::uuid`;
+      await sql`
+        UPDATE enrollments 
+        SET activo = TRUE, fecha_inicio = CURRENT_DATE, fecha_fin = NULL 
+        WHERE id = ${existing[0].id}::uuid
+      `;
+    } else {
+      // Actualizar la matrícula existente al nuevo grupo
+      await sql`
+        UPDATE enrollments 
+        SET group_id = ${newGroupId}::uuid, activo = TRUE, fecha_inicio = CURRENT_DATE, fecha_fin = NULL
+        WHERE id = ${enrollmentId}::uuid
+      `;
+    }
+
+    // 3. Actualizar students.grado para que coincida con el nuevo curso
+    await sql`
+      UPDATE students 
+      SET grado = ${newGroupName} 
+      WHERE id = ${studentId}::uuid
+    `;
+
+    await logAuditEvent({
+      action: 'STUDENT_ENROLLMENT_UPDATE',
+      category: 'STUDENTS',
+      details: `Se cambió la matrícula del estudiante al curso/horario ${newGroupName}`,
+      metadata: { studentId, enrollmentId, newGroupId, newGroupName }
+    });
+
+    revalidatePath('/admin/attendance/alerts');
+    revalidatePath('/admin/attendance/enrollment');
+    revalidatePath('/admin/attendance');
+    return { success: true, newGroupName };
+  } catch (error: any) {
+    console.error('Error in updateStudentEnrollment:', error);
+    return { error: error?.message || 'Error al actualizar el curso/horario' };
+  }
+}
+
+export async function keepSingleEnrollment(studentId: string, enrollmentIdToKeep: string) {
+  try {
+    if (!studentId || !enrollmentIdToKeep) {
+      return { error: 'Datos incompletos para unificar matrícula' };
+    }
+
+    // 1. Obtener la matrícula a conservar
+    const toKeep = await sql`
+      SELECT e.id, e.group_id, g.nombre as group_name
+      FROM enrollments e
+      JOIN groups g ON g.id = e.group_id
+      WHERE e.id = ${enrollmentIdToKeep}::uuid AND e.student_id = ${studentId}::uuid
+      LIMIT 1
+    `;
+    if (toKeep.length === 0) {
+      return { error: 'Matrícula seleccionada no encontrada' };
+    }
+    const { group_name } = toKeep[0];
+
+    // 2. Eliminar todas las demás matrículas del estudiante
+    await sql`
+      DELETE FROM enrollments 
+      WHERE student_id = ${studentId}::uuid AND id != ${enrollmentIdToKeep}::uuid
+    `;
+
+    // 3. Asegurar que la matrícula conservada esté activa
+    await sql`
+      UPDATE enrollments 
+      SET activo = TRUE, fecha_inicio = CURRENT_DATE, fecha_fin = NULL
+      WHERE id = ${enrollmentIdToKeep}::uuid
+    `;
+
+    // 4. Actualizar grado del estudiante
+    await sql`
+      UPDATE students 
+      SET grado = ${group_name} 
+      WHERE id = ${studentId}::uuid
+    `;
+
+    await logAuditEvent({
+      action: 'STUDENT_ENROLLMENT_UNIFY',
+      category: 'STUDENTS',
+      details: `Se unificaron las matrículas del estudiante dejando únicamente ${group_name}`,
+      metadata: { studentId, keptEnrollmentId: enrollmentIdToKeep, group_name }
+    });
+
+    revalidatePath('/admin/attendance/alerts');
+    revalidatePath('/admin/attendance/enrollment');
+    revalidatePath('/admin/attendance');
+    return { success: true, group_name };
+  } catch (error: any) {
+    console.error('Error in keepSingleEnrollment:', error);
+    return { error: error?.message || 'Error al unificar matrícula' };
+  }
+}
+
+export async function addStudentEnrollment(studentId: string, groupId: string) {
+  try {
+    if (!studentId || !groupId) {
+      return { error: 'ID de estudiante y grupo requeridos' };
+    }
+
+    const grp = await sql`SELECT id, nombre FROM groups WHERE id = ${groupId}::uuid LIMIT 1`;
+    if (grp.length === 0) return { error: 'Grupo no encontrado' };
+
+    await sql`
+      INSERT INTO enrollments (id, student_id, group_id, activo, fecha_inicio, created_at)
+      VALUES (gen_random_uuid(), ${studentId}::uuid, ${groupId}::uuid, TRUE, CURRENT_DATE, NOW())
+      ON CONFLICT (student_id, group_id) DO UPDATE 
+      SET activo = TRUE, fecha_inicio = CURRENT_DATE, fecha_fin = NULL
+    `;
+
+    revalidatePath('/admin/attendance/alerts');
+    revalidatePath('/admin/attendance/enrollment');
+    revalidatePath('/admin/attendance');
+    return { success: true, groupName: grp[0].nombre };
+  } catch (error: any) {
+    console.error('Error in addStudentEnrollment:', error);
+    return { error: error?.message || 'Error al agregar curso/horario' };
+  }
+}
+
+export interface ImportedStudentItem {
+  nombre: string;
+  documento?: string | null;
+  usuarioNro?: string | null;
+  tarjetaNumero?: string | null;
+  telefono?: string | null;
+  email?: string | null;
+  domicilio?: string | null;
+}
+
+/**
+ * Importa y matricula una lista de estudiantes directamente en un grupo oficial desde Excel
+ */
+export async function importStudentsToGroupAction(groupId: string, students: ImportedStudentItem[]) {
+  try {
+    if (!groupId || !Array.isArray(students) || students.length === 0) {
+      return { error: 'Se requiere el grupo y al menos un estudiante para importar' };
+    }
+
+    const { isAdmin } = await checkIsAdminFull();
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session')?.value;
+    let isTeacher = false;
+    if (sessionToken) {
+      try {
+        const payload = await decrypt(sessionToken);
+        if (payload?.teacherId || payload?.adminId) isTeacher = true;
+      } catch {}
+    }
+
+    if (!isAdmin && !isTeacher) {
+      return { error: 'No tienes permisos para importar estudiantes en este grupo' };
+    }
+
+    const grp = await sql`SELECT id, nombre, jornada, programa_nombre FROM groups WHERE id = ${groupId}::uuid LIMIT 1`;
+    if (grp.length === 0) {
+      return { error: 'Grupo oficial no encontrado' };
+    }
+    const groupName = grp[0].nombre;
+
+    let createdCount = 0;
+    let updatedCount = 0;
+
+    for (const st of students) {
+      const cleanNombre = (st.nombre || '').trim().toUpperCase();
+      if (!cleanNombre) continue;
+
+      const cleanDoc = (st.documento || '').trim() || null;
+      const cleanUsuarioNro = (st.usuarioNro || '').trim() || cleanDoc;
+      const cleanTarjeta = (st.tarjetaNumero || '').trim() || null;
+      const cleanTel = (st.telefono || '').trim() || null;
+      const cleanEmail = (st.email || '').trim().toLowerCase() || null;
+      const cleanDom = (st.domicilio || '').trim() || null;
+
+      // 1. Verificar si el alumno ya existe por documento, usuario_nro o coincidencia exacta de nombre
+      let existingStudentId: string | null = null;
+      if (cleanDoc) {
+        const byDoc = await sql`
+          SELECT id FROM students 
+          WHERE documento = ${cleanDoc} OR usuario_nro = ${cleanDoc}
+          LIMIT 1
+        `;
+        if (byDoc.length > 0) existingStudentId = byDoc[0].id;
+      }
+
+      if (!existingStudentId && cleanUsuarioNro) {
+        const byUser = await sql`
+          SELECT id FROM students WHERE usuario_nro = ${cleanUsuarioNro} LIMIT 1
+        `;
+        if (byUser.length > 0) existingStudentId = byUser[0].id;
+      }
+
+      if (!existingStudentId) {
+        const byName = await sql`
+          SELECT id FROM students 
+          WHERE UPPER(TRIM(nombre)) = ${cleanNombre}
+          LIMIT 1
+        `;
+        if (byName.length > 0) existingStudentId = byName[0].id;
+      }
+
+      if (existingStudentId) {
+        // Actualizar datos del estudiante existente y su grado canónico
+        await sql`
+          UPDATE students 
+          SET 
+            nombre = ${cleanNombre},
+            documento = COALESCE(${cleanDoc}, documento),
+            usuario_nro = COALESCE(${cleanUsuarioNro}, usuario_nro),
+            grado = ${groupName},
+            activo = TRUE,
+            tarjeta_numero = COALESCE(${cleanTarjeta}, tarjeta_numero),
+            telefono = COALESCE(${cleanTel}, telefono),
+            email = COALESCE(${cleanEmail}, email),
+            domicilio = COALESCE(${cleanDom}, domicilio)
+          WHERE id = ${existingStudentId}::uuid
+        `;
+        updatedCount++;
+      } else {
+        // Crear nuevo estudiante
+        const inserted = await sql`
+          INSERT INTO students (
+            id, nombre, documento, usuario_nro, grado, activo,
+            tarjeta_numero, telefono, email, domicilio, created_at
+          ) VALUES (
+            gen_random_uuid(), ${cleanNombre}, ${cleanDoc}, ${cleanUsuarioNro}, ${groupName}, TRUE,
+            ${cleanTarjeta}, ${cleanTel}, ${cleanEmail}, ${cleanDom}, NOW()
+          )
+          RETURNING id
+        `;
+        existingStudentId = inserted[0].id;
+        createdCount++;
+      }
+
+      // 2. Matricular activamente en este grupo
+      await sql`
+        INSERT INTO enrollments (id, student_id, group_id, activo, fecha_inicio, created_at)
+        VALUES (gen_random_uuid(), ${existingStudentId}::uuid, ${groupId}::uuid, TRUE, CURRENT_DATE, NOW())
+        ON CONFLICT (student_id, group_id) DO UPDATE
+        SET activo = TRUE, fecha_inicio = CURRENT_DATE, fecha_fin = NULL
+      `;
+    }
+
+    await logAuditEvent({
+      action: 'IMPORTACION_EXCEL_GRUPO',
+      category: 'STUDENTS',
+      details: `Importó lista Excel al grupo ${groupName}: ${createdCount} nuevos creados, ${updatedCount} actualizados y matriculados.`,
+      metadata: { groupId, groupName, createdCount, updatedCount, total: createdCount + updatedCount }
+    });
+
+    revalidatePath(`/admin/attendance/group/${groupId}`);
+    revalidatePath('/admin/attendance/enrollment');
+    revalidatePath('/admin/attendance');
+    revalidatePath('/admin/attendance/alerts');
+
+    return { 
+      success: true, 
+      groupName, 
+      createdCount, 
+      updatedCount, 
+      total: createdCount + updatedCount 
+    };
+  } catch (error: any) {
+    console.error('Error in importStudentsToGroupAction:', error);
+    return { error: error?.message || 'Error al importar estudiantes al grupo' };
+  }
+}
+
+export interface CreateGroupInput {
+  nombre: string;
+  programaCodigo: string; // 'TAE' | 'AIPI' | 'PREESCOLAR'
+  semestreRomano: string; // 'I' | 'II' | 'III'
+  jornada: string; // 'DIURNO' | 'NOCHE' | 'SABADO'
+  tipo?: string; // 'REGULAR' | 'CB'
+  startDate: string; // 'YYYY-MM-DD'
+  endDate: string; // 'YYYY-MM-DD'
+  selectedDays?: number[]; // [1, 2, 3, 4, 5] for Mon-Fri, [6] for Sat
+  totalClases?: number;
+}
+
+export async function createGroupAction(input: CreateGroupInput) {
+  try {
+    const { isAdmin } = await checkIsAdminFull();
+    if (!isAdmin) {
+      return { error: 'No tienes permisos de administrador para crear cursos o grupos.' };
+    }
+
+    const cleanNombre = (input.nombre || '').trim().toUpperCase();
+    if (!cleanNombre || cleanNombre.length < 2) {
+      return { error: 'El nombre del curso es obligatorio y debe tener al menos 2 caracteres.' };
+    }
+
+    // 1. Verificar si ya existe un curso con el mismo nombre
+    const existing = await sql`
+      SELECT id, nombre FROM groups 
+      WHERE UPPER(TRIM(nombre)) = ${cleanNombre}
+      LIMIT 1
+    `;
+    if (existing.length > 0) {
+      return { error: `Ya existe un curso registrado con el nombre "${cleanNombre}".` };
+    }
+
+    const progCode = (input.programaCodigo || 'TAE').trim().toUpperCase();
+    let progNombre = 'Técnico Laboral por Competencias en Auxiliar de Enfermería';
+    if (progCode === 'AIPI') {
+      progNombre = 'Atención Integral a la Primera Infancia';
+    } else if (progCode === 'PREESCOLAR') {
+      progNombre = 'Técnico Auxiliar en Preescolar';
+    }
+
+    const cleanJornada = (input.jornada || 'DIURNO').trim().toUpperCase();
+    const cleanTipo = (input.tipo || 'REGULAR').trim().toUpperCase();
+    const cleanSemestre = (input.semestreRomano || 'I').trim().toUpperCase();
+    const newGroupId = crypto.randomUUID();
+
+    await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS total_clases INTEGER;`.catch(() => []);
+    const customTotalClases = input.totalClases && input.totalClases > 0 ? Math.floor(input.totalClases) : null;
+
+    // 2. Insertar nuevo grupo en la tabla groups
+    await sql`
+      INSERT INTO groups (
+        id, nombre, nombre_clean, jornada, tipo,
+        programa_codigo, programa_nombre, semestre_romano,
+        modalidad, activo, created_at, updated_at, total_clases
+      ) VALUES (
+        ${newGroupId}::uuid,
+        ${cleanNombre},
+        ${cleanNombre},
+        ${cleanJornada},
+        ${cleanTipo},
+        ${progCode},
+        ${progNombre},
+        ${cleanSemestre},
+        'PRESENCIAL',
+        TRUE,
+        NOW(),
+        NOW(),
+        ${customTotalClases}
+      )
+    `;
+
+    // 3. Generar sesiones de clase en el rango de fechas
+    const diasNombres = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
+    const startStr = input.startDate || '2026-02-01';
+    const endStr = input.endDate || '2026-11-30';
+    const start = new Date(startStr + 'T12:00:00Z');
+    const end = new Date(endStr + 'T12:00:00Z');
+
+    const daysToInclude = (input.selectedDays && input.selectedDays.length > 0)
+      ? input.selectedDays
+      : (cleanJornada === 'SABADO' ? [6] : [1, 2, 3, 4, 5]);
+
+    const sessionsToInsert: { fecha: string; diaTexto: string }[] = [];
+    const curr = new Date(start);
+    while (curr <= end) {
+      const dayOfWeek = curr.getUTCDay();
+      if (daysToInclude.includes(dayOfWeek)) {
+        const fechaStr = curr.toISOString().split('T')[0];
+        sessionsToInsert.push({
+          fecha: fechaStr,
+          diaTexto: diasNombres[dayOfWeek]
+        });
+      }
+      curr.setUTCDate(curr.getUTCDate() + 1);
+    }
+
+    // Insertar sesiones en class_sessions
+    for (const s of sessionsToInsert) {
+      await sql`
+        INSERT INTO class_sessions (id, group_id, fecha, dia_semana_texto, dia_semana_calculado, activa, created_at)
+        VALUES (
+          gen_random_uuid(),
+          ${newGroupId}::uuid,
+          ${s.fecha}::date,
+          ${s.diaTexto},
+          ${s.diaTexto},
+          TRUE,
+          NOW()
+        )
+        ON CONFLICT (group_id, fecha) DO NOTHING
+      `;
+    }
+
+    // 4. Registrar auditoría institucional
+    await logAuditEvent({
+      action: 'CREACION_CURSO',
+      category: 'COURSES',
+      details: `Creó el curso oficial ${cleanNombre} (${progCode} - ${cleanJornada}) con ${sessionsToInsert.length} sesiones de clase.`,
+      metadata: {
+        groupId: newGroupId,
+        nombre: cleanNombre,
+        programaCodigo: progCode,
+        jornada: cleanJornada,
+        tipo: cleanTipo,
+        semestreRomano: cleanSemestre,
+        startDate: startStr,
+        endDate: endStr,
+        sessionsCount: sessionsToInsert.length
+      }
+    });
+
+    // 5. Revalidar rutas
+    revalidatePath('/admin/attendance/alerts');
+    revalidatePath('/admin/attendance/enrollment');
+    revalidatePath('/admin/attendance');
+    revalidatePath('/admin/attendance/promotion');
+    revalidatePath(`/admin/attendance/group/${newGroupId}`);
+
+    return {
+      success: true,
+      groupId: newGroupId,
+      groupName: cleanNombre,
+      sessionsCount: sessionsToInsert.length
+    };
+  } catch (error: any) {
+    console.error('Error in createGroupAction:', error);
+    return { error: error?.message || 'Error al crear el curso o grupo' };
+  }
+}
+
+/**
+ * Modifica la cantidad de fechas o clases totales de un grupo.
+ * Requiere permiso 'attendance_edit_total_classes' o ser Administrador General / SuperAdmin.
+ */
+export async function updateGroupTotalClassesAction(
+  groupId: string,
+  totalClases: number | null
+): Promise<{ success?: boolean; error?: string; totalClases?: number | null }> {
+  try {
+    const session = await getActionSession();
+    if (!session) {
+      return { error: 'Sesión expirada o no autenticada.' };
+    }
+
+    const canEdit = 
+      isSuperAdminEmail(session.email) ||
+      session.role === 'admin' ||
+      userHasPermission('attendance_edit_total_classes', session.role, session.permissions, session.email);
+
+    if (!canEdit) {
+      return { error: 'No tienes autorización para modificar la cantidad total de clases/fechas de este grupo.' };
+    }
+
+    // Asegurar que la columna exista de forma transparente
+    await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS total_clases INTEGER;`;
+
+    // Si viene un valor menor o igual a 0, lo guardamos como NULL (para resetear a automático)
+    const val = (totalClases !== null && totalClases !== undefined && totalClases > 0) ? Math.floor(totalClases) : null;
+
+    const grpInfo = await sql`
+      UPDATE groups 
+      SET total_clases = ${val}, updated_at = NOW() 
+      WHERE id = ${groupId}::uuid
+      RETURNING id, nombre, total_clases
+    `;
+
+    if (grpInfo.length === 0) {
+      return { error: 'Grupo no encontrado.' };
+    }
+
+    const group = grpInfo[0];
+
+    // Registrar en auditoría
+    await logAuditEvent({
+      action: 'MODIFICACION_CLASES_TOTALES_GRUPO',
+      category: 'COURSES',
+      details: `Modificó el total de clases del grupo "${group.nombre}" a ${val !== null ? `${val} clases` : 'automático'}.`,
+      metadata: {
+        groupId,
+        groupName: group.nombre,
+        totalClases: val,
+        modifiedBy: session.email
+      }
+    });
+
+    revalidatePath(`/admin/attendance/group/${groupId}`);
+    revalidatePath('/admin/attendance/alerts');
+    revalidatePath('/admin/attendance');
+
+    return { success: true, totalClases: val };
+  } catch (error: any) {
+    console.error('Error in updateGroupTotalClassesAction:', error);
+    return { error: error?.message || 'Error al actualizar las clases totales del grupo.' };
+  }
+}
+
+/**
+ * Modifica la cantidad de fechas o clases totales por defecto de una oferta educativa / programa.
+ * Requiere permiso 'attendance_edit_total_classes' o ser Administrador General / SuperAdmin.
+ */
+export async function updateProgramTotalClassesAction(
+  programId: string,
+  totalClases: number | null
+): Promise<{ success?: boolean; error?: string; totalClases?: number | null }> {
+  try {
+    const session = await getActionSession();
+    if (!session) {
+      return { error: 'Sesión expirada o no autenticada.' };
+    }
+
+    const canEdit = 
+      isSuperAdminEmail(session.email) ||
+      session.role === 'admin' ||
+      userHasPermission('attendance_edit_total_classes', session.role, session.permissions, session.email);
+
+    if (!canEdit) {
+      return { error: 'No tienes autorización para modificar la cantidad total de clases de esta oferta educativa.' };
+    }
+
+    // Asegurar que la columna exista de forma transparente
+    await sql`ALTER TABLE academic_programs ADD COLUMN IF NOT EXISTS total_clases INTEGER;`;
+
+    const val = (totalClases !== null && totalClases !== undefined && totalClases > 0) ? Math.floor(totalClases) : null;
+
+    const progInfo = await sql`
+      UPDATE academic_programs 
+      SET total_clases = ${val} 
+      WHERE id = ${programId}
+      RETURNING id, title, total_clases
+    `;
+
+    if (progInfo.length === 0) {
+      return { error: 'Programa académico no encontrado.' };
+    }
+
+    const prog = progInfo[0];
+
+    // Registrar en auditoría
+    await logAuditEvent({
+      action: 'MODIFICACION_CLASES_TOTALES_PROGRAMA',
+      category: 'COURSES',
+      details: `Modificó el total de clases de la oferta educativa "${prog.title}" a ${val !== null ? `${val} clases` : 'automático'}.`,
+      metadata: {
+        programId,
+        programTitle: prog.title,
+        totalClases: val,
+        modifiedBy: session.email
+      }
+    });
+
+    revalidatePath('/admin/attendance/alerts');
+    revalidatePath('/admin/attendance');
+    revalidatePath('/admin/pages');
+
+    return { success: true, totalClases: val };
+  } catch (error: any) {
+    console.error('Error in updateProgramTotalClassesAction:', error);
+    return { error: error?.message || 'Error al actualizar las clases totales de la oferta educativa.' };
+  }
+}
+
 

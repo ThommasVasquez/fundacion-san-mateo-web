@@ -59,6 +59,8 @@ export async function POST(req: Request) {
 
     const cuerpo = await req.json();
     const registros = cuerpo?.registros as RegistroPadron[] | undefined;
+    const targetGroupId = cuerpo?.targetGroupId as string | undefined;
+
     if (!Array.isArray(registros) || registros.length === 0) {
       return NextResponse.json({ error: 'No llegó ninguna fila' }, { status: 400 });
     }
@@ -87,21 +89,37 @@ export async function POST(req: Request) {
              VALUES (${r.nombre}, ${r.curso || 'SIN CURSO'}, TRUE, ${r.usuarioNro},
                      ${r.idDispositivo || null}, ${r.tarjetaNum ?? null}, ${r.departamento || null},
                      ${r.rol || null}, ${r.telefono}, ${r.domicilio}, ${r.dispositivos})
-        -- El WHERE repite el predicado del índice a propósito: students_usuario_nro_idx
-        -- es parcial, y Postgres solo lo reconoce para un ON CONFLICT si la
-        -- sentencia lo nombra igual. Sin esta línea: "no unique or exclusion
-        -- constraint matching".
         ON CONFLICT (usuario_nro) WHERE usuario_nro IS NOT NULL DO UPDATE
                 SET nombre = EXCLUDED.nombre, grado = EXCLUDED.grado,
-                    -- COALESCE y no asignación directa: ver la nota de arriba.
-                    -- Un número nuevo pisa al viejo; un hueco no borra nada.
                     tarjeta_numero = COALESCE(EXCLUDED.tarjeta_numero, students.tarjeta_numero),
                     departamento = EXCLUDED.departamento, rol = EXCLUDED.rol,
                     telefono = EXCLUDED.telefono, domicilio = EXCLUDED.domicilio,
                     dispositivos = EXCLUDED.dispositivos
-          RETURNING (xmax = 0) AS es_nuevo`;
+          RETURNING id, (xmax = 0) AS es_nuevo`;
+
+      const studentId = filas[0]?.id;
       if (filas[0]?.es_nuevo) creados++;
       else actualizados++;
+
+      // Matricular automáticamente en el grupo oficial correspondiente
+      let effectiveGroupId = targetGroupId;
+      if (!effectiveGroupId && r.curso) {
+        const matched = await sql`
+          SELECT id FROM groups 
+          WHERE UPPER(TRIM(nombre)) = UPPER(TRIM(${r.curso}))
+          LIMIT 1
+        `;
+        if (matched.length > 0) effectiveGroupId = matched[0].id;
+      }
+
+      if (studentId && effectiveGroupId) {
+        await sql`
+          INSERT INTO enrollments (id, student_id, group_id, activo, fecha_inicio, created_at)
+          VALUES (gen_random_uuid(), ${studentId}::uuid, ${effectiveGroupId}::uuid, TRUE, CURRENT_DATE, NOW())
+          ON CONFLICT (student_id, group_id) DO UPDATE 
+          SET activo = TRUE, fecha_inicio = CURRENT_DATE, fecha_fin = NULL
+        `;
+      }
     }
 
     return NextResponse.json({ creados, actualizados, procesados: guardables.length });

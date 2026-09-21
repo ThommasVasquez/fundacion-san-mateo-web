@@ -85,6 +85,14 @@ function getStatusBadgeInfo(estado: string, tipo_evento: string, hasRealTime: bo
         cardBg: 'bg-teal-50/40 border-teal-100',
         dot: 'bg-teal-500'
       };
+    case 'EXCUSA_PRACTICAS_AIPI':
+    case 'PRACTICAS_AIPI':
+      return {
+        label: '👶 EXCUSA PRÁCTICAS AIPI',
+        bg: 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200',
+        cardBg: 'bg-fuchsia-50/40 border-fuchsia-100',
+        dot: 'bg-fuchsia-500'
+      };
     case 'CONGELADO':
       return {
         label: '🧊 CONGELADO / INACTIVO',

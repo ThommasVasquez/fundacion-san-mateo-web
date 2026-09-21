@@ -80,6 +80,7 @@ export interface MatrixExportOptions {
   sessions: { id: string; fecha: string; dia_semana_texto: string }[];
   students: { id: string; documento?: string; nombre_original: string }[];
   records: Record<string, { estado: string; observaciones?: string }>;
+  totalClases?: number | null;
 }
 
 export async function exportGroupMatrixToExcel(options: MatrixExportOptions) {
@@ -156,9 +157,11 @@ export async function exportGroupMatrixToExcel(options: MatrixExportOptions) {
   const totalAbsCol = sessions.length + 4;
   const pctCol = sessions.length + 5;
   headerRow.getCell(totalAbsCol).value = 'TOTAL\nFALLAS';
-  headerRow.getCell(pctCol).value = '%\nASIST.';
+  headerRow.getCell(pctCol).value = options.totalClases && options.totalClases > 0 
+    ? `%\nASIST.\n(${options.totalClases} CLASES)` 
+    : '%\nASIST.';
 
-  headerRow.height = 32;
+  headerRow.height = 36;
   headerRow.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
   headerRow.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
 
@@ -227,6 +230,11 @@ export async function exportGroupMatrixToExcel(options: MatrixExportOptions) {
         totalLectivos++;
         fgColor = FSM_COLORS.STATUS_E_TEXT;
         cellBg = FSM_COLORS.STATUS_E_BG;
+      } else if (estado === 'EXCUSA_PRACTICAS_AIPI' || estado === 'PRACTICAS_AIPI') {
+        cellText = 'PA';
+        totalLectivos++;
+        fgColor = 'A21CAF'; // Fuchsia 700
+        cellBg = 'FDF4FF'; // Fuchsia 50
       } else if (estado === 'FESTIVO') {
         cellText = 'F';
         fgColor = FSM_COLORS.STATUS_F_TEXT;
@@ -239,6 +247,10 @@ export async function exportGroupMatrixToExcel(options: MatrixExportOptions) {
         cellText = 'L';
         fgColor = '64748B';
         cellBg = 'F1F5F9';
+      } else if (estado === 'PENDIENTE') {
+        cellText = '-';
+        fgColor = '94A3B8';
+        cellBg = 'F8FAFC';
       }
 
       cell.value = cellText;
@@ -261,12 +273,18 @@ export async function exportGroupMatrixToExcel(options: MatrixExportOptions) {
     absCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: totalAbsents > 0 ? 'FFFEE2E2' : bgArgb } };
 
     // % Asistencia
-    const pct = totalLectivos > 0 ? Math.round(((totalLectivos - totalAbsents) / totalLectivos) * 100) : 100;
+    const validAttendances = Math.max(0, totalLectivos - totalAbsents);
+    const effectiveTotal = (options.totalClases && options.totalClases > 0) 
+      ? options.totalClases 
+      : totalLectivos;
+    const pct = effectiveTotal > 0 
+      ? Math.min(100, Math.round((validAttendances / effectiveTotal) * 100)) 
+      : null;
     const pctCell = row.getCell(pctCol);
-    pctCell.value = `${pct}%`;
+    pctCell.value = pct !== null ? `${pct}%` : '—';
     pctCell.alignment = { vertical: 'middle', horizontal: 'center' };
-    pctCell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: pct >= 80 ? 'FF166534' : 'FF991B1B' } };
-    pctCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: pct >= 80 ? 'FFDCFCE7' : 'FFFEE2E2' } };
+    pctCell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: pct !== null && pct < 80 ? 'FF991B1B' : 'FF166534' } };
+    pctCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: pct !== null && pct < 80 ? 'FFFEE2E2' : 'FFDCFCE7' } };
 
     // Borders for metadata cells
     [1, 2, 3, totalAbsCol, pctCol].forEach(c => {
@@ -298,7 +316,7 @@ export async function exportGroupMatrixToExcel(options: MatrixExportOptions) {
   // Legend at bottom
   const legendRowNum = students.length + 8;
   const legendRow = worksheet.getRow(legendRowNum);
-  legendRow.getCell(2).value = 'CONVENCIONES:  [ P ]: Presente  |  [ X ]: Falla / Ausente  |  [ E ]: Excusa Médica  |  [ F ]: Festivo Nacional  |  [ PR ]: Prácticas  |  [ L ]: Día Libre';
+  legendRow.getCell(2).value = 'CONVENCIONES:  [ P ]: Presente  |  [ X ]: Falla / Ausente  |  [ E ]: Excusa Médica  |  [ PA ]: Excusa Prácticas AIPI  |  [ F ]: Festivo Nacional  |  [ PR ]: Prácticas  |  [ L ]: Día Libre';
   legendRow.getCell(2).font = { name: 'Calibri', size: 9, bold: true, color: { argb: 'FF' + FSM_COLORS.TEXT_MUTED } };
   worksheet.mergeCells(legendRowNum, 2, legendRowNum, pctCol);
 

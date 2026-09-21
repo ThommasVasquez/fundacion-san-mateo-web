@@ -1,6 +1,8 @@
+import '@/lib/polyfill';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { decrypt } from '@/lib/auth';
+import { checkRoutePermission } from '@/lib/permissions';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -13,18 +15,19 @@ export async function middleware(request: NextRequest) {
 
     try {
       const parsed = await decrypt(session);
-      if (!parsed || !parsed.adminId) {
+      if (!parsed || (!parsed.adminId && !parsed.teacherId)) {
         return NextResponse.redirect(new URL('/auth/login', request.url));
       }
 
-      const isAcademic = parsed.role === 'academic' || parsed.email === 'sacademica@fundacionsanmateosoacha.edu.co';
-      
-      if (isAcademic) {
-        const allowedPaths = ['/admin/attendance', '/admin/attendance/enrollment', '/admin/documents'];
-        const isAllowed = allowedPaths.some(path => pathname === path || pathname.startsWith(path + '/'));
-        
-        if (!isAllowed) {
-          return NextResponse.redirect(new URL('/admin/attendance', request.url));
+      const role = parsed.role;
+      const permissions = parsed.permissions;
+      const email = parsed.email;
+
+      const check = checkRoutePermission(pathname, role, permissions, email);
+      if (!check.allowed) {
+        const target = check.redirectUrl || '/admin/attendance';
+        if (target !== pathname) {
+          return NextResponse.redirect(new URL(target, request.url));
         }
       }
     } catch {

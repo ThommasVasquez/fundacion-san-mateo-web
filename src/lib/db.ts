@@ -1,4 +1,7 @@
+import '@/lib/polyfill';
+
 /**
+
  * La base del colegio, que ya no está en Neon.
  *
  * Había dos censos de alumnos en dos bases distintas: `students` aquí, con el

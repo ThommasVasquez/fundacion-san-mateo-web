@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useDeferredValue } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   setEnrollmentStudent, linkStudentTag, unlinkStudentTag, 
@@ -9,20 +9,40 @@ import {
 } from '@/app/actions';
 import { 
   Tag, Search, AlertTriangle, ArrowLeft, RefreshCw, 
-  Check, X, Link as LinkIcon, AlertCircle, Plus, Edit2, Save, Trash2, Users, Layers, UserCheck, CheckCircle2, ShieldAlert
+  Check, X, Link as LinkIcon, AlertCircle, Plus, Edit2, Save, Trash2, Users, Layers, UserCheck, CheckCircle2, ShieldAlert,
+  Phone, Mail, MapPin, Calendar, CreditCard, School, GraduationCap, Building2, Sparkles, User, Fingerprint
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getAcademicGroupConfig, OFFICIAL_GROUPS } from '@/lib/academicCatalog';
+import CreateGroupModal from '../CreateGroupModal';
+
+export interface GroupItem {
+  id: string;
+  nombre: string;
+  jornada: string;
+  tipo?: string | null;
+  programa_codigo?: string | null;
+  programa_nombre?: string | null;
+  semestre_romano?: string | null;
+}
 
 interface Student {
   id: string;
   nombre: string;
   documento?: string | null;
+  usuario_nro?: string | null;
   grado: string;
   grupo_matriculado?: string | null;
   rfid_tag_uid: string | null;
   tarjeta_numero?: string | null;
+  telefono?: string | null;
+  email?: string | null;
+  domicilio?: string | null;
+  departamento?: string | null;
+  sede?: number | null;
+  cumpleanos?: string | null;
+  inicio_practicas?: string | null;
   activo: boolean;
 }
 
@@ -30,11 +50,19 @@ interface EnrollmentClientProps {
   students: Student[];
   activeStudentId: string | null;
   pendingUid?: string;
+  availableGroups?: GroupItem[];
 }
 
-export default function EnrollmentClient({ students, activeStudentId, pendingUid = '' }: EnrollmentClientProps) {
+export default function EnrollmentClient({ 
+  students, 
+  activeStudentId, 
+  pendingUid = '',
+  availableGroups = []
+}: EnrollmentClientProps) {
   const router = useRouter();
   const [search, setSearch] = useState('');
+  const deferredSearch = useDeferredValue(search);
+  const [displayLimit, setDisplayLimit] = useState(40);
   const [filterPrograma, setFilterPrograma] = useState('all');
   const [filterGrado, setFilterGrado] = useState('');
   const [manualUidMap, setManualUidMap] = useState<Record<string, string>>({});
@@ -49,21 +77,68 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
 
   // Modal for Editing Student Details
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
-  const [editNombre, setEditNombre] = useState('');
+  const [editTipoDoc, setEditTipoDoc] = useState('CC');
   const [editDocumento, setEditDocumento] = useState('');
+  const [editNombre, setEditNombre] = useState('');
   const [editGrado, setEditGrado] = useState('');
+  const [editDepartamento, setEditDepartamento] = useState('');
+  const [editSede, setEditSede] = useState(1);
+  const [editTelefono, setEditTelefono] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editDomicilio, setEditDomicilio] = useState('');
   const [editTarjetaNumero, setEditTarjetaNumero] = useState('');
+  const [editUid, setEditUid] = useState('');
+  const [editCumpleanos, setEditCumpleanos] = useState('');
+  const [editInicioPracticas, setEditInicioPracticas] = useState('');
   const [editActivo, setEditActivo] = useState(true);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   // Modal for Creating New Student
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [newNombre, setNewNombre] = useState('');
+  const [newTipoDoc, setNewTipoDoc] = useState('CC');
   const [newDocumento, setNewDocumento] = useState('');
+  const [newNombre, setNewNombre] = useState('');
   const [newGrado, setNewGrado] = useState('');
+  const [newDepartamento, setNewDepartamento] = useState('');
+  const [newSede, setNewSede] = useState(1);
+  const [newTelefono, setNewTelefono] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [newDomicilio, setNewDomicilio] = useState('');
   const [newTarjetaNumero, setNewTarjetaNumero] = useState('');
   const [newUid, setNewUid] = useState('');
+  const [newCumpleanos, setNewCumpleanos] = useState('');
+  const [newInicioPracticas, setNewInicioPracticas] = useState('');
+  const [newActivo, setNewActivo] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [createGroupModalOpen, setCreateGroupModalOpen] = useState(false);
+
+  // Merge static catalog with any dynamic groups passed in props
+  const allGroups = useMemo(() => {
+    const map = new Map<string, { name: string; programCode: string; programName: string; shift: string; calendar: string }>();
+    OFFICIAL_GROUPS.forEach(g => {
+      map.set(g.name, { 
+        name: g.name, 
+        programCode: g.programCode, 
+        programName: g.programName,
+        shift: g.shift,
+        calendar: g.calendar
+      });
+    });
+    if (availableGroups) {
+      availableGroups.forEach(g => {
+        if (!map.has(g.nombre)) {
+          map.set(g.nombre, {
+            name: g.nombre,
+            programCode: g.programa_codigo || 'TAE',
+            programName: g.programa_nombre || g.nombre,
+            shift: g.jornada || 'DIURNO',
+            calendar: g.tipo || 'REGULAR'
+          });
+        }
+      });
+    }
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [availableGroups]);
 
   const activeStudent = students.find(s => s.id === activeStudentId);
 
@@ -169,27 +244,67 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
   const openEditModal = (student: Student) => {
     setEditingStudent(student);
     setEditNombre(student.nombre);
-    setEditDocumento(student.documento || '');
+
+    let doc = (student.documento || '').trim();
+    let tipo = 'CC';
+    const match = doc.match(/^(CC|TI|CE|PPT|PA|RC)\s*(.*)$/i);
+    if (match) {
+      tipo = match[1].toUpperCase();
+      doc = match[2].trim();
+    }
+    setEditTipoDoc(tipo);
+    setEditDocumento(doc);
+
     setEditGrado(student.grado);
+    setEditDepartamento(student.departamento || '');
+    setEditSede(student.sede ?? 1);
+    setEditTelefono(student.telefono || '');
+    setEditEmail(student.email || '');
+    setEditDomicilio(student.domicilio || '');
     setEditTarjetaNumero(student.tarjeta_numero || '');
+    setEditUid(student.rfid_tag_uid || '');
+    setEditCumpleanos(student.cumpleanos || '');
+    setEditInicioPracticas(student.inicio_practicas || '');
     setEditActivo(student.activo);
   };
 
   const handleSaveEdit = async () => {
     if (!editingStudent) return;
+    if (!editNombre.trim()) {
+      showStatus('El nombre completo es obligatorio.', 'error');
+      return;
+    }
+    if (!editDocumento.trim()) {
+      showStatus('El número de documento / cédula es obligatorio.', 'error');
+      return;
+    }
+    if (!editGrado.trim()) {
+      showStatus('El curso / grado oficial es obligatorio.', 'error');
+      return;
+    }
+
     setIsSavingEdit(true);
+    const formattedDoc = `${editTipoDoc} ${editDocumento.trim().replace(/\s+/g, '')}`.trim();
 
     const res = await updateStudentDetails(editingStudent.id, {
       nombre: editNombre,
+      documento: formattedDoc,
       grado: editGrado,
-      documento: editDocumento,
-      tarjeta_numero: editTarjetaNumero,
+      departamento: editDepartamento.trim() || undefined,
+      sede: editSede,
+      telefono: editTelefono.trim() || undefined,
+      email: editEmail.trim() || undefined,
+      domicilio: editDomicilio.trim() || undefined,
+      tarjeta_numero: editTarjetaNumero.trim() || undefined,
+      rfid_tag_uid: editUid.trim() || undefined,
+      cumpleanos: editCumpleanos || undefined,
+      inicio_practicas: editInicioPracticas || undefined,
       activo: editActivo,
     });
 
     setIsSavingEdit(false);
     if (res.success) {
-      showStatus(`Datos de ${editNombre} actualizados correctamente.`);
+      showStatus(`✓ Datos de ${editNombre} actualizados correctamente.`);
       setEditingStudent(null);
       router.refresh();
     } else {
@@ -237,29 +352,56 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
   };
 
   const handleCreateNewStudent = async () => {
-    if (!newNombre.trim() || !newGrado.trim()) {
-      showStatus('Nombre y Grado/Curso son obligatorios.', 'error');
+    if (!newNombre.trim()) {
+      showStatus('El nombre completo del estudiante es obligatorio.', 'error');
+      return;
+    }
+    if (!newDocumento.trim()) {
+      showStatus('La cédula / documento de identidad es obligatoria para coherencia en torniquetes y padrón.', 'error');
+      return;
+    }
+    if (!newGrado.trim()) {
+      showStatus('Debes seleccionar el curso/grado o carrera oficial.', 'error');
       return;
     }
 
     setIsCreating(true);
+    const formattedDoc = `${newTipoDoc} ${newDocumento.trim().replace(/\s+/g, '')}`.trim();
+
     const res = await createStudent({
       nombre: newNombre,
+      documento: formattedDoc,
       grado: newGrado,
-      documento: newDocumento.trim() || undefined,
+      departamento: newDepartamento.trim() || undefined,
+      sede: newSede,
+      telefono: newTelefono.trim() || undefined,
+      email: newEmail.trim() || undefined,
+      domicilio: newDomicilio.trim() || undefined,
       tarjeta_numero: newTarjetaNumero.trim() || undefined,
       rfid_tag_uid: newUid.trim() || undefined,
+      cumpleanos: newCumpleanos || undefined,
+      inicio_practicas: newInicioPracticas || undefined,
+      activo: newActivo,
     });
 
     setIsCreating(false);
     if (res.success) {
-      showStatus(`✓ Estudiante ${newNombre} creado y matriculado con éxito.`);
+      showStatus(`✓ Estudiante ${newNombre} creado, registrado y matriculado en ${newGrado}.`);
       setCreateModalOpen(false);
-      setNewNombre('');
+      setNewTipoDoc('CC');
       setNewDocumento('');
+      setNewNombre('');
       setNewGrado('');
+      setNewDepartamento('');
+      setNewSede(1);
+      setNewTelefono('');
+      setNewEmail('');
+      setNewDomicilio('');
       setNewTarjetaNumero('');
       setNewUid('');
+      setNewCumpleanos('');
+      setNewInicioPracticas('');
+      setNewActivo(true);
       router.refresh();
     } else {
       showStatus(res.error || 'Error al crear estudiante', 'error');
@@ -352,29 +494,39 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
     }
   };
 
-  // Filter students
-  const filteredStudents = students.filter(s => {
-    const matchesSearch = s.nombre.toLowerCase().includes(search.toLowerCase()) || 
-                          (s.documento && s.documento.includes(search)) ||
-                          (s.grado && s.grado.toLowerCase().includes(search.toLowerCase())) ||
-                          (s.rfid_tag_uid && s.rfid_tag_uid.toLowerCase().includes(search.toLowerCase())) ||
-                          (s.tarjeta_numero && s.tarjeta_numero.includes(search));
-    const matchesGrado = !filterGrado || 
-                         s.grado === filterGrado ||
-                         (filterGrado === 'II DIURNO A CB' && s.grado === 'II DIURNO CB') ||
-                         (filterGrado === 'II DIURNO CB' && s.grado === 'II DIURNO A CB');
-    const matchesPrograma = filterPrograma === 'all' || (() => {
-      const cfg = getAcademicGroupConfig(s.grado);
-      if (!cfg) return false;
-      return cfg.programCode === filterPrograma;
-    })();
-    const matchesEstado = filterEstado === 'all' || 
-                          (filterEstado === 'active' && s.activo) || 
-                          (filterEstado === 'inactive' && !s.activo);
-    return matchesSearch && matchesGrado && matchesPrograma && matchesEstado;
-  });
+  // Reset display limit when filter criteria change
+  useEffect(() => {
+    setDisplayLimit(40);
+  }, [deferredSearch, filterGrado, filterPrograma, filterEstado]);
 
-  const grades = Array.from(new Set(students.map(s => s.grado))).sort();
+  // Filter students (memoized and evaluated against deferred search)
+  const filteredStudents = useMemo(() => {
+    const searchTerms = deferredSearch.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    return students.filter(s => {
+      const searchableText = `${s.nombre} ${s.documento || ''} ${s.grado || ''} ${s.rfid_tag_uid || ''} ${s.tarjeta_numero || ''} ${s.telefono || ''} ${s.email || ''} ${s.domicilio || ''}`.toLowerCase();
+      const matchesSearch = searchTerms.length === 0 || searchTerms.every(term => searchableText.includes(term));
+      const matchesGrado = !filterGrado || 
+                           s.grado === filterGrado ||
+                           (filterGrado === 'II DIURNO A CB' && s.grado === 'II DIURNO CB') ||
+                           (filterGrado === 'II DIURNO CB' && s.grado === 'II DIURNO A CB');
+      const matchesPrograma = filterPrograma === 'all' || (() => {
+        const cfg = getAcademicGroupConfig(s.grado);
+        if (!cfg) return false;
+        return cfg.programCode === filterPrograma;
+      })();
+      const matchesEstado = filterEstado === 'all' || 
+                            (filterEstado === 'active' && s.activo) || 
+                            (filterEstado === 'inactive' && !s.activo);
+      return matchesSearch && matchesGrado && matchesPrograma && matchesEstado;
+    });
+  }, [students, deferredSearch, filterGrado, filterPrograma, filterEstado]);
+
+  // Progressive rendering: slice for ultra-fast DOM operations
+  const displayedStudents = useMemo(() => {
+    return filteredStudents.slice(0, displayLimit);
+  }, [filteredStudents, displayLimit]);
+
+  const grades = useMemo(() => Array.from(new Set(students.map(s => s.grado))).sort(), [students]);
   const allFilteredSelected = filteredStudents.length > 0 && filteredStudents.every(s => selectedStudentIds.includes(s.id));
 
   return (
@@ -547,7 +699,7 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
         </div>
         
         <div className="text-xs font-black text-gray-500 uppercase tracking-widest">
-          Estudiantes: {filteredStudents.length} / {students.length}
+          Mostrando {Math.min(displayLimit, filteredStudents.length)} de {filteredStudents.length} {filteredStudents.length !== students.length ? `(de ${students.length} totales)` : ''}
         </div>
       </div>
       {/* Student List */}
@@ -557,7 +709,7 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
             No se encontraron estudiantes que coincidan con los filtros seleccionados.
           </div>
         ) : (
-          filteredStudents.map(student => {
+          displayedStudents.map(student => {
             const hasCard = Boolean(student.rfid_tag_uid || student.tarjeta_numero);
             const isPendingLink = pendingUid && !hasCard;
             const isSelected = selectedStudentIds.includes(student.id);
@@ -621,18 +773,36 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
                         </button>
                       </div>
                       <h4 className="text-lg font-black text-fsm-blue uppercase mt-1 leading-tight">{student.nombre}</h4>
-                      <div className="flex flex-wrap items-center gap-3 mt-1">
-                        <span className="text-xs text-gray-600 font-bold flex items-center gap-1">
+                      <div className="flex flex-wrap items-center gap-3 mt-1.5">
+                        <span className="text-xs text-gray-700 font-bold flex items-center gap-1">
                           📄 Cédula / Doc: <strong className="font-mono text-gray-900 bg-gray-100 px-1.5 py-0.5 rounded text-[11px]">{student.documento || 'SIN DOCUMENTO'}</strong>
                         </span>
                         {hasCard ? (
-                          <span className="text-xs text-green-600 font-bold flex items-center gap-1">
-                            <Check size={14} /> Tarjeta: <strong className="font-mono bg-green-50 px-1.5 py-0.5 rounded text-[11px]">{student.tarjeta_numero ? `#${student.tarjeta_numero}` : student.rfid_tag_uid}</strong>
+                          <span className="text-xs text-green-700 font-bold flex items-center gap-1">
+                            <Check size={14} className="text-green-600" /> Tarjeta: <strong className="font-mono bg-green-50 px-1.5 py-0.5 rounded text-[11px]">{student.tarjeta_numero ? `#${student.tarjeta_numero}` : student.rfid_tag_uid}</strong>
                           </span>
                         ) : (
                           <span className="text-xs text-gray-400 font-bold flex items-center gap-1">
                             <AlertTriangle size={14} className="text-gray-400" /> Sin tarjeta
                           </span>
+                        )}
+                        {student.telefono && (
+                          <a 
+                            href={`tel:${student.telefono}`}
+                            className="text-xs text-blue-700 hover:text-blue-900 font-bold flex items-center gap-1 bg-blue-50/70 border border-blue-100 px-2 py-0.5 rounded-lg"
+                            title="Llamar para seguimiento de asistencia"
+                          >
+                            <Phone size={11} className="text-blue-600" /> {student.telefono}
+                          </a>
+                        )}
+                        {student.email && (
+                          <a 
+                            href={`mailto:${student.email}`}
+                            className="text-xs text-purple-700 hover:text-purple-900 font-bold flex items-center gap-1 bg-purple-50/70 border border-purple-100 px-2 py-0.5 rounded-lg"
+                            title="Enviar correo institucional"
+                          >
+                            <Mail size={11} className="text-purple-600" /> {student.email}
+                          </a>
                         )}
                       </div>
                     </div>
@@ -737,121 +907,310 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
             );
           })
         )}
+
+        {filteredStudents.length > displayLimit && (
+          <div className="col-span-full flex flex-col sm:flex-row items-center justify-center gap-3 py-6">
+            <button
+              type="button"
+              onClick={() => setDisplayLimit(prev => prev + 40)}
+              className="px-6 py-3 bg-fsm-blue hover:bg-fsm-blue/90 text-white font-bold text-xs uppercase tracking-widest rounded-2xl shadow-sm transition-all flex items-center gap-2"
+            >
+              <span>➕ Cargar Más Estudiantes (+40 de {filteredStudents.length - displayLimit} restantes)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setDisplayLimit(filteredStudents.length)}
+              className="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs uppercase tracking-widest rounded-2xl transition-all"
+            >
+              Mostrar Todos ({filteredStudents.length})
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Modal 1: Edit Student Details Modal */}
       {editingStudent && (
         <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl overflow-hidden w-full max-w-md p-8 space-y-6 animate-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center border-b border-gray-100 pb-4">
-              <div>
-                <span className="text-[10px] font-black text-fsm-blue uppercase tracking-widest">EDITAR DATOS DE ESTUDIANTE</span>
-                <h3 className="text-lg font-black text-fsm-blue uppercase leading-tight mt-0.5">{editingStudent.nombre}</h3>
+          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl overflow-hidden w-full max-w-3xl max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex justify-between items-center px-8 py-5 border-b border-gray-100 bg-gradient-to-r from-blue-50/50 to-white shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-fsm-blue/10 flex items-center justify-center p-1.5 border border-fsm-blue/20">
+                  <Image src="/FSM.png" alt="FSM" width={32} height={32} className="object-contain" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black text-fsm-blue uppercase tracking-widest">EXPEDIENTE DEL ESTUDIANTE</span>
+                  <h3 className="text-lg font-black text-fsm-blue uppercase leading-tight mt-0.5">{editingStudent.nombre}</h3>
+                </div>
               </div>
               <button 
                 onClick={() => setEditingStudent(null)}
-                className="text-gray-400 hover:text-fsm-red transition-colors p-1"
+                className="text-gray-400 hover:text-fsm-red transition-colors p-1.5 rounded-full hover:bg-gray-100"
               >
                 <X size={20} />
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Cédula / Documento de Identidad:</label>
-                <input 
-                  type="text" 
-                  value={editDocumento}
-                  onChange={e => setEditDocumento(e.target.value)}
-                  placeholder="Ej: 1024567890 o TI / CC"
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
-                />
+            {/* Form Body - Scrollable */}
+            <div className="p-8 space-y-6 overflow-y-auto">
+              {/* Sección 1: Identificación y Datos Personales */}
+              <div className="bg-slate-50/80 border border-slate-200/60 rounded-2xl p-5 space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-200/60 pb-2">
+                  <User size={16} className="text-fsm-blue" />
+                  <h4 className="text-xs font-black uppercase text-fsm-blue tracking-wider">1. Identificación y Datos Personales</h4>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                  <div className="sm:col-span-4">
+                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Tipo de Documento:</label>
+                    <select
+                      value={editTipoDoc}
+                      onChange={e => setEditTipoDoc(e.target.value)}
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue bg-white"
+                    >
+                      <option value="CC">CC - Cédula de Ciudadanía</option>
+                      <option value="TI">TI - Tarjeta de Identidad</option>
+                      <option value="CE">CE - Cédula de Extranjería</option>
+                      <option value="PPT">PPT - Protección Temporal</option>
+                      <option value="PA">PA - Pasaporte</option>
+                      <option value="RC">RC - Registro Civil</option>
+                    </select>
+                  </div>
+                  <div className="sm:col-span-8">
+                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Número de Documento / Cédula:*</label>
+                    <input 
+                      type="text" 
+                      value={editDocumento}
+                      onChange={e => setEditDocumento(e.target.value)}
+                      placeholder="Ej: 1024567890"
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue bg-white"
+                    />
+                  </div>
+                  <div className="sm:col-span-8">
+                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Nombre Completo (Apellidos y Nombres):*</label>
+                    <input 
+                      type="text" 
+                      value={editNombre}
+                      onChange={e => setEditNombre(e.target.value)}
+                      placeholder="Ej: ABELLO FUENTES JUAN DAVID"
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue bg-white"
+                    />
+                  </div>
+                  <div className="sm:col-span-4">
+                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Fecha de Nacimiento:</label>
+                    <input 
+                      type="date" 
+                      value={editCumpleanos}
+                      onChange={e => setEditCumpleanos(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue bg-white"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Nombre Completo:*</label>
-                <input 
-                  type="text" 
-                  value={editNombre}
-                  onChange={e => setEditNombre(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
-                />
+              {/* Sección 2: Asignación Académica y Sede */}
+              <div className="bg-slate-50/80 border border-slate-200/60 rounded-2xl p-5 space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-200/60 pb-2">
+                  <GraduationCap size={16} className="text-emerald-700" />
+                  <h4 className="text-xs font-black uppercase text-emerald-800 tracking-wider">2. Asignación Académica y Sede Oficial</h4>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                  <div className="sm:col-span-7">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-[10px] font-black uppercase text-gray-500">Curso Oficial de Matrícula:*</label>
+                      <button
+                        type="button"
+                        onClick={() => setCreateGroupModalOpen(true)}
+                        className="text-[10px] font-black text-emerald-700 hover:text-emerald-900 uppercase flex items-center gap-1 transition-colors"
+                      >
+                        <Plus size={12} /> Crear Nuevo Curso
+                      </button>
+                    </div>
+                    <select
+                      value={allGroups.some(g => g.name === editGrado) ? editGrado : ''}
+                      onChange={e => {
+                        const val = e.target.value;
+                        if (val) {
+                          setEditGrado(val);
+                          const cfg = getAcademicGroupConfig(val);
+                          if (cfg) setEditDepartamento(cfg.programName);
+                        }
+                      }}
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-emerald-600 bg-white mb-2"
+                    >
+                      <option value="">-- Seleccionar Curso Oficial --</option>
+                      <optgroup label="🩺 Técnico Auxiliar en Enfermería (TAE)">
+                        {allGroups.filter(g => g.programCode === 'TAE').map(g => (
+                          <option key={g.name} value={g.name}>{g.name} ({g.shift} {g.calendar === 'CB' ? '• Calendario B' : ''})</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="👶 Atención a la Primera Infancia (AIPI)">
+                        {allGroups.filter(g => g.programCode === 'AIPI').map(g => (
+                          <option key={g.name} value={g.name}>{g.name} ({g.shift})</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="🎒 Técnico Auxiliar en Preescolar">
+                        {allGroups.filter(g => g.programCode === 'PREESCOLAR').map(g => (
+                          <option key={g.name} value={g.name}>{g.name} ({g.shift})</option>
+                        ))}
+                      </optgroup>
+                      {allGroups.filter(g => !['TAE', 'AIPI', 'PREESCOLAR'].includes(g.programCode)).length > 0 && (
+                        <optgroup label="Otros Cursos Institucionales">
+                          {allGroups.filter(g => !['TAE', 'AIPI', 'PREESCOLAR'].includes(g.programCode)).map(g => (
+                            <option key={g.name} value={g.name}>{g.name}</option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </select>
+                    <input 
+                      type="text" 
+                      value={editGrado}
+                      onChange={e => setEditGrado(e.target.value)}
+                      placeholder="O escribe el curso personalizado..."
+                      className="w-full px-3 py-1.5 border border-gray-200 rounded-lg font-bold text-[11px] uppercase outline-none focus:border-emerald-600 bg-white"
+                    />
+                  </div>
+                  <div className="sm:col-span-5">
+                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Programa / Carrera:</label>
+                    <input 
+                      type="text" 
+                      value={editDepartamento}
+                      onChange={e => setEditDepartamento(e.target.value)}
+                      placeholder="Ej: Enfermería TAE"
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-emerald-600 bg-white"
+                    />
+                  </div>
+                  <div className="sm:col-span-6">
+                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Sede Institucional:</label>
+                    <select
+                      value={editSede}
+                      onChange={e => setEditSede(Number(e.target.value))}
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-emerald-600 bg-white"
+                    >
+                      <option value={1}>Sede Principal Soacha (Centro)</option>
+                    </select>
+                  </div>
+                  <div className="sm:col-span-6">
+                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Inicio de Prácticas (Opcional):</label>
+                    <input 
+                      type="date" 
+                      value={editInicioPracticas}
+                      onChange={e => setEditInicioPracticas(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-emerald-600 bg-white"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Curso / Carrera / Turno:*</label>
-                <select
-                  value={OFFICIAL_GROUPS.some(g => g.name === editGrado) ? editGrado : ''}
-                  onChange={e => {
-                    if (e.target.value) setEditGrado(e.target.value);
-                  }}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue bg-white mb-2"
-                >
-                  <option value="">-- Seleccionar curso / carrera oficial --</option>
-                  <optgroup label="🩺 Técnico Auxiliar en Enfermería (TAE)">
-                    {OFFICIAL_GROUPS.filter(g => g.programCode === 'TAE').map(g => (
-                      <option key={g.name} value={g.name}>{g.name} ({g.shift} {g.calendar === 'CB' ? '• Calendario B' : ''})</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="👶 Primera Infancia (AIPI)">
-                    {OFFICIAL_GROUPS.filter(g => g.programCode === 'AIPI').map(g => (
-                      <option key={g.name} value={g.name}>{g.name} (Diurno)</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="🎒 Técnico Auxiliar en Preescolar">
-                    {OFFICIAL_GROUPS.filter(g => g.programCode === 'PREESCOLAR').map(g => (
-                      <option key={g.name} value={g.name}>{g.name} (Diurno)</option>
-                    ))}
-                  </optgroup>
-                </select>
-                <input 
-                  type="text" 
-                  value={editGrado}
-                  onChange={e => setEditGrado(e.target.value)}
-                  placeholder="O escribe manualmente el curso aquí..."
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
-                />
+              {/* Sección 3: Contacto y Residencia (Para Asistencias) */}
+              <div className="bg-slate-50/80 border border-slate-200/60 rounded-2xl p-5 space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-200/60 pb-2">
+                  <Phone size={16} className="text-blue-600" />
+                  <h4 className="text-xs font-black uppercase text-blue-800 tracking-wider">3. Contacto y Seguimiento de Inasistencias</h4>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                  <div className="sm:col-span-6">
+                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Teléfono / Celular de Contacto:</label>
+                    <input 
+                      type="tel" 
+                      value={editTelefono}
+                      onChange={e => setEditTelefono(e.target.value)}
+                      placeholder="Ej: 3101234567"
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs outline-none focus:border-blue-600 bg-white"
+                    />
+                  </div>
+                  <div className="sm:col-span-6">
+                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Correo Electrónico:</label>
+                    <input 
+                      type="email" 
+                      value={editEmail}
+                      onChange={e => setEditEmail(e.target.value)}
+                      placeholder="Ej: estudiante@ejemplo.com"
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-medium text-xs outline-none focus:border-blue-600 bg-white"
+                    />
+                  </div>
+                  <div className="sm:col-span-12">
+                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Dirección de Domicilio / Residencia:</label>
+                    <input 
+                      type="text" 
+                      value={editDomicilio}
+                      onChange={e => setEditDomicilio(e.target.value)}
+                      placeholder="Ej: Calle 13 # 7-45 Soacha Centro"
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-medium text-xs uppercase outline-none focus:border-blue-600 bg-white"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Número de Tarjeta Física (Opcional):</label>
-                <input 
-                  type="text" 
-                  value={editTarjetaNumero}
-                  onChange={e => setEditTarjetaNumero(e.target.value)}
-                  placeholder="Ej: 3056834"
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
-                />
-              </div>
-
-              <div className="flex items-center gap-3 pt-2">
-                <input 
-                  type="checkbox" 
-                  id="editActivo"
-                  checked={editActivo}
-                  onChange={e => setEditActivo(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-fsm-blue focus:ring-fsm-blue"
-                />
-                <label htmlFor="editActivo" className="text-xs font-bold uppercase text-gray-700 cursor-pointer">
-                  Estudiante Activo en la Institución
-                </label>
+              {/* Sección 4: Control de Acceso y Tarjeta RFID */}
+              <div className="bg-slate-50/80 border border-slate-200/60 rounded-2xl p-5 space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-200/60 pb-2">
+                  <CreditCard size={16} className="text-purple-600" />
+                  <h4 className="text-xs font-black uppercase text-purple-800 tracking-wider">4. Control de Acceso, Torniquetes y Tarjeta RFID</h4>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                  <div className="sm:col-span-6">
+                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Número de Tarjeta Física (Plástico):</label>
+                    <input 
+                      type="text" 
+                      value={editTarjetaNumero}
+                      onChange={e => setEditTarjetaNumero(e.target.value)}
+                      placeholder="Ej: 3056834 (Impreso en la tarjeta)"
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-purple-600 bg-white font-mono"
+                    />
+                  </div>
+                  <div className="sm:col-span-6">
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-[10px] font-black uppercase text-gray-500">UID Chip RFID / NFC:</label>
+                      {pendingUid && (
+                        <button
+                          type="button"
+                          onClick={() => setEditUid(pendingUid)}
+                          className="text-[9px] font-black text-purple-700 hover:text-purple-900 uppercase underline"
+                        >
+                          Usar {pendingUid}
+                        </button>
+                      )}
+                    </div>
+                    <input 
+                      type="text" 
+                      value={editUid}
+                      onChange={e => setEditUid(e.target.value.toUpperCase())}
+                      placeholder="Ej: 5400357EAC"
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-purple-600 bg-white font-mono"
+                    />
+                  </div>
+                  <div className="sm:col-span-12 pt-2">
+                    <label className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+                      <input 
+                        type="checkbox" 
+                        checked={editActivo}
+                        onChange={e => setEditActivo(e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-300 text-fsm-blue focus:ring-fsm-blue"
+                      />
+                      <span className="text-xs font-bold uppercase text-gray-800">
+                        Estudiante Activo en la Institución (Habilitado para ingreso y planilla)
+                      </span>
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+            {/* Footer Actions */}
+            <div className="flex items-center justify-between px-8 py-5 border-t border-gray-100 bg-gray-50/50 shrink-0">
               <button
                 type="button"
                 onClick={() => handleDelete(editingStudent)}
-                className="px-4 py-2 bg-red-50 text-fsm-red hover:bg-fsm-red hover:text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-1"
+                className="px-4 py-2.5 bg-red-50 text-fsm-red hover:bg-fsm-red hover:text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-1.5"
               >
-                <Trash2 size={14} /> Eliminar
+                <Trash2 size={15} /> Eliminar
               </button>
 
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 <button
                   type="button"
                   onClick={() => setEditingStudent(null)}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-all"
+                  className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-all"
                 >
                   Cancelar
                 </button>
@@ -859,9 +1218,9 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
                   type="button"
                   onClick={handleSaveEdit}
                   disabled={isSavingEdit}
-                  className="px-5 py-2 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all flex items-center gap-2 disabled:opacity-50"
+                  className="px-6 py-2.5 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all flex items-center gap-2 disabled:opacity-50 shadow-md"
                 >
-                  <Save size={14} /> {isSavingEdit ? 'Guardando...' : 'Guardar'}
+                  <Save size={15} /> {isSavingEdit ? 'Guardando...' : 'Guardar Cambios'}
                 </button>
               </div>
             </div>
@@ -872,102 +1231,277 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
       {/* Modal 2: Create New Student Modal */}
       {createModalOpen && (
         <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl overflow-hidden w-full max-w-md p-8 space-y-6 animate-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center border-b border-gray-100 pb-4">
-              <div>
-                <span className="text-[10px] font-black text-fsm-blue uppercase tracking-widest">NUEVO REGISTRO</span>
-                <h3 className="text-lg font-black text-fsm-blue uppercase leading-tight mt-0.5">CREAR NUEVO ESTUDIANTE</h3>
+          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl overflow-hidden w-full max-w-3xl max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex justify-between items-center px-8 py-5 border-b border-gray-100 bg-gradient-to-r from-blue-50/50 to-white shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-fsm-blue/10 flex items-center justify-center p-1.5 border border-fsm-blue/20">
+                  <Image src="/FSM.png" alt="FSM" width={32} height={32} className="object-contain" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black text-fsm-blue uppercase tracking-widest">REGISTRO Y MATRÍCULA OFICIAL</span>
+                  <h3 className="text-lg font-black text-fsm-blue uppercase leading-tight mt-0.5">CREAR NUEVO ESTUDIANTE</h3>
+                </div>
               </div>
               <button 
                 onClick={() => setCreateModalOpen(false)}
-                className="text-gray-400 hover:text-fsm-red transition-colors p-1"
+                className="text-gray-400 hover:text-fsm-red transition-colors p-1.5 rounded-full hover:bg-gray-100"
               >
                 <X size={20} />
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Cédula / Documento de Identidad:</label>
-                <input 
-                  type="text" 
-                  placeholder="Ej: 1024567890 o TI / CC"
-                  value={newDocumento}
-                  onChange={e => setNewDocumento(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
-                />
+            {/* Form Body - Scrollable */}
+            <div className="p-8 space-y-6 overflow-y-auto">
+              <p className="text-xs font-semibold text-gray-600 leading-relaxed -mt-2">
+                Ingresa los datos del estudiante. Al crearlo, el sistema lo registrará en el padrón institucional y lo <strong>matriculará automáticamente en su grupo oficial</strong> para que aparezca de inmediato en planillas docentes y en torniquetes.
+              </p>
+
+              {/* Sección 1: Identificación y Datos Personales */}
+              <div className="bg-slate-50/80 border border-slate-200/60 rounded-2xl p-5 space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-200/60 pb-2">
+                  <User size={16} className="text-fsm-blue" />
+                  <h4 className="text-xs font-black uppercase text-fsm-blue tracking-wider">1. Identificación y Datos Personales</h4>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                  <div className="sm:col-span-4">
+                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Tipo de Documento:</label>
+                    <select
+                      value={newTipoDoc}
+                      onChange={e => setNewTipoDoc(e.target.value)}
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue bg-white"
+                    >
+                      <option value="CC">CC - Cédula de Ciudadanía</option>
+                      <option value="TI">TI - Tarjeta de Identidad</option>
+                      <option value="CE">CE - Cédula de Extranjería</option>
+                      <option value="PPT">PPT - Protección Temporal</option>
+                      <option value="PA">PA - Pasaporte</option>
+                      <option value="RC">RC - Registro Civil</option>
+                    </select>
+                  </div>
+                  <div className="sm:col-span-8">
+                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Número de Documento / Cédula:*</label>
+                    <input 
+                      type="text" 
+                      value={newDocumento}
+                      onChange={e => setNewDocumento(e.target.value)}
+                      placeholder="Ej: 1024567890 (Sin puntos ni espacios)"
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue bg-white"
+                    />
+                  </div>
+                  <div className="sm:col-span-8">
+                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Nombre Completo (Apellidos y Nombres):*</label>
+                    <input 
+                      type="text" 
+                      value={newNombre}
+                      onChange={e => setNewNombre(e.target.value)}
+                      placeholder="Ej: PÉREZ LÓPEZ JUAN CARLOS"
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue bg-white"
+                    />
+                  </div>
+                  <div className="sm:col-span-4">
+                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Fecha de Nacimiento:</label>
+                    <input 
+                      type="date" 
+                      value={newCumpleanos}
+                      onChange={e => setNewCumpleanos(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue bg-white"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Nombre Completo:*</label>
-                <input 
-                  type="text" 
-                  placeholder="Ej: MARÍA CAMILA RODRÍGUEZ"
-                  value={newNombre}
-                  onChange={e => setNewNombre(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
-                />
+              {/* Sección 2: Asignación Académica y Sede */}
+              <div className="bg-slate-50/80 border border-slate-200/60 rounded-2xl p-5 space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-200/60 pb-2">
+                  <GraduationCap size={16} className="text-emerald-700" />
+                  <h4 className="text-xs font-black uppercase text-emerald-800 tracking-wider">2. Asignación Académica y Sede Oficial</h4>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                  <div className="sm:col-span-7">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-[10px] font-black uppercase text-gray-500">Curso Oficial de Matrícula:*</label>
+                      <button
+                        type="button"
+                        onClick={() => setCreateGroupModalOpen(true)}
+                        className="text-[10px] font-black text-emerald-700 hover:text-emerald-900 uppercase flex items-center gap-1 transition-colors"
+                      >
+                        <Plus size={12} /> Crear Nuevo Curso
+                      </button>
+                    </div>
+                    <select
+                      value={allGroups.some(g => g.name === newGrado) ? newGrado : ''}
+                      onChange={e => {
+                        const val = e.target.value;
+                        if (val) {
+                          setNewGrado(val);
+                          const cfg = getAcademicGroupConfig(val);
+                          if (cfg) setNewDepartamento(cfg.programName);
+                        }
+                      }}
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-emerald-600 bg-white mb-2"
+                    >
+                      <option value="">-- Seleccionar Curso Oficial --</option>
+                      <optgroup label="🩺 Técnico Auxiliar en Enfermería (TAE)">
+                        {allGroups.filter(g => g.programCode === 'TAE').map(g => (
+                          <option key={g.name} value={g.name}>{g.name} ({g.shift} {g.calendar === 'CB' ? '• Calendario B' : ''})</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="👶 Atención a la Primera Infancia (AIPI)">
+                        {allGroups.filter(g => g.programCode === 'AIPI').map(g => (
+                          <option key={g.name} value={g.name}>{g.name} ({g.shift})</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="🎒 Técnico Auxiliar en Preescolar">
+                        {allGroups.filter(g => g.programCode === 'PREESCOLAR').map(g => (
+                          <option key={g.name} value={g.name}>{g.name} ({g.shift})</option>
+                        ))}
+                      </optgroup>
+                      {allGroups.filter(g => !['TAE', 'AIPI', 'PREESCOLAR'].includes(g.programCode)).length > 0 && (
+                        <optgroup label="Otros Cursos Institucionales">
+                          {allGroups.filter(g => !['TAE', 'AIPI', 'PREESCOLAR'].includes(g.programCode)).map(g => (
+                            <option key={g.name} value={g.name}>{g.name}</option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </select>
+                    <input 
+                      type="text" 
+                      value={newGrado}
+                      onChange={e => setNewGrado(e.target.value)}
+                      placeholder="O escribe el curso personalizado..."
+                      className="w-full px-3 py-1.5 border border-gray-200 rounded-lg font-bold text-[11px] uppercase outline-none focus:border-emerald-600 bg-white"
+                    />
+                  </div>
+                  <div className="sm:col-span-5">
+                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Programa / Carrera:</label>
+                    <input 
+                      type="text" 
+                      value={newDepartamento}
+                      onChange={e => setNewDepartamento(e.target.value)}
+                      placeholder="Ej: Enfermería TAE"
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-emerald-600 bg-white"
+                    />
+                  </div>
+                  <div className="sm:col-span-6">
+                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Sede Institucional:</label>
+                    <select
+                      value={newSede}
+                      onChange={e => setNewSede(Number(e.target.value))}
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-emerald-600 bg-white"
+                    >
+                      <option value={1}>Sede Principal Soacha (Centro)</option>
+                    </select>
+                  </div>
+                  <div className="sm:col-span-6">
+                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Inicio de Prácticas (Opcional):</label>
+                    <input 
+                      type="date" 
+                      value={newInicioPracticas}
+                      onChange={e => setNewInicioPracticas(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-emerald-600 bg-white"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Curso / Carrera / Turno:*</label>
-                <select
-                  value={OFFICIAL_GROUPS.some(g => g.name === newGrado) ? newGrado : ''}
-                  onChange={e => {
-                    if (e.target.value) setNewGrado(e.target.value);
-                  }}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue bg-white mb-2"
-                >
-                  <option value="">-- Seleccionar curso / carrera oficial --</option>
-                  <optgroup label="🩺 Técnico Auxiliar en Enfermería (TAE)">
-                    {OFFICIAL_GROUPS.filter(g => g.programCode === 'TAE').map(g => (
-                      <option key={g.name} value={g.name}>{g.name} ({g.shift} {g.calendar === 'CB' ? '• Calendario B' : ''})</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="👶 Primera Infancia (AIPI)">
-                    {OFFICIAL_GROUPS.filter(g => g.programCode === 'AIPI').map(g => (
-                      <option key={g.name} value={g.name}>{g.name} (Diurno)</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="🎒 Técnico Auxiliar en Preescolar">
-                    {OFFICIAL_GROUPS.filter(g => g.programCode === 'PREESCOLAR').map(g => (
-                      <option key={g.name} value={g.name}>{g.name} (Diurno)</option>
-                    ))}
-                  </optgroup>
-                </select>
-                <input 
-                  type="text" 
-                  placeholder="O escribe manualmente el curso aquí..."
-                  value={newGrado}
-                  onChange={e => setNewGrado(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
-                />
+              {/* Sección 3: Contacto y Residencia (Para Asistencias) */}
+              <div className="bg-slate-50/80 border border-slate-200/60 rounded-2xl p-5 space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-200/60 pb-2">
+                  <Phone size={16} className="text-blue-600" />
+                  <h4 className="text-xs font-black uppercase text-blue-800 tracking-wider">3. Contacto y Seguimiento de Inasistencias</h4>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                  <div className="sm:col-span-6">
+                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Teléfono / Celular de Contacto:</label>
+                    <input 
+                      type="tel" 
+                      value={newTelefono}
+                      onChange={e => setNewTelefono(e.target.value)}
+                      placeholder="Ej: 3101234567"
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs outline-none focus:border-blue-600 bg-white"
+                    />
+                  </div>
+                  <div className="sm:col-span-6">
+                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Correo Electrónico:</label>
+                    <input 
+                      type="email" 
+                      value={newEmail}
+                      onChange={e => setNewEmail(e.target.value)}
+                      placeholder="Ej: estudiante@ejemplo.com"
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-medium text-xs outline-none focus:border-blue-600 bg-white"
+                    />
+                  </div>
+                  <div className="sm:col-span-12">
+                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Dirección de Domicilio / Residencia:</label>
+                    <input 
+                      type="text" 
+                      value={newDomicilio}
+                      onChange={e => setNewDomicilio(e.target.value)}
+                      placeholder="Ej: Calle 13 # 7-45 Soacha Centro"
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-medium text-xs uppercase outline-none focus:border-blue-600 bg-white"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Número de Tarjeta Física (Opcional):</label>
-                <input 
-                  type="text" 
-                  placeholder="Ej: 3056834"
-                  value={newTarjetaNumero}
-                  onChange={e => setNewTarjetaNumero(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">UID Tarjeta RFID / NFC (Opcional):</label>
-                <input 
-                  type="text" 
-                  placeholder="Ej: 5400357EAC"
-                  value={newUid}
-                  onChange={e => setNewUid(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
-                />
+              {/* Sección 4: Control de Acceso y Tarjeta RFID */}
+              <div className="bg-slate-50/80 border border-slate-200/60 rounded-2xl p-5 space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-200/60 pb-2">
+                  <CreditCard size={16} className="text-purple-600" />
+                  <h4 className="text-xs font-black uppercase text-purple-800 tracking-wider">4. Control de Acceso, Torniquetes y Tarjeta RFID</h4>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                  <div className="sm:col-span-6">
+                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Número de Tarjeta Física (Plástico):</label>
+                    <input 
+                      type="text" 
+                      value={newTarjetaNumero}
+                      onChange={e => setNewTarjetaNumero(e.target.value)}
+                      placeholder="Ej: 3056834 (Impreso en la tarjeta)"
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-purple-600 bg-white font-mono"
+                    />
+                  </div>
+                  <div className="sm:col-span-6">
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-[10px] font-black uppercase text-gray-500">UID Chip RFID / NFC:</label>
+                      {pendingUid && (
+                        <button
+                          type="button"
+                          onClick={() => setNewUid(pendingUid)}
+                          className="text-[9px] font-black text-purple-700 hover:text-purple-900 uppercase underline"
+                        >
+                          Usar {pendingUid}
+                        </button>
+                      )}
+                    </div>
+                    <input 
+                      type="text" 
+                      value={newUid}
+                      onChange={e => setNewUid(e.target.value.toUpperCase())}
+                      placeholder="Ej: 5400357EAC"
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-purple-600 bg-white font-mono"
+                    />
+                  </div>
+                  <div className="sm:col-span-12 pt-2">
+                    <label className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+                      <input 
+                        type="checkbox" 
+                        checked={newActivo}
+                        onChange={e => setNewActivo(e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-300 text-fsm-blue focus:ring-fsm-blue"
+                      />
+                      <span className="text-xs font-bold uppercase text-gray-800">
+                        Estudiante Activo en la Institución (Habilitado para ingreso y planilla)
+                      </span>
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="flex gap-3 pt-4 border-t border-gray-100 justify-end">
+            {/* Footer Actions */}
+            <div className="flex items-center justify-end gap-3 px-8 py-5 border-t border-gray-100 bg-gray-50/50 shrink-0">
               <button
                 type="button"
                 onClick={() => setCreateModalOpen(false)}
@@ -979,9 +1513,9 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
                 type="button"
                 onClick={handleCreateNewStudent}
                 disabled={isCreating}
-                className="px-6 py-2.5 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all flex items-center gap-2 disabled:opacity-50"
+                className="px-6 py-2.5 bg-fsm-blue text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red transition-all flex items-center gap-2 disabled:opacity-50 shadow-md"
               >
-                <Plus size={16} /> {isCreating ? 'Creando...' : 'Crear Estudiante'}
+                <Plus size={16} /> {isCreating ? 'Creando y Matriculando...' : 'Crear y Matricular Estudiante'}
               </button>
             </div>
           </div>
@@ -1015,7 +1549,7 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
                   Nuevo Curso / Carrera / Turno de Destino:
                 </label>
                 <select
-                  value={OFFICIAL_GROUPS.some(g => g.name === newBulkGrado) ? newBulkGrado : ''}
+                  value={allGroups.some(g => g.name === newBulkGrado) ? newBulkGrado : ''}
                   onChange={e => {
                     if (e.target.value) setNewBulkGrado(e.target.value);
                   }}
@@ -1023,20 +1557,27 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
                 >
                   <option value="">-- Seleccionar curso / carrera oficial --</option>
                   <optgroup label="🩺 Técnico Auxiliar en Enfermería (TAE)">
-                    {OFFICIAL_GROUPS.filter(g => g.programCode === 'TAE').map(g => (
+                    {allGroups.filter(g => g.programCode === 'TAE').map(g => (
                       <option key={g.name} value={g.name}>{g.name} ({g.shift} {g.calendar === 'CB' ? '• Calendario B' : ''})</option>
                     ))}
                   </optgroup>
                   <optgroup label="👶 Primera Infancia (AIPI)">
-                    {OFFICIAL_GROUPS.filter(g => g.programCode === 'AIPI').map(g => (
-                      <option key={g.name} value={g.name}>{g.name} (Diurno)</option>
+                    {allGroups.filter(g => g.programCode === 'AIPI').map(g => (
+                      <option key={g.name} value={g.name}>{g.name} ({g.shift})</option>
                     ))}
                   </optgroup>
                   <optgroup label="🎒 Técnico Auxiliar en Preescolar">
-                    {OFFICIAL_GROUPS.filter(g => g.programCode === 'PREESCOLAR').map(g => (
-                      <option key={g.name} value={g.name}>{g.name} (Diurno)</option>
+                    {allGroups.filter(g => g.programCode === 'PREESCOLAR').map(g => (
+                      <option key={g.name} value={g.name}>{g.name} ({g.shift})</option>
                     ))}
                   </optgroup>
+                  {allGroups.filter(g => !['TAE', 'AIPI', 'PREESCOLAR'].includes(g.programCode)).length > 0 && (
+                    <optgroup label="Otros Cursos Institucionales">
+                      {allGroups.filter(g => !['TAE', 'AIPI', 'PREESCOLAR'].includes(g.programCode)).map(g => (
+                        <option key={g.name} value={g.name}>{g.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
                 <input 
                   type="text" 
@@ -1123,6 +1664,18 @@ export default function EnrollmentClient({ students, activeStudentId, pendingUid
           </div>
         </div>
       )}
+
+      {/* Modal para Crear Nuevo Curso Oficial */}
+      <CreateGroupModal
+        isOpen={createGroupModalOpen}
+        onClose={() => setCreateGroupModalOpen(false)}
+        onSuccess={(res) => {
+          setNewGrado(res.groupName);
+          setEditGrado(res.groupName);
+          showStatus(`✓ Curso ${res.groupName} creado y listo.`);
+          router.refresh();
+        }}
+      />
     </div>
   );
 }

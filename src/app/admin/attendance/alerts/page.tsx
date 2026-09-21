@@ -2,73 +2,193 @@ import Link from 'next/link';
 import { AlertTriangle, Users, BookOpen, ChevronRight, CheckCircle2, XCircle } from 'lucide-react';
 import { sql } from '@/lib/db';
 import StudentAlertsTable from './StudentAlertsTable';
-
+import MultiEnrollmentManager from './MultiEnrollmentManager';
+import CreateGroupButton from '../CreateGroupButton';
+import { getColombiaHolidays } from '@/lib/colombiaHolidays';
 
 export const revalidate = 0;
 
 export default async function AttendanceAlertsPage() {
-  // Query group absenteeism summary
-  const groupStatsQuery = await sql`
+  const currentYear = new Date().getFullYear();
+  const holidays = getColombiaHolidays(currentYear).map(h => h.dateStr);
+
+  // Parallel queries: real absenteeism based on actual turnstile scans and justified excuses
+  const [groupStatsQuery, studentAlertsQuery] = await Promise.all([
+    sql`
+      WITH real_scans AS (
+        SELECT DISTINCT 
+          ae.student_id, 
+          (ae.timestamp AT TIME ZONE 'America/Bogota')::date::text as scan_date
+        FROM attendance_events ae
+        WHERE ae.student_id IS NOT NULL
+      ),
+      student_sessions AS (
+        SELECT 
+          s.id as student_id,
+          s.nombre as student_name,
+          g.id as group_id,
+          g.nombre as group_name,
+          g.jornada,
+          g.tipo,
+          cs.id as session_id,
+          cs.fecha::text as fecha,
+          CASE 
+            WHEN ar.estado IS NOT NULL THEN ar.estado
+            WHEN rs.scan_date IS NOT NULL THEN 'PRESENTE'
+            WHEN cs.fecha = CURRENT_DATE THEN 'PENDIENTE'
+            ELSE 'AUSENTE'
+          END as final_estado
+        FROM groups g
+        JOIN enrollments e ON e.group_id = g.id AND (e.activo IS NULL OR e.activo = TRUE)
+        JOIN students s ON s.id = e.student_id AND s.activo = TRUE
+        JOIN class_sessions cs ON cs.group_id = g.id AND cs.fecha <= CURRENT_DATE
+        LEFT JOIN real_scans rs ON rs.student_id = s.id AND rs.scan_date = cs.fecha::text
+        LEFT JOIN attendance_records_normalized ar ON ar.session_id = cs.id AND ar.student_id = s.id
+        WHERE cs.fecha::text != ALL(${holidays}::text[])
+          AND (
+            NOT (g.nombre ILIKE '%CB%' OR g.tipo = 'CALENDARIO_B') 
+            OR cs.fecha >= '2026-09-01'
+          )
+          AND (e.fecha_inicio IS NULL OR cs.fecha >= e.fecha_inicio)
+      ),
+      group_agg AS (
+        SELECT 
+          group_id,
+          COUNT(DISTINCT student_id) as total_students,
+          COUNT(DISTINCT session_id) as total_sessions,
+          COUNT(*) FILTER (WHERE final_estado = 'AUSENTE') as total_absences,
+          COUNT(*) FILTER (WHERE final_estado IN ('PRESENTE', 'AUSENTE', 'EXCUSA_MEDICA', 'EXCUSA_PRACTICAS_AIPI', 'PRACTICAS')) as total_records
+        FROM student_sessions
+        GROUP BY group_id
+      )
+      SELECT 
+        g.id as group_id,
+        g.nombre as group_name,
+        g.jornada,
+        g.tipo,
+        COALESCE(ga.total_students, 0) as total_students,
+        COALESCE(ga.total_sessions, 0) as total_sessions,
+        COALESCE(ga.total_absences, 0) as total_absences,
+        COALESCE(ga.total_records, 0) as total_records
+      FROM groups g
+      LEFT JOIN group_agg ga ON ga.group_id = g.id
+      ORDER BY g.nombre ASC
+    `,
+    sql`
+      WITH real_scans AS (
+        SELECT DISTINCT 
+          ae.student_id, 
+          (ae.timestamp AT TIME ZONE 'America/Bogota')::date::text as scan_date
+        FROM attendance_events ae
+        WHERE ae.student_id IS NOT NULL
+      ),
+      student_sessions AS (
+        SELECT 
+          s.id as student_id,
+          s.nombre as student_name,
+          g.id as group_id,
+          g.nombre as group_name,
+          cs.id as session_id,
+          cs.fecha::text as fecha,
+          CASE 
+            WHEN ar.estado IS NOT NULL THEN ar.estado
+            WHEN rs.scan_date IS NOT NULL THEN 'PRESENTE'
+            WHEN cs.fecha = CURRENT_DATE THEN 'PENDIENTE'
+            ELSE 'AUSENTE'
+          END as final_estado
+        FROM students s
+        JOIN enrollments e ON e.student_id = s.id AND (e.activo IS NULL OR e.activo = TRUE)
+        JOIN groups g ON g.id = e.group_id
+        JOIN class_sessions cs ON cs.group_id = g.id AND cs.fecha <= CURRENT_DATE
+        LEFT JOIN real_scans rs ON rs.student_id = s.id AND rs.scan_date = cs.fecha::text
+        LEFT JOIN attendance_records_normalized ar ON ar.session_id = cs.id AND ar.student_id = s.id
+        WHERE s.activo = TRUE
+          AND cs.fecha::text != ALL(${holidays}::text[])
+          AND (
+            NOT (g.nombre ILIKE '%CB%' OR g.tipo = 'CALENDARIO_B') 
+            OR cs.fecha >= '2026-09-01'
+          )
+          AND (e.fecha_inicio IS NULL OR cs.fecha >= e.fecha_inicio)
+      )
+      SELECT 
+        student_id,
+        student_name,
+        group_name,
+        group_id,
+        COUNT(*) FILTER (WHERE final_estado IN ('PRESENTE', 'AUSENTE', 'EXCUSA_MEDICA', 'EXCUSA_PRACTICAS_AIPI', 'PRACTICAS')) as total_sessions,
+        COUNT(*) FILTER (WHERE final_estado = 'AUSENTE') as total_absences,
+        COUNT(*) FILTER (WHERE final_estado = 'PRESENTE') as total_presents,
+        ROUND(
+          (COUNT(*) FILTER (WHERE final_estado = 'AUSENTE')::numeric / 
+           NULLIF(COUNT(*) FILTER (WHERE final_estado IN ('PRESENTE', 'AUSENTE', 'EXCUSA_MEDICA', 'EXCUSA_PRACTICAS_AIPI', 'PRACTICAS')), 0)) * 100, 1
+        ) as absence_rate
+      FROM student_sessions
+      GROUP BY student_id, student_name, group_name, group_id
+      HAVING (
+        (COUNT(*) FILTER (WHERE final_estado = 'AUSENTE')::numeric / 
+         NULLIF(COUNT(*) FILTER (WHERE final_estado IN ('PRESENTE', 'AUSENTE', 'EXCUSA_MEDICA', 'EXCUSA_PRACTICAS_AIPI', 'PRACTICAS')), 0)) * 100 > 15
+        OR COUNT(*) FILTER (WHERE final_estado = 'AUSENTE') >= 3
+      )
+      ORDER BY absence_rate DESC, total_absences DESC
+      LIMIT 150
+    `,
+  ]);
+
+  // Multi-enrollment students query with full group and schedule data
+  const allGroupsQuery = await sql`
+    SELECT id, nombre, jornada, tipo, programa_nombre
+    FROM groups
+    ORDER BY programa_nombre ASC, nombre ASC
+  `;
+
+  const multiEnrollmentRows = await sql`
     SELECT 
+      s.id as student_id,
+      s.nombre as student_name,
+      s.documento,
+      s.grado as student_grado,
+      e.id as enrollment_id,
+      e.activo as enrollment_activo,
       g.id as group_id,
       g.nombre as group_name,
       g.jornada,
       g.tipo,
-      COUNT(DISTINCT e.student_id) as total_students,
-      COUNT(DISTINCT cs.id) as total_sessions,
-      COUNT(ar.id) FILTER (WHERE ar.estado = 'AUSENTE') as total_absences,
-      COUNT(ar.id) as total_records
-    FROM groups g
-    LEFT JOIN enrollments e ON e.group_id = g.id
-    LEFT JOIN class_sessions cs ON cs.group_id = g.id
-    LEFT JOIN attendance_records_normalized ar ON ar.session_id = cs.id AND ar.student_id = e.student_id
-    GROUP BY g.id, g.nombre, g.jornada, g.tipo
-    ORDER BY g.nombre ASC
+      g.programa_nombre
+    FROM students s
+    JOIN enrollments e ON e.student_id = s.id AND (e.activo IS NULL OR e.activo = TRUE)
+    JOIN groups g ON g.id = e.group_id
+    WHERE s.id IN (
+      SELECT student_id 
+      FROM enrollments 
+      WHERE (activo IS NULL OR activo = TRUE)
+      GROUP BY student_id 
+      HAVING COUNT(DISTINCT group_id) > 1 OR COUNT(id) > 1
+    )
+    ORDER BY s.nombre ASC, g.nombre ASC
   `;
 
-  // Query high absenteeism students (>15% absence rate)
-  const studentAlertsQuery = await sql`
-    SELECT 
-      s.id as student_id,
-      s.nombre_original as student_name,
-      g.nombre as group_name,
-      g.id as group_id,
-      COUNT(ar.id) as total_sessions,
-      COUNT(ar.id) FILTER (WHERE ar.estado = 'AUSENTE') as total_absences,
-      COUNT(ar.id) FILTER (WHERE ar.estado = 'PRESENTE') as total_presents,
-      ROUND(
-        (COUNT(ar.id) FILTER (WHERE ar.estado = 'AUSENTE')::numeric / NULLIF(COUNT(ar.id), 0)) * 100, 1
-      ) as absence_rate
-    FROM students_normalized s
-    JOIN enrollments e ON e.student_id = s.id
-    JOIN groups g ON g.id = e.group_id
-    JOIN class_sessions cs ON cs.group_id = g.id
-    JOIN attendance_records_normalized ar ON ar.session_id = cs.id AND ar.student_id = s.id
-    WHERE (s.estado IS NULL OR s.estado = 'ACTIVO')
-      AND (e.activo IS NULL OR e.activo = TRUE)
-      AND NOT EXISTS (
-        SELECT 1 FROM students st 
-        WHERE st.nombre = s.nombre_original AND st.activo = FALSE
-      )
-    GROUP BY s.id, s.nombre_original, g.nombre, g.id
-    HAVING (COUNT(ar.id) FILTER (WHERE ar.estado = 'AUSENTE')::numeric / NULLIF(COUNT(ar.id), 0)) * 100 > 15
-    ORDER BY absence_rate DESC
-    LIMIT 100
-  `;
-
-  // Multi-enrollment students query
-  const multiEnrollmentQuery = await sql`
-    SELECT 
-      s.id as student_id,
-      s.nombre_original as student_name,
-      ARRAY_AGG(g.nombre) as groups
-    FROM students_normalized s
-    JOIN enrollments e ON e.student_id = s.id
-    JOIN groups g ON g.id = e.group_id
-    GROUP BY s.id, s.nombre_original
-    HAVING COUNT(g.id) > 1
-    ORDER BY s.nombre_original ASC
-  `;
+  // Group rows by student
+  const studentMap = new Map<string, any>();
+  for (const row of multiEnrollmentRows) {
+    if (!studentMap.has(row.student_id)) {
+      studentMap.set(row.student_id, {
+        student_id: row.student_id,
+        student_name: row.student_name,
+        documento: row.documento || null,
+        student_grado: row.student_grado || null,
+        enrollments: []
+      });
+    }
+    studentMap.get(row.student_id).enrollments.push({
+      enrollment_id: row.enrollment_id,
+      group_id: row.group_id,
+      group_name: row.group_name,
+      jornada: row.jornada,
+      tipo: row.tipo,
+      programa_nombre: row.programa_nombre
+    });
+  }
+  const multiEnrollmentStudents = Array.from(studentMap.values());
 
   return (
     <div className="min-h-screen bg-gray-50/50 p-6 md:p-10 space-y-8">
@@ -85,10 +205,11 @@ export default async function AttendanceAlertsPage() {
             Resumen consolidado por grupo, estudiantes en riesgo (&gt;15% de inasistencia) y multimatrículas.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <CreateGroupButton />
           <Link
             href="/admin/attendance"
-            className="px-4 py-2 bg-white text-fsm-blue border border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all shadow-sm"
+            className="px-4 py-2.5 bg-white text-fsm-blue border border-gray-200 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all shadow-sm flex items-center gap-2"
           >
             ← Volver a Control Diario
           </Link>
@@ -123,7 +244,7 @@ export default async function AttendanceAlertsPage() {
           </div>
           <div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Estudiantes Multimatriculados</p>
-            <p className="text-3xl font-black text-fsm-blue mt-1">{multiEnrollmentQuery.length}</p>
+            <p className="text-3xl font-black text-fsm-blue mt-1">{multiEnrollmentStudents.length}</p>
           </div>
         </div>
       </div>
@@ -147,15 +268,16 @@ export default async function AttendanceAlertsPage() {
 
       {/* Section 2: Group Summary Cards */}
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-6">
-        <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
           <div>
             <h2 className="text-xl font-black text-fsm-blue uppercase tracking-tight">
               RESUMEN CONSOLIDADO POR GRUPO / JORNADA
             </h2>
             <p className="text-xs text-gray-500 font-medium mt-1">
-              Indicadores generales de asistencia por cada hoja de grupo migrada del Excel.
+              Indicadores generales de asistencia por cada curso oficial registrado.
             </p>
           </div>
+          <CreateGroupButton variant="secondary" label="➕ Crear Nuevo Curso" />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -203,34 +325,24 @@ export default async function AttendanceAlertsPage() {
         </div>
       </div>
 
-      {/* Section 3: Multi-Enrollment Students */}
-      {multiEnrollmentQuery.length > 0 && (
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-4">
-          <div className="border-b border-gray-100 pb-3">
-            <h2 className="text-xl font-black text-fsm-blue uppercase tracking-tight">
-              🔀 ESTUDIANTES CON MULTIMATRÍCULA / TRANSFERENCIAS ({multiEnrollmentQuery.length})
+      {/* Section 3: Multi-Enrollment Students Manager */}
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-4">
+        <div className="border-b border-gray-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 className="text-xl font-black text-fsm-blue uppercase tracking-tight flex items-center gap-2">
+              <span className="text-purple-600">🔀</span> ESTUDIANTES CON MULTIMATRÍCULA / TRANSFERENCIAS ({multiEnrollmentStudents.length})
             </h2>
             <p className="text-xs text-gray-500 font-medium">
-              Estudiantes consolidados que figuran en más de un grupo/jornada.
+              Estudiantes que figuran en más de un grupo/jornada. Aquí puedes eliminar cursos obsoletos, editar el curso y horario, o unificarlos con un solo clic.
             </p>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {multiEnrollmentQuery.map((m: any) => (
-              <div key={m.student_id} className="p-4 bg-purple-50/50 border border-purple-200 rounded-2xl space-y-2">
-                <p className="font-bold text-gray-800 text-xs">{m.student_name}</p>
-                <div className="flex flex-wrap gap-1">
-                  {m.groups.map((gName: string) => (
-                    <span key={gName} className="text-[10px] font-bold bg-white text-purple-700 border border-purple-200 px-2 py-0.5 rounded-md">
-                      {gName}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
-      )}
+
+        <MultiEnrollmentManager 
+          initialStudents={multiEnrollmentStudents} 
+          allGroups={allGroupsQuery as any} 
+        />
+      </div>
     </div>
   );
 }

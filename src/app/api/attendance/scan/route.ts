@@ -89,9 +89,13 @@ async function authorize(req: Request): Promise<AuthResult> {
     return { ok: true };
   }
 
-  // Sin clave: solo queda la sesion. Sirve la de profesor y la de admin — las
-  // dos son personal del colegio que ya paso por una contrasena.
-  const session = readCookie(req.headers.get('cookie'), 'session');
+  // Sin clave: buscar sesión en cabecera Authorization (para apps móviles) o en cookie (para navegadores)
+  let session = readCookie(req.headers.get('cookie'), 'session');
+  const authHeader = req.headers.get('authorization');
+  if (!session && authHeader && authHeader.toLowerCase().startsWith('bearer ')) {
+    session = authHeader.slice(7).trim();
+  }
+
   if (session) {
     try {
       const parsed = await decrypt(session);

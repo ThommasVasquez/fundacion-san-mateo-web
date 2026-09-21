@@ -2,7 +2,7 @@ import { sql } from '@/lib/db';
 import { headers, cookies } from 'next/headers';
 import { decrypt } from '@/lib/auth';
 
-export type AuditActionCategory = 'AUTH' | 'ATTENDANCE' | 'STUDENTS' | 'USERS' | 'SYSTEM' | 'CONTENT';
+export type AuditActionCategory = 'AUTH' | 'ATTENDANCE' | 'STUDENTS' | 'USERS' | 'SYSTEM' | 'CONTENT' | 'COURSES';
 
 export interface AuditLogPayload {
   action: string;

@@ -77,6 +77,13 @@ function wordsMatch(wordsA: string[], wordsB: string[]): boolean {
   return false;
 }
 
+function tarjetaDecimal(tagUid: string): number | null {
+  const hex = tagUid.trim().toUpperCase();
+  if (!/^[0-9A-F]{10}$/.test(hex)) return null;
+  const b = hex.match(/../g)!.map((x) => parseInt(x, 16));
+  return (((b[1] << 24) >>> 0) + (b[2] << 16) + (b[3] << 8) + b[4]);
+}
+
 export async function POST(req: Request) {
   try {
     const authHeader = req.headers.get('authorization') || '';
@@ -89,6 +96,302 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json().catch(() => ({}));
+
+    if (body.action === 'search_student') {
+      const query = body.query || '';
+      const students = await sql`
+        SELECT s.id, s.nombre, s.documento, s.grado, s.tarjeta_numero, s.rfid_tag_uid, s.activo,
+               g.nombre as grupo_nombre
+        FROM students s
+        LEFT JOIN enrollments e ON e.student_id = s.id AND (e.activo IS NULL OR e.activo = TRUE)
+        LEFT JOIN groups g ON g.id = e.group_id
+        WHERE s.nombre ILIKE ${'%' + query.trim() + '%'}
+           OR s.documento ILIKE ${'%' + query.trim() + '%'}
+           OR CAST(s.tarjeta_numero as TEXT) ILIKE ${'%' + query.trim() + '%'}
+        LIMIT 20
+      `;
+      return NextResponse.json({ success: true, students });
+    }
+
+    if (body.action === 'inspect_student_detail') {
+      const studentName = (body.nombre || 'ACEVEDO FONSECA YISLENNY STEFANNY').trim();
+      const students = await sql`
+        SELECT s.id, s.nombre, s.documento, s.usuario_nro, s.grado, s.tarjeta_numero, s.rfid_tag_uid, s.activo,
+               s.telefono, s.email, s.domicilio, s.sede, s.inicio_practicas
+        FROM students s
+        WHERE s.nombre ILIKE ${'%' + studentName + '%'}
+      `;
+
+      if (students.length === 0) {
+        return NextResponse.json({ success: false, message: 'Estudiante no encontrado', studentName, results: [] });
+      }
+
+      const results = [];
+      for (const st of students) {
+        const enrollments = await sql`
+          SELECT e.id, e.group_id, e.activo, e.fecha_inicio, e.fecha_fin, g.nombre as grupo_nombre, g.jornada, g.tipo
+          FROM enrollments e
+          JOIN groups g ON g.id = e.group_id
+          WHERE e.student_id = ${st.id}::uuid
+        `;
+
+        const scansByStudent = await sql`
+          SELECT ae.id, ae.timestamp, ae.tipo_evento, ae.sede, ae.reader_id, ae.origen, ae.rfid_tag_uid, r.ubicacion as reader_name
+          FROM attendance_events ae
+          LEFT JOIN readers r ON ae.reader_id = r.id
+          WHERE ae.student_id = ${st.id}::uuid
+          ORDER BY ae.timestamp DESC
+        `;
+
+        let scansByTag: any[] = [];
+        if (st.rfid_tag_uid) {
+          scansByTag = await sql`
+            SELECT ae.id, ae.timestamp, ae.tipo_evento, ae.sede, ae.student_id, ae.rfid_tag_uid, r.ubicacion as reader_name
+            FROM attendance_events ae
+            LEFT JOIN readers r ON ae.reader_id = r.id
+            WHERE ae.rfid_tag_uid = ${st.rfid_tag_uid}
+            ORDER BY ae.timestamp DESC
+          `;
+        }
+
+        // Search for scans by decimal card number if tag_uid is null
+        let scansByCardNum: any[] = [];
+        if (st.tarjeta_numero) {
+          const cardNumStr = String(st.tarjeta_numero).trim();
+          const cardNumInt = parseInt(cardNumStr, 10);
+          const hexPart = Number(cardNumInt).toString(16).toUpperCase();
+          scansByCardNum = await sql`
+            SELECT ae.id, ae.timestamp, ae.tipo_evento, ae.sede, ae.student_id, ae.rfid_tag_uid, r.ubicacion as reader_name
+            FROM attendance_events ae
+            LEFT JOIN readers r ON ae.reader_id = r.id
+            WHERE ae.rfid_tag_uid ILIKE ${'%' + hexPart + '%'}
+            ORDER BY ae.timestamp DESC
+          `;
+        }
+
+        const manualRecords = await sql`
+          SELECT ar.id, cs.fecha, ar.estado, ar.fuente, ar.observaciones, g.nombre as grupo_nombre
+          FROM attendance_records_normalized ar
+          JOIN class_sessions cs ON cs.id = ar.session_id
+          LEFT JOIN groups g ON g.id = cs.group_id
+          WHERE ar.student_id = ${st.id}::uuid
+          ORDER BY cs.fecha DESC
+        `;
+
+        const followups = await sql`
+          SELECT af.id, af.fecha, af.se_llamo, af.estado_llamada, af.comentarios, af.registrado_por
+          FROM absence_followups af
+          WHERE af.student_id = ${st.id}::uuid
+          ORDER BY af.fecha DESC
+        `;
+
+        const groupSessions = await sql`
+          SELECT cs.id, cs.fecha, cs.dia_semana_texto, g.nombre as grupo_nombre
+          FROM class_sessions cs
+          JOIN groups g ON g.id = cs.group_id
+          WHERE cs.group_id IN (SELECT group_id FROM enrollments WHERE student_id = ${st.id}::uuid)
+            AND cs.fecha <= CURRENT_DATE
+          ORDER BY cs.fecha DESC
+        `;
+
+        results.push({
+          student: st,
+          enrollments,
+          scansByStudent,
+          scansByTag,
+          scansByCardNum,
+          manualRecords,
+          followups,
+          totalPastSessions: groupSessions.length,
+          recentSessions: groupSessions.slice(0, 10)
+        });
+      }
+
+      return NextResponse.json({ success: true, results });
+    }
+
+    if (body.action === 'unlink_card') {
+      const studentName = (body.nombre || 'VILLALOBOS VELASQUEZ LAURA VALENTINA').trim();
+      const studentDoc = body.documento ? String(body.documento).trim() : '';
+
+      const found = await sql`
+        SELECT id, nombre, documento, grado, tarjeta_numero, rfid_tag_uid, activo
+        FROM students
+        WHERE nombre ILIKE ${'%' + studentName + '%'}
+           OR (${studentDoc} != '' AND documento = ${studentDoc})
+      `;
+
+      if (found.length === 0) {
+        return NextResponse.json({ success: false, message: 'Estudiante no encontrado', found: [] });
+      }
+
+      const updated = [];
+      for (const st of found) {
+        const res = await sql`
+          UPDATE students
+          SET rfid_tag_uid = NULL,
+              tarjeta_numero = NULL
+          WHERE id = ${st.id}::uuid
+          RETURNING id, nombre, documento, grado, tarjeta_numero, rfid_tag_uid
+        `;
+        updated.push({
+          previous: st,
+          current: res[0]
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Tarjeta desvinculada exitosamente para ${found.map((f: any) => f.nombre).join(', ')}`,
+        results: updated
+      });
+    }
+
+    if (body.action === 'assign_card') {
+      const studentName = (body.nombre || 'VILLALOBOS VELASQUEZ LAURA VALENTINA').trim();
+      const studentDoc = (body.documento ? String(body.documento) : '1073682568').trim();
+      const tagUid = (body.tag_uid || '5E005B3DE2').trim().toUpperCase().replace(/[^A-F0-9]/g, '');
+      const tarjetaNum = tarjetaDecimal(tagUid) || (body.tarjeta_numero ? Number(body.tarjeta_numero) : null);
+
+      // 1. Buscar al estudiante
+      const found = await sql`
+        SELECT s.id, s.nombre, s.documento, s.grado, s.tarjeta_numero, s.rfid_tag_uid, s.activo
+        FROM students s
+        WHERE (s.documento IS NOT NULL AND s.documento = ${studentDoc})
+           OR s.nombre ILIKE ${'%' + studentName + '%'}
+           OR (s.nombre ILIKE '%LAURA%' AND s.nombre ILIKE '%VILLALOBOS%')
+        LIMIT 5
+      `;
+
+      if (found.length === 0) {
+        return NextResponse.json({ success: false, message: 'Estudiante no encontrado por documento o nombre', found: [] });
+      }
+
+      const targetStudent = found[0];
+
+      // 2. Si la tarjeta está asignada a otra persona, desvincularla para evitar colisiones
+      const conflicts = await sql`
+        SELECT id, nombre, documento, tarjeta_numero, rfid_tag_uid
+        FROM students
+        WHERE id != ${targetStudent.id}::uuid
+          AND (rfid_tag_uid = ${tagUid} OR (${tarjetaNum}::bigint IS NOT NULL AND tarjeta_numero = ${tarjetaNum}::bigint))
+      `;
+
+      for (const conf of conflicts) {
+        await sql`
+          UPDATE students
+          SET rfid_tag_uid = NULL, tarjeta_numero = NULL
+          WHERE id = ${conf.id}::uuid
+        `;
+      }
+
+      // 3. Asignar la tarjeta y cédula al estudiante
+      const updated = await sql`
+        UPDATE students
+        SET rfid_tag_uid = ${tagUid},
+            tarjeta_numero = ${tarjetaNum}::bigint,
+            documento = COALESCE(documento, ${studentDoc}),
+            activo = TRUE
+        WHERE id = ${targetStudent.id}::uuid
+        RETURNING id, nombre, documento, grado, tarjeta_numero, rfid_tag_uid, activo
+      `;
+
+      // 4. Sincronizar también con la tabla users si existe
+      try {
+        await sql`
+          UPDATE users
+          SET rfid_tag_uid = ${tagUid},
+              tarjeta_numero = ${tarjetaNum}::bigint
+          WHERE (documento IS NOT NULL AND documento = ${studentDoc})
+             OR nombre ILIKE ${'%' + studentName + '%'}
+        `;
+      } catch (err) {
+        console.warn('Sync to users table skipped/failed:', err);
+      }
+
+      // 5. Vincular todos los eventos de asistencia pasados huérfanos que tengan esta tarjeta
+      const updatedEvents = await sql`
+        UPDATE attendance_events
+        SET student_id = ${targetStudent.id}::uuid
+        WHERE (rfid_tag_uid = ${tagUid} OR rfid_tag_uid ILIKE ${tagUid})
+          AND student_id IS NULL
+        RETURNING id, rfid_tag_uid, tipo_evento, timestamp
+      `;
+
+      // 6. Verificar matrícula activa
+      const enrollments = await sql`
+        SELECT e.id, e.activo, g.nombre as grupo_nombre
+        FROM enrollments e
+        JOIN groups g ON g.id = e.group_id
+        WHERE e.student_id = ${targetStudent.id}::uuid AND (e.activo IS NULL OR e.activo = TRUE)
+      `;
+
+      return NextResponse.json({
+        success: true,
+        message: `Tarjeta ${tagUid} (decimal ${tarjetaNum}) asignada con éxito a ${updated[0].nombre}`,
+        previous: targetStudent,
+        current: updated[0],
+        enrollments,
+        updatedEventsCount: updatedEvents.length,
+        updatedEvents,
+        conflictsCleared: conflicts
+      });
+    }
+
+    if (body.action === 'clean_future_attendance_and_set_practicas') {
+      // 1. Set PRACTICAS for I SABADO A on 2026-09-05 and 2026-09-12
+      const sabadoGroup = await sql`SELECT id FROM groups WHERE nombre ILIKE '%I SABADO A%' LIMIT 1`;
+      let sabadoCount = 0;
+      if (sabadoGroup.length > 0) {
+        const sId = sabadoGroup[0].id;
+        const sabadoSessions = await sql`
+          SELECT id FROM class_sessions 
+          WHERE group_id = ${sId}::uuid AND fecha IN ('2026-09-05', '2026-09-12')
+        `;
+        const enrolledSabado = await sql`
+          SELECT student_id FROM enrollments WHERE group_id = ${sId}::uuid AND (activo IS NULL OR activo = TRUE)
+        `;
+        for (const sess of sabadoSessions) {
+          for (const st of enrolledSabado) {
+            await sql`
+              INSERT INTO attendance_records_normalized (
+                student_id, session_id, estado, fuente, observaciones, sede
+              ) VALUES (
+                ${st.student_id}::uuid, ${sess.id}::uuid, 'PRACTICAS', 'MASIVO', 'Rotación de prácticas clínicas', 'Sede 1'
+              )
+              ON CONFLICT (student_id, session_id) DO UPDATE
+              SET estado = 'PRACTICAS', observaciones = 'Rotación de prácticas clínicas', updated_at = NOW();
+            `;
+            sabadoCount++;
+          }
+        }
+      }
+
+      // 2. Delete premature pre-imported blank PRESENTE records for dates >= CURRENT_DATE
+      // (records with estado = 'PRESENTE' and empty observaciones or fuente = 'EXCEL')
+      const deletedPremature = await sql`
+        DELETE FROM attendance_records_normalized
+        WHERE session_id IN (
+          SELECT id FROM class_sessions WHERE fecha >= CURRENT_DATE
+        )
+        AND estado = 'PRESENTE'
+        AND (observaciones IS NULL OR observaciones = '' OR fuente = 'EXCEL');
+      `;
+
+      return NextResponse.json({
+        success: true,
+        message: 'Saneamiento completado exitosamente',
+        sabadoPracticasUpdated: sabadoCount,
+        deletedPrematureCount: deletedPremature.length ?? 0
+      });
+    }
+
+    if (body.action === 'fix_students_schema') {
+      await sql`ALTER TABLE students ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`;
+      await sql`ALTER TABLE students ADD COLUMN IF NOT EXISTS email TEXT;`;
+      return NextResponse.json({ success: true, message: 'Columna updated_at asegurada en students' });
+    }
+
     if (body.action === 'inspect') {
       const groups = await sql`
         SELECT g.id, g.nombre, g.jornada, g.tipo, g.programa_nombre,
@@ -104,6 +407,13 @@ export async function POST(req: Request) {
         FROM students
         GROUP BY grado
         ORDER BY count DESC
+      `;
+
+      const studentColumns = await sql`
+        SELECT column_name, data_type, is_nullable
+        FROM information_schema.columns
+        WHERE table_name = 'students'
+        ORDER BY ordinal_position
       `;
 
       const cbStudents = await sql`
@@ -123,11 +433,133 @@ export async function POST(req: Request) {
         success: true,
         groups,
         studentGrades,
+        studentColumns,
         cbStudents
       });
     }
 
+    if (body.action === 'find_or_enroll_students') {
+      const targetList: string[] = body.list || [];
+      const doEnroll = !!body.doEnroll;
+      const targetGroupId = body.groupId || '32302dd7-a3be-4a01-9b6c-0b9ee963569b';
+
+      const allStudents = await sql`
+        SELECT s.id, s.nombre, s.documento, s.tarjeta_numero, s.grado, s.activo,
+               e.id as enrollment_id, e.group_id, g.nombre as current_group
+        FROM students s
+        LEFT JOIN enrollments e ON e.student_id = s.id AND (e.activo IS NULL OR e.activo = TRUE)
+        LEFT JOIN groups g ON g.id = e.group_id
+        ORDER BY s.nombre ASC
+      `;
+
+      const results: any[] = [];
+      const notFound: string[] = [];
+
+      for (const target of targetList) {
+        const cleanT = target.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+        const parts = cleanT.split(/\s+/).filter(Boolean);
+
+        let match = allStudents.find((s: any) => {
+          const sName = (s.nombre || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+          return parts.every(p => sName.includes(p));
+        });
+
+        if (!match && parts.length >= 2) {
+          // Fallback matching at least 2 key words
+          match = allStudents.find((s: any) => {
+            const sName = (s.nombre || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+            const matchedCount = parts.filter(p => sName.includes(p)).length;
+            return matchedCount >= Math.min(parts.length, 2);
+          });
+        }
+
+        if (match) {
+          let enrolledNow = false;
+          if (doEnroll) {
+            // Update student name to exact canon requested if desired
+            await sql`
+              UPDATE students 
+              SET nombre = ${target.trim()}, activo = TRUE, grado = 'I DIURNO CB'
+              WHERE id = ${match.id}::uuid
+            `;
+
+            // Insert or update enrollment in target group safely
+            await sql`
+              DELETE FROM enrollments 
+              WHERE student_id = ${match.id}::uuid AND group_id = ${targetGroupId}::uuid
+            `;
+            await sql`
+              INSERT INTO enrollments (id, student_id, group_id, activo, fecha_inicio, created_at)
+              VALUES (gen_random_uuid(), ${match.id}::uuid, ${targetGroupId}::uuid, TRUE, CURRENT_DATE, NOW())
+            `;
+            enrolledNow = true;
+          }
+
+          results.push({
+            target,
+            matchedId: match.id,
+            matchedName: match.nombre,
+            doc: match.documento,
+            previousGroup: match.current_group,
+            previousGroupId: match.group_id,
+            enrolledInTarget: enrolledNow || match.group_id === targetGroupId
+          });
+        } else {
+          if (doEnroll) {
+            // Create student if completely missing
+            const newIdQuery = await sql`
+              INSERT INTO students (
+                id, nombre, grado, activo, created_at
+              ) VALUES (
+                gen_random_uuid(), ${target.trim()}, 'I DIURNO CB', TRUE, NOW()
+              )
+              RETURNING id
+            `;
+            const newStudentId = newIdQuery[0].id;
+            
+            // Delete any existing enrollment for this student in target group
+            await sql`
+              DELETE FROM enrollments 
+              WHERE student_id = ${newStudentId}::uuid AND group_id = ${targetGroupId}::uuid
+            `;
+            await sql`
+              INSERT INTO enrollments (id, student_id, group_id, activo, fecha_inicio, created_at)
+              VALUES (gen_random_uuid(), ${newStudentId}::uuid, ${targetGroupId}::uuid, TRUE, CURRENT_DATE, NOW())
+            `;
+            results.push({
+              target,
+              matchedId: newStudentId,
+              matchedName: target.trim(),
+              createdNew: true,
+              enrolledInTarget: true
+            });
+          } else {
+            notFound.push(target);
+          }
+        }
+      }
+
+      // Re-fetch count in target group
+      const countRes = await sql`
+        SELECT COUNT(e.id) as count
+        FROM enrollments e
+        WHERE e.group_id = ${targetGroupId}::uuid AND (e.activo IS NULL OR e.activo = TRUE)
+      `;
+
+      return NextResponse.json({
+        success: true,
+        targetGroupId,
+        totalTarget: targetList.length,
+        foundCount: results.length,
+        notFoundCount: notFound.length,
+        results,
+        notFound,
+        enrolledCountNow: countRes[0]?.count || 0
+      });
+    }
+
     if (body.action === 'compare_groups') {
+
       const g1 = body.g1 || "f847ea2c-0c47-4e34-9b3e-7828f9a6e1c0";
       const g2 = body.g2 || "fe0f0776-d2a0-4a58-b75f-d5ee31838486";
 
@@ -220,7 +652,14 @@ export async function POST(req: Request) {
         let status = 'OK';
         let addedCount = 0;
 
-        if (count === 0 && body.fix === true) {
+        const isTargetGroup = body.target_group_id === grp.id || 
+          (body.target_group_nombre && grp.nombre.toUpperCase().includes(String(body.target_group_nombre).toUpperCase()));
+
+        const shouldSync = (count === 0 && body.fix === true) || 
+                           (body.sync_missing === true && (count < weekdayDatesRes.length || isTargetGroup)) ||
+                           isTargetGroup;
+
+        if (shouldSync) {
           const isSaturday = grp.jornada === 'SABADO' || grp.nombre.includes('SABADO');
           const refDates = isSaturday ? saturdayDatesRes : weekdayDatesRes;
 
@@ -238,7 +677,7 @@ export async function POST(req: Request) {
               addedCount++;
             }
           }
-          status = `Generadas ${addedCount} sesiones`;
+          status = addedCount > 0 ? `Generadas ${addedCount} sesiones faltantes` : 'Sin fechas faltantes';
         } else if (count === 0) {
           status = 'FALTAN_SESIONES';
         }

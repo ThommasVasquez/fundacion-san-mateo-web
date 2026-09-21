@@ -115,17 +115,17 @@ const normalizarCabecera = (s: string) =>
  * nombres sensatos, para quien prepare el fichero a mano.
  */
 const COLUMNAS: Record<keyof Omit<RegistroPadron, 'tarjetaNum'>, string[]> = {
-  usuarioNro:      ['usuario nro', 'usuario', 'no usuario', 'numero de usuario'],
+  usuarioNro:      ['usuario nro', 'usuario', 'no usuario', 'numero de usuario', 'documento', 'cedula', 'cédula', 'identificacion', 'identificación', 'nro identificacion', 'doc', 'no documento', 'numero documento', 'cc', 'ti'],
   idDispositivo:   ['id en dispositivo', 'id dispositivo'],
   tarjeta:         ['tarjeta nro', 'tarjeta', 'numero de tarjeta', 'no tarjeta'],
-  nombre:          ['nombre', 'nombres', 'nombre completo', 'alumno', 'estudiante'],
+  nombre:          ['nombre', 'nombres', 'nombre completo', 'alumno', 'estudiante', 'apellidos y nombres', 'estudiantes'],
   departamento:    ['departamento', 'sede'],
   rol:             ['genero', 'rol', 'tipo'],
-  curso:           ['posicion', 'curso', 'grado', 'programa'],
+  curso:           ['posicion', 'curso', 'grado', 'programa', 'grupo'],
   cumpleanos:      ['cumpleanos', 'fecha de nacimiento', 'nacimiento'],
   inicioPracticas: ['fecha de inicio laboral', 'inicio laboral', 'fecha de inicio'],
-  telefono:        ['telefono', 'celular', 'movil'],
-  domicilio:       ['domicilio', 'direccion'],
+  telefono:        ['telefono', 'teléfono', 'celular', 'movil', 'móvil'],
+  domicilio:       ['domicilio', 'direccion', 'dirección'],
   dispositivos:    ['dispositivos', 'dispositivo'],
 };
 

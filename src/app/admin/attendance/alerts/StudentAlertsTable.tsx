@@ -22,7 +22,7 @@ interface StudentAlertsTableProps {
 export default function StudentAlertsTable({ alerts }: StudentAlertsTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState<number>(3);
 
   // Filter based on search term
   const filteredAlerts = useMemo(() => {
@@ -35,29 +35,45 @@ export default function StudentAlertsTable({ alerts }: StudentAlertsTableProps) 
     );
   }, [alerts, searchTerm]);
 
-  // Reset to page 1 if filter changes
+  // Reset to page 1 if filter or pageSize changes
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, pageSize]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredAlerts.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(filteredAlerts.length / (pageSize || 1)));
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = Math.min(startIndex + pageSize, filteredAlerts.length);
-  const currentItems = filteredAlerts.slice(startIndex, endIndex);
+  const currentItems = pageSize === 0 ? filteredAlerts : filteredAlerts.slice(startIndex, endIndex);
 
   return (
     <div className="space-y-4">
       {/* Header controls: Search & Count summary */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-        <div className="text-xs font-bold text-gray-500">
-          Mostrando{' '}
-          <span className="text-fsm-blue font-black">
-            {filteredAlerts.length === 0 ? 0 : startIndex + 1}–{endIndex}
-          </span>{' '}
-          de <span className="font-black text-gray-800">{filteredAlerts.length}</span> estudiantes en riesgo
-          {filteredAlerts.length !== alerts.length && (
-            <span className="text-gray-400 font-normal"> (filtrados de un total de {alerts.length})</span>
-          )}
+        <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-gray-500">
+          <div>
+            Mostrando{' '}
+            <span className="text-fsm-blue font-black">
+              {filteredAlerts.length === 0 ? 0 : startIndex + 1}–{endIndex}
+            </span>{' '}
+            de <span className="font-black text-gray-800">{filteredAlerts.length}</span> estudiantes en riesgo
+            {filteredAlerts.length !== alerts.length && (
+              <span className="text-gray-400 font-normal"> (de {alerts.length})</span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1 text-[11px] text-gray-600 bg-white border border-gray-200 px-2 py-1 rounded-lg">
+            <span>Mostrar:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              className="bg-transparent font-black text-fsm-blue outline-none cursor-pointer"
+            >
+              <option value={3}>3</option>
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+            </select>
+          </div>
         </div>
 
         {/* Quick Search */}

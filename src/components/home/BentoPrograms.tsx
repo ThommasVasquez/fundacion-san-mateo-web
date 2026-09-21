@@ -58,6 +58,21 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
     return { icon: <GraduationCap size={24} />, bg: index % 2 === 0 ? 'bg-fsm-blue/80' : 'bg-fsm-red/80', small: true };
   };
 
+  const getBentoImage = (program: Program, index: number) => {
+    if (
+      program.image_url &&
+      !program.image_url.includes('banner1') &&
+      program.image_url !== '/img/image21.jpg' &&
+      program.image_url !== '/img/image25.jpg'
+    ) {
+      return program.image_url;
+    }
+    const t = `${program.href || ''} ${program.title || ''}`.toLowerCase();
+    if (t.includes('enfermer') || index === 0) return '/img/image18.jpg';
+    if (t.includes('infancia') || index === 1) return '/img/image27.jpg';
+    return program.image_url || '/img/image18.jpg';
+  };
+
   return (
     <section ref={containerRef} className="py-32 bg-white overflow-hidden">
       <div className="container mx-auto px-4 md:px-8">
@@ -87,7 +102,7 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
               className="bento-item md:col-span-8 lg:col-span-5 relative group rounded-[4rem] overflow-hidden shadow-premium h-[500px] lg:min-h-[700px]"
             >
                 <Image 
-                  src={programs[0].image_url} 
+                  src={getBentoImage(programs[0], 0)} 
                   alt={programs[0].title} 
                   fill 
                   className="object-cover transition-transform duration-1000 group-hover:scale-110 brightness-75 group-hover:brightness-50"
@@ -119,7 +134,7 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
                 className="bento-item md:col-span-2 relative group rounded-[4rem] overflow-hidden shadow-premium h-[400px]"
               >
                   <Image 
-                    src={programs[1].image_url} 
+                    src={getBentoImage(programs[1], 1)} 
                     alt={programs[1].title} 
                     fill 
                     priority
@@ -151,7 +166,7 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
                 className="bento-item relative group rounded-[4rem] overflow-hidden shadow-premium h-[300px]"
               >
                 <Image 
-                  src={programs[2].image_url} 
+                  src={getBentoImage(programs[2], 2)} 
                   alt={programs[2].title} 
                   fill 
                   className="object-cover transition-transform duration-1000 group-hover:scale-110 brightness-75 group-hover:brightness-50"

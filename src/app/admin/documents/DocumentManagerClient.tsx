@@ -3,7 +3,6 @@
 import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import * as XLSX from 'xlsx';
 import { formatDateDDMMYYYY } from '@/lib/dateUtils';
 import { 
   createIssuedDocument, updateIssuedDocument, toggleDocumentStatus, deleteIssuedDocument,
@@ -12,7 +11,7 @@ import {
 import { generateDocumentPDF } from '@/lib/documentPdfGenerator';
 import { stampOfficialDocumentPDF, uint8ArrayToDataUrl } from '@/lib/pdfStamper';
 import { extractStudentInfoFromPDF } from '@/lib/pdfTextExtractor';
-import { exportDocumentsToExcel, exportBulkImportTemplateExcel } from '@/lib/excelExportHelper';
+
 import { 
   FileCheck, Search, Plus, QrCode, Edit2, Trash2, X, Save, 
   CheckCircle2, XCircle, Download, ExternalLink, ShieldCheck, Printer, 
@@ -95,9 +94,14 @@ export default function DocumentManagerClient({
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [newConsecutivo, setNewConsecutivo] = useState(nextConsecutivo);
   const [newNombre, setNewNombre] = useState('');
+  const [newTipoId, setNewTipoId] = useState('C.C.');
   const [newDocumento, setNewDocumento] = useState('');
+  const [newLugarExpedicion, setNewLugarExpedicion] = useState('Soacha');
   const [newTipo, setNewTipo] = useState(isSuperAdmin ? 'Diploma de Grado' : 'Certificado de Notas');
+  const [newTipoCertificacion, setNewTipoCertificacion] = useState('Programa Aptitud Ocupacional por');
   const [newPrograma, setNewPrograma] = useState('');
+  const [newCiclo, setNewCiclo] = useState('PRIMER CICLO');
+  const [newJornada, setNewJornada] = useState('Noche');
   const [newFecha, setNewFecha] = useState(new Date().toISOString().split('T')[0]);
   const [newFolio, setNewFolio] = useState('');
   const [newLibro, setNewLibro] = useState('');
@@ -128,9 +132,14 @@ export default function DocumentManagerClient({
   const [editingDoc, setEditingDoc] = useState<DocumentItem | null>(null);
   const [editConsecutivo, setEditConsecutivo] = useState('');
   const [editNombre, setEditNombre] = useState('');
+  const [editTipoId, setEditTipoId] = useState('C.C.');
   const [editDocumento, setEditDocumento] = useState('');
+  const [editLugarExpedicion, setEditLugarExpedicion] = useState('Soacha');
   const [editTipo, setEditTipo] = useState('');
+  const [editTipoCertificacion, setEditTipoCertificacion] = useState('Programa Aptitud Ocupacional por');
   const [editPrograma, setEditPrograma] = useState('');
+  const [editCiclo, setEditCiclo] = useState('PRIMER CICLO');
+  const [editJornada, setEditJornada] = useState('Noche');
   const [editFecha, setEditFecha] = useState('');
   const [editFolio, setEditFolio] = useState('');
   const [editLibro, setEditLibro] = useState('');
@@ -169,6 +178,14 @@ export default function DocumentManagerClient({
     setNewNombre(s.nombre);
     if (s.documento) setNewDocumento(s.documento);
     if (s.programa && !newPrograma) setNewPrograma(s.programa);
+    
+    // Deduce Jornada automatically from group name
+    const progUpper = (s.programa || '').toUpperCase();
+    if (progUpper.includes('NOCHE')) setNewJornada('Noche');
+    else if (progUpper.includes('SABADO') || progUpper.includes('SÁBADO')) setNewJornada('Sábado');
+    else if (progUpper.includes('TARDE')) setNewJornada('Tarde');
+    else if (progUpper.includes('MAÑANA') || progUpper.includes('MANANA')) setNewJornada('Mañana');
+
     setShowStudentSuggestions(false);
     setStudentQuery('');
   };
@@ -201,6 +218,22 @@ export default function DocumentManagerClient({
         setNewDocumento(extracted.studentDocumento);
         detectedFields.push('Documento');
       }
+      if (extracted.tipoDocumentoId) {
+        setNewTipoId(extracted.tipoDocumentoId);
+        detectedFields.push('Tipo ID');
+      }
+      if (extracted.lugarExpedicion) {
+        setNewLugarExpedicion(extracted.lugarExpedicion);
+        detectedFields.push('Lugar');
+      }
+      if (extracted.ciclo) {
+        setNewCiclo(extracted.ciclo);
+        detectedFields.push('Ciclo');
+      }
+      if (extracted.jornada) {
+        setNewJornada(extracted.jornada);
+        detectedFields.push('Jornada');
+      }
       if (extracted.programaCurso && !newPrograma) {
         setNewPrograma(extracted.programaCurso);
         detectedFields.push('Programa');
@@ -217,10 +250,10 @@ export default function DocumentManagerClient({
       }
 
       if (detectedFields.length > 0) {
-        setPdfAutoDetectedMsg(`Detectado automáticamente del PDF: ${detectedFields.join(', ')}.`);
+        setPdfAutoDetectedMsg(`Detectado del PDF: ${detectedFields.join(', ')}.`);
         showStatus(`Datos detectados del PDF: ${detectedFields.join(', ')}.`);
       } else {
-        showStatus('PDF adjunto. Se estampará marca de agua, logo y consecutivo.');
+        showStatus('PDF adjunto. Se estampará membrete oficial, calificaciones y datos institucionales.');
       }
     } catch (err) {
       console.warn('Could not parse PDF text:', err);
@@ -243,10 +276,15 @@ export default function DocumentManagerClient({
       const stampedBytes = await stampOfficialDocumentPDF(arrayBuffer, {
         consecutivo: editingDoc ? editConsecutivo : newConsecutivo,
         studentNombre: editingDoc ? editNombre : newNombre,
+        tipoDocumentoId: editingDoc ? editTipoId : newTipoId,
         studentDocumento: editingDoc ? editDocumento : newDocumento,
-        tipoDocumento: editingDoc ? editTipo : newTipo,
+        lugarExpedicion: editingDoc ? editLugarExpedicion : newLugarExpedicion,
+        tipoCertificacion: editingDoc ? editTipoCertificacion : newTipoCertificacion,
         programaCurso: editingDoc ? editPrograma : newPrograma,
+        ciclo: editingDoc ? editCiclo : newCiclo,
+        jornada: editingDoc ? editJornada : newJornada,
         fechaExpedicion: editingDoc ? editFecha : newFecha,
+        tipoDocumento: editingDoc ? editTipo : newTipo,
       });
 
       const blob = new Blob([stampedBytes as any], { type: 'application/pdf' });
@@ -282,19 +320,29 @@ export default function DocumentManagerClient({
 
     let stampedPdfUrl: string | undefined = undefined;
 
-    // If a PDF is attached, stamp it with watermark, logo on top-left, and consecutivo on top-right!
+    // If a PDF is attached, stamp it with official centered header, real student data, grades preserved, and footer!
     if (attachedPdfFile) {
       try {
         const arrayBuffer = await attachedPdfFile.arrayBuffer();
         const stampedBytes = await stampOfficialDocumentPDF(arrayBuffer, {
           consecutivo: newConsecutivo,
           studentNombre: newNombre,
+          tipoDocumentoId: newTipoId,
           studentDocumento: newDocumento,
-          tipoDocumento: newTipo,
+          lugarExpedicion: newLugarExpedicion,
+          tipoCertificacion: newTipoCertificacion,
           programaCurso: newPrograma,
+          ciclo: newCiclo,
+          jornada: newJornada,
           fechaExpedicion: newFecha,
+          tipoDocumento: newTipo,
         });
         stampedPdfUrl = uint8ArrayToDataUrl(stampedBytes);
+        if (stampedPdfUrl.length > 950000) {
+          setIsCreating(false);
+          showStatus('El archivo PDF adjunto supera el límite de 700 KB permitido para almacenamiento. Por favor comprímelo antes de subirlo.', 'error');
+          return;
+        }
       } catch (e: any) {
         console.error('Error stamping PDF during document creation:', e);
         showStatus('Advertencia: No se pudo estampar el PDF adjunto, se creará el registro sin el archivo.', 'error');
@@ -342,13 +390,15 @@ export default function DocumentManagerClient({
     setBulkFileName(file.name);
     const reader = new FileReader();
 
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
+        const XLSX = await import('xlsx');
         const bstr = evt.target?.result;
         const wb = XLSX.read(bstr, { type: 'binary', cellDates: true });
         const wsName = wb.SheetNames[0];
         const ws = wb.Sheets[wsName];
         const rawData: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
 
         if (rawData.length === 0) {
           showStatus('El archivo no contiene filas con datos válidos.', 'error');
@@ -532,6 +582,18 @@ export default function DocumentManagerClient({
     setEditNotas(doc.notas);
     setEditPdfUrl(doc.pdf_url || '');
     setEditAttachedPdfFile(null);
+    setEditTipoId('C.C.');
+    setEditLugarExpedicion('Soacha');
+    setEditCiclo('PRIMER CICLO');
+    setEditJornada('Noche');
+    setEditTipoCertificacion('Programa Aptitud Ocupacional por');
+
+    // Deduce Jornada if present in program/notes
+    const progUpper = (doc.programa_curso || '').toUpperCase();
+    if (progUpper.includes('NOCHE')) setEditJornada('Noche');
+    else if (progUpper.includes('SABADO') || progUpper.includes('SÁBADO')) setEditJornada('Sábado');
+    else if (progUpper.includes('TARDE')) setEditJornada('Tarde');
+    else if (progUpper.includes('MAÑANA') || progUpper.includes('MANANA')) setEditJornada('Mañana');
   };
 
   const handleSaveEdit = async () => {
@@ -544,7 +606,7 @@ export default function DocumentManagerClient({
 
     setIsSavingEdit(true);
 
-    let stampedPdfUrl = editPdfUrl || undefined;
+    let stampedPdfUrl: string | null = null;
 
     if (editAttachedPdfFile) {
       try {
@@ -552,19 +614,40 @@ export default function DocumentManagerClient({
         const stampedBytes = await stampOfficialDocumentPDF(arrayBuffer, {
           consecutivo: editConsecutivo,
           studentNombre: editNombre,
+          tipoDocumentoId: editTipoId,
           studentDocumento: editDocumento,
-          tipoDocumento: editTipo,
+          lugarExpedicion: editLugarExpedicion,
+          tipoCertificacion: editTipoCertificacion,
           programaCurso: editPrograma,
+          ciclo: editCiclo,
+          jornada: editJornada,
           fechaExpedicion: editFecha,
+          tipoDocumento: editTipo,
         });
         stampedPdfUrl = uint8ArrayToDataUrl(stampedBytes);
+        if (stampedPdfUrl.length > 950000) {
+          setIsSavingEdit(false);
+          showStatus('El nuevo archivo PDF adjunto supera el límite de 700 KB para almacenamiento. Por favor comprímelo antes de subirlo.', 'error');
+          return;
+        }
       } catch (err) {
         console.error('Error stamping updated PDF:', err);
         showStatus('Advertencia: No se pudo estampar el nuevo PDF', 'error');
       }
     }
 
-    const res = await updateIssuedDocument(editingDoc.id, {
+    const updatePayload: {
+      consecutivo?: string;
+      student_nombre?: string;
+      student_documento?: string;
+      tipo_documento?: string;
+      programa_curso?: string;
+      fecha_expedicion?: string;
+      folio?: string;
+      libro?: string;
+      notas?: string;
+      pdf_url?: string;
+    } = {
       consecutivo: editConsecutivo,
       student_nombre: editNombre,
       student_documento: editDocumento,
@@ -574,8 +657,13 @@ export default function DocumentManagerClient({
       folio: editFolio,
       libro: editLibro,
       notas: editNotas,
-      pdf_url: stampedPdfUrl,
-    });
+    };
+
+    if (editAttachedPdfFile && stampedPdfUrl) {
+      updatePayload.pdf_url = stampedPdfUrl;
+    }
+
+    const res = await updateIssuedDocument(editingDoc.id, updatePayload);
 
     setIsSavingEdit(false);
     if (res.success) {
@@ -649,22 +737,43 @@ export default function DocumentManagerClient({
     });
   };
 
-  // Download official PDF for document (Stamped PDF or generated diploma/certificate)
-  const handleDownloadPDF = async (doc: DocumentItem) => {
+  // Download official PDF for document (Generated diploma/certificate or stamped PDF)
+  const handleDownloadPDF = async (doc: DocumentItem, forceGenerateOfficial: boolean = false) => {
     try {
       setIsGeneratingPdfId(doc.id);
 
-      if (doc.pdf_url) {
+      if (doc.pdf_url && !forceGenerateOfficial) {
+        let downloadUrl = doc.pdf_url;
+        if (doc.pdf_url.startsWith('data:application/pdf')) {
+          try {
+            const base64Data = doc.pdf_url.split(',')[1];
+            const binary = atob(base64Data);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+            const stampedBytes = await stampOfficialDocumentPDF(bytes, {
+              consecutivo: doc.consecutivo,
+              studentNombre: doc.student_nombre,
+              studentDocumento: doc.student_documento,
+              tipoDocumento: doc.tipo_documento,
+              programaCurso: doc.programa_curso,
+              fechaExpedicion: doc.fecha_expedicion,
+            });
+            downloadUrl = uint8ArrayToDataUrl(stampedBytes);
+          } catch (stampErr) {
+            console.warn('Could not re-stamp PDF dynamically on download:', stampErr);
+          }
+        }
         // Trigger download of official stamped PDF with watermark and consecutivo
         const safeName = doc.student_nombre ? `_${doc.student_nombre.trim().replace(/\s+/g, '_')}` : '';
         const link = document.createElement('a');
-        link.href = doc.pdf_url;
+        link.href = downloadUrl;
         link.download = `FSM-000-${doc.consecutivo}${safeName}.pdf`;
         link.target = '_blank';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        showStatus(`PDF Oficial Estampado de ${doc.consecutivo} descargado exitosamente.`);
+        showStatus(`Archivo adjunto de ${doc.consecutivo} descargado exitosamente.`);
       } else {
         await generateDocumentPDF({
           consecutivo: doc.consecutivo,
@@ -678,7 +787,7 @@ export default function DocumentManagerClient({
           estado: doc.estado,
           notas: doc.notas,
         });
-        showStatus(`PDF Oficial de ${doc.consecutivo} descargado exitosamente.`);
+        showStatus(`Certificado Oficial de ${doc.student_nombre} (${doc.consecutivo}) generado y descargado exitosamente.`);
       }
     } catch (e: any) {
       console.error('Error generating PDF:', e);
@@ -719,6 +828,7 @@ export default function DocumentManagerClient({
         verification_url: `https://fundacionsanmateosoacha.edu.co/verificar/${d.consecutivo}`
       }));
 
+      const { exportDocumentsToExcel } = await import('@/lib/excelExportHelper');
       await exportDocumentsToExcel(dataToExport);
       showStatus('Reporte Excel institucional generado exitosamente.');
     } catch (e) {
@@ -935,16 +1045,14 @@ export default function DocumentManagerClient({
                         )}
                       </td>
                       <td className="py-4 px-6 text-right space-x-1.5 whitespace-nowrap">
-                        {/* Download PDF Button */}
+                        {/* Download Official PDF Button (Priority to stamped PDF with real grades and student data) */}
                         <button
-                          onClick={() => handleDownloadPDF(doc)}
+                          onClick={() => handleDownloadPDF(doc, !doc.pdf_url)}
                           disabled={isDownloading}
-                          className={`px-2.5 py-1.5 text-white transition-all text-xs font-bold rounded-xl inline-flex items-center gap-1 shadow-sm disabled:opacity-50 ${
-                            doc.pdf_url ? 'bg-teal-700 hover:bg-teal-800' : 'bg-fsm-blue hover:bg-fsm-red'
-                          }`}
-                          title={doc.pdf_url ? "Descargar PDF Estampado (Marca de agua, logo y consecutivo)" : "Descargar Certificado Institucional Oficial"}
+                          className="px-2.5 py-1.5 bg-fsm-blue hover:bg-fsm-red text-white transition-all text-xs font-bold rounded-xl inline-flex items-center gap-1 shadow-sm disabled:opacity-50"
+                          title="Descargar Documento Oficial en PDF con calificaciones, resoluciones y datos del estudiante"
                         >
-                          <Download size={13} /> {isDownloading ? 'Generando...' : (doc.pdf_url ? 'PDF Estampado' : 'PDF')}
+                          <Download size={13} /> {isDownloading ? 'Procesando...' : 'Descargar PDF Oficial'}
                         </button>
 
                         {/* View QR Modal */}
@@ -1189,12 +1297,27 @@ export default function DocumentManagerClient({
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Documento Identidad (Cédula/TI):</label>
+                  <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Tipo de ID:*</label>
+                  <select
+                    value={newTipoId}
+                    onChange={e => setNewTipoId(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
+                  >
+                    <option value="C.C.">C.C. (Cédula de Ciudadanía)</option>
+                    <option value="T.I.">T.I. (Tarjeta de Identidad)</option>
+                    <option value="C.E.">C.E. (Cédula de Extranjería)</option>
+                    <option value="PEP">PEP</option>
+                    <option value="PAS">Pasaporte</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Número de Documento:*</label>
                   <input 
                     type="text" 
-                    placeholder="Ej: 1.018.452.930"
+                    placeholder="Ej: 1151951615"
                     value={newDocumento}
                     onChange={e => setNewDocumento(e.target.value)}
                     className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs outline-none focus:border-fsm-blue"
@@ -1202,11 +1325,32 @@ export default function DocumentManagerClient({
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Tipo de Documento:*</label>
+                  <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Lugar de Expedición:</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej: Soacha"
+                    value={newLugarExpedicion}
+                    onChange={e => setNewLugarExpedicion(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Tipo de Documento / Certificación:*</label>
                   <select
                     value={newTipo}
-                    onChange={e => setNewTipo(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
+                    onChange={e => {
+                      const val = e.target.value;
+                      setNewTipo(val);
+                      if (/notas|calificaciones/i.test(val)) {
+                        setNewTipoCertificacion('Programa Aptitud Ocupacional por');
+                      } else {
+                        setNewTipoCertificacion(val);
+                      }
+                    }}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
                   >
                     {documentTypes.map(t => {
                       const isRestricted = !isSuperAdmin && /diploma|acta/i.test(t);
@@ -1219,18 +1363,45 @@ export default function DocumentManagerClient({
                   </select>
                   {!isSuperAdmin && (
                     <p className="text-[10px] text-amber-600 mt-1 font-semibold">
-                      ℹ️ La expedición de Diplomas y Actas de Grado está restringida a la Dirección (admin@fundacionsanmateo.edu.co).
+                      ℹ️ Diplomas y Actas restringidos a Dirección.
                     </p>
                   )}
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Ciclo / Semestre Aprobado:*</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej: PRIMER CICLO"
+                    value={newCiclo}
+                    onChange={e => setNewCiclo(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Jornada:*</label>
+                  <select
+                    value={newJornada}
+                    onChange={e => setNewJornada(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
+                  >
+                    <option value="Noche">Noche</option>
+                    <option value="Mañana">Mañana</option>
+                    <option value="Tarde">Tarde</option>
+                    <option value="Sábado">Sábado</option>
+                    <option value="Domingo">Domingo</option>
+                    <option value="Sede A">Sede A</option>
+                  </select>
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Programa / Curso / Certificación:*</label>
+                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Programa / Especialidad:*</label>
                 <input 
                   type="text" 
                   list="academicProgramsList"
-                  placeholder="Ej: TÉCNICO EN ENFERMERÍA / AUXILIAR EN ENFERMERÍA"
+                  placeholder="Ej: Competencias Técnico Laboral en Auxiliar en Enfermería"
                   value={newPrograma}
                   onChange={e => setNewPrograma(e.target.value)}
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
@@ -1371,7 +1542,10 @@ export default function DocumentManagerClient({
                   </div>
                   <button
                     type="button"
-                    onClick={() => exportBulkImportTemplateExcel()}
+                    onClick={async () => {
+                      const { exportBulkImportTemplateExcel } = await import('@/lib/excelExportHelper');
+                      exportBulkImportTemplateExcel();
+                    }}
                     className="px-4 py-2 bg-white text-fsm-blue border border-fsm-blue/20 hover:bg-fsm-blue hover:text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-xs flex items-center gap-1.5 shrink-0"
                   >
                     <Download size={14} /> Descargar Plantilla Excel
@@ -1689,9 +1863,24 @@ export default function DocumentManagerClient({
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Documento Identidad:</label>
+                  <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Tipo de ID:*</label>
+                  <select
+                    value={editTipoId}
+                    onChange={e => setEditTipoId(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
+                  >
+                    <option value="C.C.">C.C. (Cédula de Ciudadanía)</option>
+                    <option value="T.I.">T.I. (Tarjeta de Identidad)</option>
+                    <option value="C.E.">C.E. (Cédula de Extranjería)</option>
+                    <option value="PEP">PEP</option>
+                    <option value="PAS">Pasaporte</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Número de Documento:*</label>
                   <input 
                     type="text" 
                     value={editDocumento}
@@ -1701,11 +1890,32 @@ export default function DocumentManagerClient({
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Tipo de Documento:</label>
+                  <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Lugar de Expedición:</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej: Soacha"
+                    value={editLugarExpedicion}
+                    onChange={e => setEditLugarExpedicion(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Tipo de Documento / Certificación:*</label>
                   <select
                     value={editTipo}
-                    onChange={e => setEditTipo(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
+                    onChange={e => {
+                      const val = e.target.value;
+                      setEditTipo(val);
+                      if (/notas|calificaciones/i.test(val)) {
+                        setEditTipoCertificacion('Programa Aptitud Ocupacional por');
+                      } else {
+                        setEditTipoCertificacion(val);
+                      }
+                    }}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
                   >
                     {documentTypes.map(t => {
                       const isRestricted = !isSuperAdmin && /diploma|acta/i.test(t);
@@ -1717,10 +1927,37 @@ export default function DocumentManagerClient({
                     })}
                   </select>
                 </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Ciclo / Semestre:*</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej: PRIMER CICLO"
+                    value={editCiclo}
+                    onChange={e => setEditCiclo(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Jornada:*</label>
+                  <select
+                    value={editJornada}
+                    onChange={e => setEditJornada(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
+                  >
+                    <option value="Noche">Noche</option>
+                    <option value="Mañana">Mañana</option>
+                    <option value="Tarde">Tarde</option>
+                    <option value="Sábado">Sábado</option>
+                    <option value="Domingo">Domingo</option>
+                    <option value="Sede A">Sede A</option>
+                  </select>
+                </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Programa / Curso:</label>
+                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Programa / Especialidad:*</label>
                 <input 
                   type="text" 
                   value={editPrograma}

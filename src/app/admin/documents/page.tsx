@@ -4,14 +4,16 @@ import { cookies } from 'next/headers';
 import { decrypt } from '@/lib/auth';
 import { sql } from '@/lib/db';
 import DocumentManagerClient from './DocumentManagerClient';
-import { ArrowLeft, ChevronRight, FileCheck } from 'lucide-react';
+import { ArrowLeft, ChevronRight, FileCheck, ShieldAlert } from 'lucide-react';
 import { getNextDocumentConsecutivo } from '@/app/actions';
+import { userHasPermission } from '@/lib/permissions';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminDocumentsPage() {
   const session = (await cookies()).get('session')?.value;
-  let parsed = null;
+  let parsed: any = null;
   if (session) {
     try {
       parsed = await decrypt(session);
@@ -19,7 +21,36 @@ export default async function AdminDocumentsPage() {
       parsed = null;
     }
   }
-  const userEmail = (parsed?.email || '').toLowerCase().trim();
+
+  if (!parsed || (!parsed.adminId && !parsed.teacherId)) {
+    redirect('/auth/login');
+  }
+
+  const userEmail = (parsed.email || '').toLowerCase().trim();
+  const hasAccess = userHasPermission('documents_manage', parsed.role, parsed.permissions, userEmail);
+
+  if (!hasAccess) {
+    return (
+      <div className="max-w-xl mx-auto my-16 p-8 bg-white rounded-3xl border border-red-200 text-center shadow-lg space-y-4">
+        <div className="w-16 h-16 bg-red-100 text-fsm-red rounded-full flex items-center justify-center mx-auto">
+          <ShieldAlert size={32} />
+        </div>
+        <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Acceso Restringido</h2>
+        <p className="text-xs text-gray-600 leading-relaxed">
+          No tienes el permiso <strong>Certificados y Código QR</strong> (<code className="bg-gray-100 px-1 py-0.5 rounded text-gray-800">documents_manage</code>). La expedición y foliación de certificados oficiales está restringida a Coordinación y Rectoría.
+        </p>
+        <div className="pt-2">
+          <Link
+            href="/admin/attendance"
+            className="px-6 py-2.5 bg-fsm-blue text-white rounded-xl text-xs font-bold uppercase inline-flex items-center gap-2 hover:bg-fsm-red transition-all shadow-sm"
+          >
+            <ArrowLeft size={14} /> Volver a Asistencia
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const isSuperAdmin = userEmail === 'admin@fundacionsanmateo.edu.co' || userEmail === 'admin@fundacionsanmateosoacha.edu.co';
   let documents: any[] = [];
   try {
@@ -66,32 +97,36 @@ export default async function AdminDocumentsPage() {
   let academicPrograms: string[] = [];
   try {
     const progsRes = await sql`
-      SELECT title FROM academic_programs ORDER BY title ASC
+      SELECT DISTINCT title 
+      FROM programs 
+      WHERE active = true 
+      ORDER BY title ASC
     `;
     academicPrograms = progsRes.map((p: any) => p.title);
   } catch (e) {
-    console.error('Error fetching academic programs:', e);
+    academicPrograms = [];
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto space-y-6">
       {/* Breadcrumbs */}
-      <div className="flex items-center gap-3 text-xs font-black tracking-widest uppercase text-gray-700 mb-4">
+      <div className="flex items-center gap-3 text-xs font-black tracking-widest uppercase text-gray-700">
         <Link href="/admin" className="hover:text-fsm-red transition-colors flex items-center gap-2">
           <ArrowLeft size={14} /> Panel
         </Link>
         <ChevronRight size={14} />
-        <span className="text-fsm-blue">Verificación Documental y Códigos QR</span>
+        <span className="text-fsm-blue">Documentos Oficiales y QR</span>
       </div>
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-4">
         <div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-fsm-blue/10 text-fsm-blue rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-fsm-blue text-white rounded-2xl flex items-center justify-center shadow-md">
               <FileCheck size={24} />
             </div>
-            <h1 className="text-3xl font-black text-fsm-blue uppercase tracking-tighter">
-              SISTEMA DE VERIFICACIÓN DOCUMENTAL
+            <h1 className="text-2xl md:text-3xl font-black text-fsm-blue uppercase tracking-tight">
+              Certificados y Documentos Oficiales
             </h1>
           </div>
           <p className="text-gray-900 font-medium mt-2">

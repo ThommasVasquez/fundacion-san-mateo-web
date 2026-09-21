@@ -100,7 +100,9 @@ export default function StudentHistoryClient({ studentId, records }: StudentHist
                       >
                         <option value="AUSENTE">❌ INASISTENCIA</option>
                         <option value="EXCUSA_MEDICA">📝 EXCUSA MÉDICA</option>
+                        <option value="EXCUSA_PRACTICAS_AIPI">👶 EXCUSA PRÁCTICAS AIPI</option>
                         <option value="PRESENTE">✅ PRESENTE</option>
+                        <option value="PRACTICAS">🏥 PRÁCTICAS CLÍNICAS</option>
                         <option value="FESTIVO">🎉 FESTIVO</option>
                         <option value="LIBRE">🕊️ LIBRE</option>
                       </select>
@@ -112,10 +114,30 @@ export default function StudentHistoryClient({ studentId, records }: StudentHist
                               ? 'bg-green-50 text-green-700 border-green-200'
                               : r.estado === 'AUSENTE'
                               ? 'bg-red-50 text-fsm-red border-red-200 shadow-sm'
+                              : r.estado === 'EXCUSA_PRACTICAS_AIPI' || r.estado === 'PRACTICAS_AIPI'
+                              ? 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200'
+                              : r.estado === 'EXCUSA_MEDICA'
+                              ? 'bg-teal-50 text-teal-700 border-teal-200'
+                              : r.estado === 'CALENDARIO_B'
+                              ? 'bg-amber-50 text-amber-800 border-amber-200'
+                              : r.estado === 'FESTIVO'
+                              ? 'bg-purple-50 text-purple-700 border-purple-200'
+                              : r.estado === 'NO_MATRICULADO'
+                              ? 'bg-gray-100 text-gray-500 border-gray-200'
                               : 'bg-amber-50 text-amber-800 border-amber-200'
                           }`}
                         >
-                          {r.estado === 'AUSENTE' ? '❌ INASISTENCIA' : r.estado}
+                          {r.estado === 'AUSENTE' 
+                            ? '❌ INASISTENCIA' 
+                            : r.estado === 'EXCUSA_PRACTICAS_AIPI'
+                            ? '👶 PRÁCTICAS AIPI'
+                            : r.estado === 'CALENDARIO_B'
+                            ? '📅 CALENDARIO B (SEP)'
+                            : r.estado === 'FESTIVO'
+                            ? '🎉 FESTIVO'
+                            : r.estado === 'NO_MATRICULADO'
+                            ? '⚪ NO MATRICULADO'
+                            : r.estado}
                         </span>
                         {r.scan_time && (
                           <p className="text-[10px] text-gray-500 font-medium">🕒 {r.scan_time}</p>

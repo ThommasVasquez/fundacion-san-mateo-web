@@ -81,6 +81,7 @@ export async function generateDocumentPDF(docData: DocumentPdfData) {
   const blueNavy = [0, 43, 73];    // #002B49
   const redFsm = [200, 16, 46];    // #C8102E
   const goldFsm = [217, 119, 6];   // #D97706
+  const vinotintoFsm = [118, 28, 48]; // #761C30 Vinotinto oficial FSM
   const grayDark = [50, 50, 50];
   const grayLight = [240, 243, 246];
 
@@ -107,12 +108,12 @@ export async function generateDocumentPDF(docData: DocumentPdfData) {
     // ==========================================
     // DIPLOMA LAYOUT (HORIZONTAL / LANDSCAPE)
     // ==========================================
-    let currentY = 22;
+    let currentY = 20;
 
     // Logo (Centered Top)
     if (logoDataUrl) {
       pdf.addImage(logoDataUrl, 'PNG', (pageWidth / 2) - 13, currentY - 6, 26, 26);
-      currentY += 24;
+      currentY += 23;
     } else {
       currentY += 10;
     }
@@ -120,21 +121,27 @@ export async function generateDocumentPDF(docData: DocumentPdfData) {
     // Institution Name
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(22);
+    pdf.setTextColor(vinotintoFsm[0], vinotintoFsm[1], vinotintoFsm[2]);
+    pdf.text('FUNDACIÓN SAN MATEO', pageWidth / 2, currentY, { align: 'center' });
+    currentY += 5.5;
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10);
     pdf.setTextColor(blueNavy[0], blueNavy[1], blueNavy[2]);
-    pdf.text('FUNDACIÓN EDUCATIVA SAN MATEO', pageWidth / 2, currentY, { align: 'center' });
-    currentY += 6;
+    pdf.text('NIT 832.008.253-1', pageWidth / 2, currentY, { align: 'center' });
+    currentY += 4.5;
 
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(9);
     pdf.setTextColor(redFsm[0], redFsm[1], redFsm[2]);
-    pdf.text('RESOLUCIÓN Y REGISTRO OFICIAL DE SECRETARÍA DE EDUCACIÓN DE SOACHA', pageWidth / 2, currentY, { align: 'center' });
-    currentY += 4;
+    pdf.text('EDUCACIÓN PARA EL TRABAJO Y EL DESARROLLO HUMANO', pageWidth / 2, currentY, { align: 'center' });
+    currentY += 3.5;
 
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
+    pdf.setFontSize(6.5);
     pdf.setTextColor(grayDark[0], grayDark[1], grayDark[2]);
-    pdf.text('INSTITUCIÓN DE FORMACIÓN PARA EL TRABAJO Y EL DESARROLLO HUMANO', pageWidth / 2, currentY, { align: 'center' });
-    currentY += 10;
+    pdf.text('Aprobación Res. 006253 SEC • SIET No. 513-0 • Certificado Calidad ISO 9001-2011. NTC 5555 NTC 5663 NTC 5581', pageWidth / 2, currentY, { align: 'center' });
+    currentY += 8;
 
     // Diploma Title
     pdf.setFont('helvetica', 'bold');
@@ -236,69 +243,124 @@ export async function generateDocumentPDF(docData: DocumentPdfData) {
       pdf.text(regText, 28, pageHeight - 13);
     }
 
+    // Official Institutional Footer
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(5.5);
+    pdf.setTextColor(grayDark[0], grayDark[1], grayDark[2]);
+    pdf.text(
+      'Principal: Calle 19 #8-21  Teléfonos: 601-9018127 Sede A: Calle 19 N° 7 - 29 Teléfono: 601-8175456  •  Soacha – Cundinamarca  •  direccionacademica@fundacionsanmateosoacha.edu.co',
+      pageWidth / 2,
+      pageHeight - 7,
+      { align: 'center' }
+    );
+
   } else {
     // ==========================================
     // CERTIFICADO / CONSTANCIA / ACTA LAYOUT (PORTRAIT / VERTICAL)
     // ==========================================
-    let currentY = 22;
+    let currentY = 14;
 
-    // Header Logo & Institution Name
+    // Center Watermark (Escudo)
     if (logoDataUrl) {
-      pdf.addImage(logoDataUrl, 'PNG', 18, currentY - 4, 22, 22);
+      try {
+        pdf.saveGraphicsState();
+        if ((pdf as any).GState) {
+          pdf.setGState(new (pdf as any).GState({ opacity: 0.08 }));
+        }
+        const wmSize = 92;
+        pdf.addImage(logoDataUrl, 'PNG', (pageWidth - wmSize) / 2, (pageHeight - wmSize) / 2, wmSize, wmSize);
+        pdf.restoreGraphicsState();
+      } catch (err) {
+        console.warn('Could not render watermark:', err);
+      }
     }
 
-    // Institution Name
+    // Top Center Shield Logo
+    if (logoDataUrl) {
+      const logoW = 18;
+      const logoH = 18;
+      pdf.addImage(logoDataUrl, 'PNG', (pageWidth - logoW) / 2, currentY, logoW, logoH);
+      currentY += logoH + 3.2;
+    } else {
+      currentY += 8;
+    }
+
+    // "FUNDACIÓN SAN MATEO"
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(16);
-    pdf.setTextColor(blueNavy[0], blueNavy[1], blueNavy[2]);
-    pdf.text('FUNDACIÓN EDUCATIVA SAN MATEO', 44, currentY + 2);
+    pdf.setFontSize(14);
+    pdf.setTextColor(vinotintoFsm[0], vinotintoFsm[1], vinotintoFsm[2]);
+    pdf.text('FUNDACIÓN SAN MATEO', pageWidth / 2, currentY, { align: 'center' });
+    currentY += 4.2;
 
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(8);
-    pdf.setTextColor(redFsm[0], redFsm[1], redFsm[2]);
-    pdf.text('INSTITUCIÓN DE EDUCACIÓN PARA EL TRABAJO Y EL DESARROLLO HUMANO', 44, currentY + 7);
-
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(7.5);
-    pdf.setTextColor(grayDark[0], grayDark[1], grayDark[2]);
-    pdf.text('Reconocimiento Oficial de Secretaría de Educación de Soacha', 44, currentY + 11.5);
-    pdf.text('NIT: 900.XXX.XXX-X  •  Soacha, Cundinamarca', 44, currentY + 15.5);
-
-    currentY += 28;
-
-    // Divider Line
-    pdf.setDrawColor(goldFsm[0], goldFsm[1], goldFsm[2]);
-    pdf.setLineWidth(0.6);
-    pdf.line(18, currentY, pageWidth - 18, currentY);
-    currentY += 10;
-
-    // Consecutivo Badge
-    pdf.setFillColor(grayLight[0], grayLight[1], grayLight[2]);
-    pdf.roundedRect(pageWidth - 68, currentY - 4, 50, 9, 2, 2, 'F');
+    // "NIT 832.008.253-1"
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(8.5);
     pdf.setTextColor(blueNavy[0], blueNavy[1], blueNavy[2]);
-    pdf.text(`CONSECUTIVO: ${docData.consecutivo}`, pageWidth - 43, currentY + 2, { align: 'center' });
+    pdf.text('NIT 832.008.253-1', pageWidth / 2, currentY, { align: 'center' });
+    currentY += 5;
 
-    // Document Title
+    // "Educación para el Trabajo y el Desarrollo Humano"
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(15);
+    pdf.setFontSize(7.8);
     pdf.setTextColor(blueNavy[0], blueNavy[1], blueNavy[2]);
-    pdf.text(docData.tipo_documento.toUpperCase(), 18, currentY + 2);
-    currentY += 14;
+    pdf.text('Educación para el Trabajo y el Desarrollo Humano', pageWidth / 2, currentY, { align: 'center' });
+    currentY += 3.2;
+
+    // Legal Resolutions & Approvals Block
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(5.2);
+    pdf.setTextColor(60, 64, 67);
+
+    const legalLines = [
+      'Aprobación Res. 006253 de SEC del 9 de Diciembre de 2002 Acuerdo 48 del 12 de Febrero de',
+      '2002 de Min. Salud Resolución 513 SES de Junio 5 de 2009 y 2074 del 21 de Septiembre de 2010,',
+      'Expedida por la Secretaría de Educación, Acuerdo 00071 del 17 de Mayo de 2019 de Min. Salud y Protección Social,',
+      'Resolución 1066 del 01 de junio de 2022 de Secretaria de Educación de Soacha, y Programa de Formación Laboral en Atención Integral de la Primera Infancia',
+      'Res. 1840 de 31 de Julio de 2018  Expedida por la Secretaría de Educación',
+      'SIET No. 513-0.',
+      'Certificado de Gestión de Calidad ISO 9001-2011. NTC 5555 NTC 5663 NTC 5581'
+    ];
+
+    for (const line of legalLines) {
+      if (line.startsWith('SIET') || line.startsWith('Certificado')) {
+        pdf.setFont('helvetica', 'bold');
+      } else {
+        pdf.setFont('helvetica', 'normal');
+      }
+      pdf.text(line, pageWidth / 2, currentY, { align: 'center' });
+      currentY += 2.4;
+    }
+
+    currentY += 2;
+
+    // Red Consecutivo at Top Right (as in example: FSM/CE172/26)
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10.5);
+    pdf.setTextColor(redFsm[0], redFsm[1], redFsm[2]);
+    pdf.text(docData.consecutivo, pageWidth - 18, currentY, { align: 'right' });
+    currentY += 5;
+
+    // Document Subtitle or Type (if specific like "ACTA DE GRADO", display cleanly)
+    if (docData.tipo_documento && !docData.tipo_documento.toLowerCase().includes('constancia') && !docData.tipo_documento.toLowerCase().includes('certific')) {
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(11);
+      pdf.setTextColor(blueNavy[0], blueNavy[1], blueNavy[2]);
+      pdf.text(docData.tipo_documento.toUpperCase(), pageWidth / 2, currentY, { align: 'center' });
+      currentY += 5;
+    }
 
     // Official Certifier text
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(10.5);
     pdf.setTextColor(blueNavy[0], blueNavy[1], blueNavy[2]);
-    pdf.text('LA DIRECCIÓN ACADÉMICA Y DE REGISTRO DE LA FUNDACIÓN SAN MATEO', 18, currentY);
-    currentY += 6;
+    pdf.text('LA DIRECTORA GENERAL DE LA FUNDACIÓN SAN MATEO', pageWidth / 2, currentY, { align: 'center' });
+    currentY += 4.5;
 
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(14);
-    pdf.setTextColor(redFsm[0], redFsm[1], redFsm[2]);
-    pdf.text('CERTIFICA:', 18, currentY);
-    currentY += 9;
+    pdf.setFontSize(11);
+    pdf.setTextColor(blueNavy[0], blueNavy[1], blueNavy[2]);
+    pdf.text('HACE CONSTAR QUE:', pageWidth / 2, currentY, { align: 'center' });
+    currentY += 8;
 
     // Body text
     pdf.setFont('helvetica', 'normal');
@@ -431,6 +493,24 @@ export async function generateDocumentPDF(docData: DocumentPdfData) {
     pdf.setFontSize(7.5);
     pdf.setTextColor(grayDark[0], grayDark[1], grayDark[2]);
     pdf.text('Registro y Control', pageWidth - 55, sigY + 18, { align: 'center' });
+
+    // Official Institutional Footer
+    const footerBottomY = pageHeight - 7;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(5.5);
+    pdf.setTextColor(grayDark[0], grayDark[1], grayDark[2]);
+    pdf.text(
+      'Principal: Calle 19 #8-21  Teléfonos: 601-9018127 Sede A: Calle 19 N° 7 - 29 Teléfono: 601-8175456',
+      pageWidth / 2,
+      footerBottomY - 2.6,
+      { align: 'center' }
+    );
+    pdf.text(
+      'Soacha – Cundinamarca Página-E-mail: direccionacademica@fundacionsanmateosoacha.edu.co',
+      pageWidth / 2,
+      footerBottomY,
+      { align: 'center' }
+    );
   }
 
   // Save the PDF
