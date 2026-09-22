@@ -3811,4 +3811,71 @@ export async function updateProgramTotalClassesAction(
   }
 }
 
+/**
+ * Modifica el umbral de fallas / inasistencias a partir del cual un estudiante entra en estado de RIESGO en un grupo.
+ * Por defecto es 3.
+ * Requiere permiso 'attendance_edit_risk_threshold', 'attendance_edit_total_classes' o ser Administrador General / SuperAdmin.
+ */
+export async function updateGroupRiskThresholdAction(
+  groupId: string,
+  fallasRiesgo: number | null
+): Promise<{ success?: boolean; error?: string; fallasRiesgo?: number | null }> {
+  try {
+    const session = await getActionSession();
+    if (!session) {
+      return { error: 'Sesión expirada o no autenticada.' };
+    }
+
+    const canEdit = isSuperAdminEmail(session.email) ||
+      session.role === 'admin' ||
+      userHasPermission('attendance_edit_risk_threshold', session.role, session.permissions, session.email) ||
+      userHasPermission('attendance_edit_total_classes', session.role, session.permissions, session.email);
+
+    if (!canEdit) {
+      return { error: 'No tienes autorización para modificar el umbral de fallas en riesgo de este grupo.' };
+    }
+
+    // Asegurar que la columna exista de forma transparente
+    await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS fallas_riesgo INTEGER;`;
+
+    // Si viene menor a 1 o nulo, guardamos null para usar el valor por defecto institucional (3)
+    const val = (fallasRiesgo !== null && fallasRiesgo !== undefined && fallasRiesgo > 0) ? Math.floor(fallasRiesgo) : null;
+
+    const grpInfo = await sql`
+      UPDATE groups 
+      SET fallas_riesgo = ${val}, updated_at = NOW() 
+      WHERE id = ${groupId}::uuid
+      RETURNING id, nombre, fallas_riesgo
+    `;
+
+    if (grpInfo.length === 0) {
+      return { error: 'Grupo no encontrado.' };
+    }
+
+    const group = grpInfo[0];
+
+    // Registrar en auditoría
+    await logAuditEvent({
+      action: 'MODIFICACION_UMBRAL_RIESGO_GRUPO',
+      category: 'COURSES',
+      details: `Modificó el umbral de fallas para riesgo del grupo "${group.nombre}" a ${val !== null ? `${val} fallas` : '3 fallas (por defecto)'}.`,
+      metadata: {
+        groupId,
+        groupName: group.nombre,
+        fallasRiesgo: val,
+        modifiedBy: session.email
+      }
+    });
+
+    revalidatePath(`/admin/attendance/group/${groupId}`);
+    revalidatePath('/admin/attendance/alerts');
+    revalidatePath('/admin/attendance');
+
+    return { success: true, fallasRiesgo: val };
+  } catch (error: any) {
+    console.error('Error in updateGroupRiskThresholdAction:', error);
+    return { error: error?.message || 'Error al actualizar el umbral de riesgo del grupo.' };
+  }
+}
+
 

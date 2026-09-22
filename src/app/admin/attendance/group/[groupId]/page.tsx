@@ -26,6 +26,7 @@ export default async function GroupAttendancePage({
   let currentUserEmail = '';
   let canModifyAll = false;
   let canEditTotalClasses = false;
+  let canEditRiskThreshold = false;
 
   if (sessionToken) {
     try {
@@ -60,19 +61,28 @@ export default async function GroupAttendancePage({
         payload?.role === 'admin' ||
         userHasPermission('attendance_edit_total_classes', payload?.role, payload?.permissions, currentUserEmail)
       );
+
+      canEditRiskThreshold = (
+        isSuperAdminEmail(currentUserEmail) ||
+        payload?.role === 'admin' ||
+        userHasPermission('attendance_edit_risk_threshold', payload?.role, payload?.permissions, currentUserEmail) ||
+        userHasPermission('attendance_edit_total_classes', payload?.role, payload?.permissions, currentUserEmail)
+      );
     } catch {
       canModifyAll = false;
       canEditTotalClasses = false;
+      canEditRiskThreshold = false;
     }
   }
 
   // Asegurar columnas en BD si no existen
   await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS total_clases INTEGER;`.catch(() => []);
+  await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS fallas_riesgo INTEGER;`.catch(() => []);
   await sql`ALTER TABLE academic_programs ADD COLUMN IF NOT EXISTS total_clases INTEGER;`.catch(() => []);
 
   // 2. Query group details
   const groupQuery = await sql`
-    SELECT id, nombre, jornada, tipo, programa_codigo, programa_nombre, total_clases
+    SELECT id, nombre, jornada, tipo, programa_codigo, programa_nombre, total_clases, fallas_riesgo
     FROM groups
     WHERE id = ${groupId}::uuid
     LIMIT 1
@@ -375,6 +385,8 @@ export default async function GroupAttendancePage({
         defaultProgramTotalClasses={defaultProgramTotalClasses}
         programName={programTitle}
         canEditTotalClasses={canEditTotalClasses}
+        initialRiskThreshold={group.fallas_riesgo ?? null}
+        canEditRiskThreshold={canEditRiskThreshold}
       />
     </div>
   );

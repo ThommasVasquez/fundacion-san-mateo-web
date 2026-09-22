@@ -13,7 +13,8 @@ import {
   bulkUpdateGroupSessionStateAction, 
   bulkUpdateDateRangeGroupStateAction,
   syncGroupSessionsAction,
-  updateGroupTotalClassesAction
+  updateGroupTotalClassesAction,
+  updateGroupRiskThresholdAction
 } from '@/app/actions';
 import { formatDateDDMMYYYY } from '@/lib/dateUtils';
 import { isColombiaHoliday } from '@/lib/colombiaHolidays';
@@ -65,6 +66,8 @@ interface GroupAttendanceMatrixProps {
   defaultProgramTotalClasses?: number | null;
   programName?: string;
   canEditTotalClasses?: boolean;
+  initialRiskThreshold?: number | null;
+  canEditRiskThreshold?: boolean;
 }
 
 const MONTH_NAMES: Record<string, string> = {
@@ -103,6 +106,8 @@ export default function GroupAttendanceMatrix({
   defaultProgramTotalClasses = null,
   programName = '',
   canEditTotalClasses = false,
+  initialRiskThreshold = null,
+  canEditRiskThreshold = false,
 }: GroupAttendanceMatrixProps) {
   const router = useRouter();
   const [showImportModal, setShowImportModal] = useState(false);
@@ -112,6 +117,22 @@ export default function GroupAttendanceMatrix({
     initialTotalClasses ? String(initialTotalClasses) : defaultProgramTotalClasses ? String(defaultProgramTotalClasses) : ''
   );
   const [isSavingTotalClasses, setIsSavingTotalClasses] = useState(false);
+
+  // ─── Umbral de Fallas para Riesgo State ─────────────────────────────────────
+  const [groupRiskThreshold, setGroupRiskThreshold] = useState<number | null>(initialRiskThreshold ?? null);
+  const [showRiskThresholdModal, setShowRiskThresholdModal] = useState(false);
+  const [inputRiskThreshold, setInputRiskThreshold] = useState<string>(
+    initialRiskThreshold ? String(initialRiskThreshold) : '3'
+  );
+  const [isSavingRiskThreshold, setIsSavingRiskThreshold] = useState(false);
+
+  // Effective risk threshold (defaults to 3)
+  const effectiveRiskThreshold = useMemo(() => {
+    if (groupRiskThreshold !== null && groupRiskThreshold > 0) {
+      return groupRiskThreshold;
+    }
+    return 3;
+  }, [groupRiskThreshold]);
 
   // ─── Excuses Filter Panel State ───────────────────────────────────────────
   const [showExcusesPanel, setShowExcusesPanel] = useState(false);
@@ -219,8 +240,6 @@ export default function GroupAttendanceMatrix({
     let totalGroupAbsents = 0;
     let totalGroupLectivos = 0;
 
-    const maxAllowed = effectiveTotalClasses > 0 ? Math.max(3, Math.floor(effectiveTotalClasses * 0.15)) : 3;
-
     students.forEach(st => {
       let stAbsents = 0;
       let stLectivos = 0;
@@ -249,7 +268,7 @@ export default function GroupAttendanceMatrix({
         }
       });
       if (stAbsents > 0) totalStudentsWithAbsences++;
-      if (stAbsents >= maxAllowed || (effectiveTotalClasses > 0 && (stAbsents / effectiveTotalClasses) >= 0.15) || stAbsents >= 3) {
+      if (stAbsents >= effectiveRiskThreshold) {
         totalStudentsAtRisk++;
       }
       totalGroupAbsents += stAbsents;
@@ -265,7 +284,7 @@ export default function GroupAttendanceMatrix({
       totalStudentsAtRisk,
       avgAttendance
     };
-  }, [students, sessions, records, groupName, tipo, todayStr, effectiveTotalClasses]);
+  }, [students, sessions, records, groupName, tipo, todayStr, effectiveRiskThreshold]);
 
   // Handler to update group total classes
   const handleSaveTotalClasses = async (val: number | null) => {
@@ -284,6 +303,26 @@ export default function GroupAttendanceMatrix({
       showToast(err?.message || 'Error inesperado', 'error');
     } finally {
       setIsSavingTotalClasses(false);
+    }
+  };
+
+  // Handler to update group risk threshold
+  const handleSaveRiskThreshold = async (val: number | null) => {
+    setIsSavingRiskThreshold(true);
+    try {
+      const res = await updateGroupRiskThresholdAction(groupId, val);
+      if (res.success) {
+        setGroupRiskThreshold(res.fallasRiesgo ?? null);
+        showToast(val ? `✓ Umbral de riesgo fijado en ${val} fallas` : '✓ Umbral restablecido a 3 fallas por defecto');
+        setShowRiskThresholdModal(false);
+        router.refresh();
+      } else {
+        showToast(res.error || 'Error al actualizar umbral de riesgo', 'error');
+      }
+    } catch (err: any) {
+      showToast(err?.message || 'Error inesperado', 'error');
+    } finally {
+      setIsSavingRiskThreshold(false);
     }
   };
   
@@ -1096,17 +1135,37 @@ export default function GroupAttendanceMatrix({
         }`}>
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-wider block">
-              En Riesgo (≥3 Fallas)
+              En Riesgo (≥{effectiveRiskThreshold} Fallas)
             </span>
-            {groupMetrics.totalStudentsAtRisk > 0 && (
-              <span className="px-1.5 py-0.5 bg-red-600 text-white rounded text-[9px] font-black animate-pulse">
-                ALERTA
-              </span>
-            )}
+            <div className="flex items-center gap-1">
+              {groupMetrics.totalStudentsAtRisk > 0 && (
+                <span className="px-1.5 py-0.5 bg-red-600 text-white rounded text-[9px] font-black animate-pulse">
+                  ALERTA
+                </span>
+              )}
+              {canEditRiskThreshold && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInputRiskThreshold(groupRiskThreshold ? String(groupRiskThreshold) : '3');
+                    setShowRiskThresholdModal(true);
+                  }}
+                  className="text-red-700 hover:text-red-900 bg-red-100 hover:bg-red-200 px-2 py-0.5 rounded-lg text-[10px] font-black flex items-center gap-1 transition-all"
+                  title="Modificar umbral de fallas para considerar al estudiante en riesgo"
+                >
+                  <Edit3 size={11} /> Editar
+                </button>
+              )}
+            </div>
           </div>
           <span className="text-xl font-black text-red-700 mt-0.5 block">
             {groupMetrics.totalStudentsAtRisk}
           </span>
+          {groupRiskThreshold !== null && (
+            <span className="block text-[9px] text-red-500/70 font-semibold mt-0.5">
+              • Umbral personalizado
+            </span>
+          )}
         </div>
       </div>
 
@@ -1713,6 +1772,113 @@ export default function GroupAttendanceMatrix({
               <button
                 type="button"
                 onClick={() => setShowTotalClassesModal(false)}
+                className="w-full py-2 text-gray-400 hover:text-gray-600 font-bold text-xs uppercase tracking-wider"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para Modificar Umbral de Fallas en Riesgo */}
+      {showRiskThresholdModal && canEditRiskThreshold && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-gray-100 space-y-4 animate-scale-up">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-red-50 text-red-700 rounded-xl">
+                  <AlertTriangle size={20} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-red-700 uppercase">
+                    Configurar Umbral de Riesgo
+                  </h3>
+                  <p className="text-[11px] text-gray-500 font-medium">
+                    Grupo: <span className="font-bold text-gray-800">{groupName}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRiskThresholdModal(false)}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-600 leading-relaxed">
+              Define cuántas fallas acumuladas debe tener un estudiante para ser marcado como &ldquo;En Riesgo&rdquo;. 
+              El valor por defecto es <strong>3 fallas</strong>. Cambiar este umbral afecta únicamente a este grupo.
+            </p>
+
+            <div className="p-3 bg-amber-50/70 border border-amber-200/60 rounded-2xl text-xs text-amber-900 flex items-start gap-2">
+              <span className="text-sm">⚠️</span>
+              <div>
+                <p className="font-bold">Umbral actual:</p>
+                <p className="text-[11px] text-amber-800 font-medium">
+                  {groupRiskThreshold !== null
+                    ? <>Personalizado: <strong>{effectiveRiskThreshold} fallas</strong></>  
+                    : <>Por defecto: <strong>3 fallas</strong> (reglamentario)</>}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[11px] font-black uppercase tracking-wider text-gray-600 block">
+                Número de Fallas para Estado &ldquo;En Riesgo&rdquo;
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="1"
+                  max="99"
+                  placeholder={`Ej. 3, 4, 5 (Actual: ${effectiveRiskThreshold})`}
+                  value={inputRiskThreshold}
+                  onChange={(e) => setInputRiskThreshold(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm font-black text-red-700 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 transition-all"
+                  autoFocus
+                />
+              </div>
+              <p className="text-[10px] text-gray-400">
+                Un estudiante con este número o más de fallas aparecerá resaltado como &ldquo;En Riesgo&rdquo; en la matriz y en el conteo de la tarjeta superior.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                type="button"
+                disabled={isSavingRiskThreshold}
+                onClick={() => {
+                  const num = parseInt(inputRiskThreshold, 10);
+                  if (isNaN(num) || num <= 0) {
+                    showToast('Ingresa un número válido mayor a 0', 'error');
+                    return;
+                  }
+                  handleSaveRiskThreshold(num);
+                }}
+                className="w-full py-3 bg-red-600 text-white rounded-2xl font-black text-xs uppercase tracking-wider hover:bg-red-700 transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-50"
+              >
+                {isSavingRiskThreshold ? <RefreshCw size={14} className="animate-spin" /> : 'Guardar Umbral de Riesgo'}
+              </button>
+
+              {groupRiskThreshold !== null && (
+                <button
+                  type="button"
+                  disabled={isSavingRiskThreshold}
+                  onClick={() => {
+                    handleSaveRiskThreshold(null);
+                  }}
+                  className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all"
+                >
+                  Restablecer al Valor por Defecto (3 Fallas)
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setShowRiskThresholdModal(false)}
                 className="w-full py-2 text-gray-400 hover:text-gray-600 font-bold text-xs uppercase tracking-wider"
               >
                 Cancelar

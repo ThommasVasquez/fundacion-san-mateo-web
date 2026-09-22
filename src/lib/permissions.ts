@@ -20,6 +20,7 @@ export const AVAILABLE_PERMISSIONS = [
   { key: 'users_manage', label: 'Administrar Usuarios y Permisos', desc: 'Acceso total para crear nuevos usuarios y definir sus privilegios' },
   { key: 'mobile_attendance', label: '📱 Asistencia Móvil / App Profesor', desc: 'Permite registrar entradas, salidas y escaneo desde la App Móvil' },
   { key: 'attendance_edit_total_classes', label: 'Configurar Total de Clases/Fechas', desc: 'Permite modificar la cantidad de fechas o clases totales en grupos y ofertas educativas para el cálculo del porcentaje en planillas' },
+  { key: 'attendance_edit_risk_threshold', label: 'Configurar Umbral de Fallas / Riesgo', desc: 'Permite modificar el número de inasistencias para marcar a un estudiante en riesgo por ausentismo en planillas' },
 ] as const;
 
 export type PermissionKey = typeof AVAILABLE_PERMISSIONS[number]['key'];
