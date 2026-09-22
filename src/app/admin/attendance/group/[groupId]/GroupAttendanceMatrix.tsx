@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useTransition, useMemo, useDeferredValue } from 'react';
+import React, { useState, useTransition, useMemo, useDeferredValue, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Calendar, Users, Download, Plus, CheckCircle2, XCircle, 
   Sparkles, Layers, Filter, Clock, Check, AlertCircle, RefreshCw,
   FileSpreadsheet, ShieldCheck, Lock, FileText, Search, ChevronLeft, ChevronRight,
-  Target, EyeOff, AlertTriangle, Upload, Edit3, Settings
+  Target, EyeOff, AlertTriangle, Upload, Edit3, Settings, Table, User, SlidersHorizontal, Stethoscope
 } from 'lucide-react';
 import { 
   updateCellAttendanceAction, 
@@ -19,6 +19,16 @@ import { formatDateDDMMYYYY } from '@/lib/dateUtils';
 import { isColombiaHoliday } from '@/lib/colombiaHolidays';
 import GroupExcelImportModal from './GroupExcelImportModal';
 
+export interface ExcuseItem {
+  studentId: string;
+  studentName: string;
+  studentDoc: string;
+  sessionId: string;
+  fecha: string;
+  diaSemana: string;
+  estado: string;
+  observaciones: string;
+}
 
 export interface StudentData {
   id: string;
@@ -102,6 +112,15 @@ export default function GroupAttendanceMatrix({
     initialTotalClasses ? String(initialTotalClasses) : defaultProgramTotalClasses ? String(defaultProgramTotalClasses) : ''
   );
   const [isSavingTotalClasses, setIsSavingTotalClasses] = useState(false);
+
+  // ─── Excuses Filter Panel State ───────────────────────────────────────────
+  const [showExcusesPanel, setShowExcusesPanel] = useState(false);
+  const [excuseFilterStudent, setExcuseFilterStudent] = useState('ALL');
+  const [excuseFilterMode, setExcuseFilterMode] = useState<'semester' | 'month' | 'range'>('semester');
+  const [excuseFilterMonth, setExcuseFilterMonth] = useState('ALL');
+  const [excuseFilterFrom, setExcuseFilterFrom] = useState('');
+  const [excuseFilterTo, setExcuseFilterTo] = useState('');
+  const [isExportingExcuses, setIsExportingExcuses] = useState(false);
 
   // Effective total classes: Group override > Program default > Sessions length
   const effectiveTotalClasses = useMemo(() => {
@@ -398,6 +417,89 @@ export default function GroupAttendanceMatrix({
     }
   };
 
+  // ─── Computed filtered excuses list ──────────────────────────────────────
+  const allExcuseItems = useMemo(() => {
+    const items: ExcuseItem[] = [];
+    sessions.forEach(s => {
+      students.forEach(st => {
+        const record = records[`${st.id}_${s.id}`];
+        if (!record) return;
+        const isExcuse = record.estado === 'EXCUSA_MEDICA' || record.estado === 'EXCUSA_PRACTICAS_AIPI';
+        if (!isExcuse) return;
+        items.push({
+          studentId: st.id,
+          studentName: st.nombre_original,
+          studentDoc: st.documento || '',
+          sessionId: s.id,
+          fecha: s.fecha,
+          diaSemana: s.dia_semana_texto,
+          estado: record.estado,
+          observaciones: record.observaciones || '',
+        });
+      });
+    });
+    // Sort by date ascending
+    return items.sort((a, b) => a.fecha.localeCompare(b.fecha));
+  }, [students, sessions, records]);
+
+  const filteredExcuseItems = useMemo(() => {
+    let items = allExcuseItems;
+    // Filter by student
+    if (excuseFilterStudent !== 'ALL') {
+      items = items.filter(i => i.studentId === excuseFilterStudent);
+    }
+    // Filter by date range / month / semester
+    if (excuseFilterMode === 'month' && excuseFilterMonth !== 'ALL') {
+      items = items.filter(i => i.fecha.startsWith(excuseFilterMonth));
+    } else if (excuseFilterMode === 'range') {
+      if (excuseFilterFrom) items = items.filter(i => i.fecha >= excuseFilterFrom);
+      if (excuseFilterTo) items = items.filter(i => i.fecha <= excuseFilterTo);
+    }
+    return items;
+  }, [allExcuseItems, excuseFilterStudent, excuseFilterMode, excuseFilterMonth, excuseFilterFrom, excuseFilterTo]);
+
+  const handleExportExcuses = useCallback(async () => {
+    if (filteredExcuseItems.length === 0) {
+      showToast('No hay excusas en el período/alumno seleccionado', 'error');
+      return;
+    }
+    setIsExportingExcuses(true);
+    try {
+      const { exportExcusesReportToExcel } = await import('@/lib/excelExportHelper');
+      const periodLabel = excuseFilterMode === 'month' && excuseFilterMonth !== 'ALL'
+        ? (availableMonths.find(m => m.key === excuseFilterMonth)?.label || excuseFilterMonth)
+        : excuseFilterMode === 'range'
+          ? `${excuseFilterFrom || '...'} al ${excuseFilterTo || '...'}`
+          : 'Semestre Completo';
+      const studentLabel = excuseFilterStudent !== 'ALL'
+        ? (students.find(s => s.id === excuseFilterStudent)?.nombre_original || '')
+        : undefined;
+      await exportExcusesReportToExcel({
+        groupName,
+        jornada,
+        tipo,
+        periodTitle: periodLabel,
+        studentFilterTitle: studentLabel,
+        excuses: filteredExcuseItems.map((item, i) => ({
+          consecutivo: i + 1,
+          nombre: item.studentName,
+          documento: item.studentDoc,
+          fecha: item.fecha.split('-').reverse().join('/'),
+          diaSemana: item.diaSemana,
+          tipo: item.estado === 'EXCUSA_PRACTICAS_AIPI' ? 'Excusa Prácticas AIPI' : 'Excusa Médica',
+          observaciones: item.observaciones,
+        })),
+      });
+      showToast('✓ Reporte de Excusas exportado correctamente');
+    } catch (err: any) {
+      console.error('Error exporting excuses:', err);
+      showToast('Error al exportar excusas', 'error');
+    } finally {
+      setIsExportingExcuses(false);
+    }
+  }, [filteredExcuseItems, excuseFilterMode, excuseFilterMonth, excuseFilterFrom, excuseFilterTo,
+      excuseFilterStudent, students, groupName, jornada, tipo, availableMonths]);
+
   // Export Matrix to Excel (XLSX) in official institutional layout with Logo and Colors
   const handleExportXLSX = async () => {
     try {
@@ -494,6 +596,27 @@ export default function GroupAttendanceMatrix({
             </div>
           )}
 
+          {/* Export Excuses Report */}
+          <button
+            type="button"
+            onClick={() => setShowExcusesPanel(prev => !prev)}
+            className={`px-4 py-2.5 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm border ${
+              showExcusesPanel
+                ? 'bg-teal-600 text-white border-teal-700'
+                : 'bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-600 hover:text-white hover:border-teal-700'
+            }`}
+          >
+            <Stethoscope size={16} />
+            {showExcusesPanel ? 'Ocultar Panel Excusas' : 'Excusas Médicas'}
+            {allExcuseItems.length > 0 && (
+              <span className={`px-1.5 py-0.5 rounded-lg text-[10px] font-black ${
+                showExcusesPanel ? 'bg-white/20 text-white' : 'bg-teal-200 text-teal-900'
+              }`}>
+                {allExcuseItems.length}
+              </span>
+            )}
+          </button>
+
           {/* Export to Excel */}
           <button
             type="button"
@@ -516,6 +639,229 @@ export default function GroupAttendanceMatrix({
           </button>
         </div>
       </div>
+
+      {/* ── Excusas Médicas Filter Panel ─────────────────────────────────────── */}
+      {showExcusesPanel && (
+        <div className="bg-white rounded-3xl border border-teal-200 shadow-sm overflow-hidden animate-fade-in">
+          {/* Panel Header */}
+          <div className="bg-gradient-to-r from-teal-700 to-teal-600 px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/15 rounded-xl">
+                <Stethoscope size={20} className="text-white" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-white uppercase tracking-wide">
+                  Reporte de Excusas Médicas
+                </h3>
+                <p className="text-[11px] text-teal-200 font-medium">
+                  Filtra y exporta las excusas médicas del grupo: {groupName}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="px-3 py-1.5 bg-white/20 text-white rounded-xl text-xs font-black">
+                {filteredExcuseItems.length} excusa{filteredExcuseItems.length !== 1 ? 's' : ''} encontrada{filteredExcuseItems.length !== 1 ? 's' : ''}
+              </span>
+              <button
+                type="button"
+                onClick={handleExportExcuses}
+                disabled={isExportingExcuses || filteredExcuseItems.length === 0}
+                className="px-4 py-2 bg-white text-teal-800 hover:bg-teal-50 rounded-xl font-bold text-xs uppercase flex items-center gap-2 transition-all disabled:opacity-40 shadow-sm"
+              >
+                {isExportingExcuses ? (
+                  <RefreshCw size={14} className="animate-spin" />
+                ) : (
+                  <FileSpreadsheet size={14} />
+                )}
+                Exportar Excel
+              </button>
+            </div>
+          </div>
+
+          {/* Filter Controls */}
+          <div className="p-6 border-b border-gray-100 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Student filter */}
+              <div>
+                <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider block mb-1.5 flex items-center gap-1.5">
+                  <User size={11} /> Filtrar por Alumno
+                </label>
+                <select
+                  value={excuseFilterStudent}
+                  onChange={e => setExcuseFilterStudent(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none focus:border-teal-500"
+                >
+                  <option value="ALL">— Todos los Estudiantes —</option>
+                  {students.map(st => (
+                    <option key={st.id} value={st.id}>
+                      {st.nombre_original}{st.documento ? ` (${st.documento})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Period mode */}
+              <div>
+                <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider block mb-1.5 flex items-center gap-1.5">
+                  <Calendar size={11} /> Período a Consultar
+                </label>
+                <div className="flex rounded-xl bg-gray-100 p-0.5">
+                  {(['semester', 'month', 'range'] as const).map(mode => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setExcuseFilterMode(mode)}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        excuseFilterMode === mode
+                          ? 'bg-white text-teal-700 shadow-xs'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      {mode === 'semester' ? '🌐 Semestre' : mode === 'month' ? '📅 Mes' : '📆 Rango'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Month picker */}
+            {excuseFilterMode === 'month' && (
+              <div>
+                <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider block mb-1.5">
+                  Seleccionar Mes
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setExcuseFilterMonth('ALL')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      excuseFilterMonth === 'ALL'
+                        ? 'bg-teal-600 text-white shadow-sm'
+                        : 'bg-gray-100 text-gray-600 hover:bg-teal-50 hover:text-teal-700'
+                    }`}
+                  >
+                    Todos
+                  </button>
+                  {availableMonths.map(m => (
+                    <button
+                      key={m.key}
+                      type="button"
+                      onClick={() => setExcuseFilterMonth(m.key)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                        excuseFilterMonth === m.key
+                          ? 'bg-teal-600 text-white shadow-sm'
+                          : 'bg-gray-100 text-gray-600 hover:bg-teal-50 hover:text-teal-700'
+                      }`}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Date range picker */}
+            {excuseFilterMode === 'range' && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-500 block mb-1">Desde</label>
+                  <input
+                    type="date"
+                    value={excuseFilterFrom}
+                    onChange={e => setExcuseFilterFrom(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none focus:border-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-500 block mb-1">Hasta</label>
+                  <input
+                    type="date"
+                    value={excuseFilterTo}
+                    onChange={e => setExcuseFilterTo(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none focus:border-teal-500"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Results Table */}
+          {filteredExcuseItems.length === 0 ? (
+            <div className="p-12 text-center text-gray-400">
+              <Stethoscope size={40} className="mx-auto mb-3 opacity-30" />
+              <p className="text-sm font-bold text-gray-500">Sin excusas para los filtros seleccionados</p>
+              <p className="text-xs text-gray-400 mt-1">Ajusta el período o el alumno para ver resultados</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead className="sticky top-0 z-10">
+                  <tr className="bg-teal-900 text-white">
+                    <th className="px-3 py-2.5 font-black uppercase text-[10px] text-center w-10">#</th>
+                    <th className="px-3 py-2.5 font-black uppercase text-[10px] min-w-[200px]">Estudiante</th>
+                    <th className="px-3 py-2.5 font-black uppercase text-[10px] text-center">Documento</th>
+                    <th className="px-3 py-2.5 font-black uppercase text-[10px] text-center">Fecha</th>
+                    <th className="px-3 py-2.5 font-black uppercase text-[10px] text-center">Día</th>
+                    <th className="px-3 py-2.5 font-black uppercase text-[10px]">Tipo</th>
+                    <th className="px-3 py-2.5 font-black uppercase text-[10px]">Observación / Justificación</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredExcuseItems.map((item, i) => (
+                    <tr
+                      key={`${item.studentId}_${item.sessionId}`}
+                      className={`transition-colors ${
+                        i % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'
+                      } hover:bg-teal-50/40`}
+                    >
+                      <td className="px-3 py-2 text-center text-gray-400 font-bold">{i + 1}</td>
+                      <td className="px-3 py-2 font-bold text-gray-900">{item.studentName}</td>
+                      <td className="px-3 py-2 text-center text-gray-500 font-medium">{item.studentDoc || '—'}</td>
+                      <td className="px-3 py-2 text-center font-bold text-gray-700">
+                        {item.fecha.split('-').reverse().join('/')}
+                      </td>
+                      <td className="px-3 py-2 text-center text-gray-500 font-medium capitalize">
+                        {item.diaSemana.slice(0, 3)}
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black ${
+                          item.estado === 'EXCUSA_PRACTICAS_AIPI'
+                            ? 'bg-fuchsia-100 text-fuchsia-800'
+                            : 'bg-teal-100 text-teal-800'
+                        }`}>
+                          {item.estado === 'EXCUSA_PRACTICAS_AIPI' ? 'Prácticas AIPI' : 'Médica (E)'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-gray-600 font-medium max-w-[300px] truncate" title={item.observaciones}>
+                        {item.observaciones || <span className="text-gray-300 italic">Sin observación</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Footer summary */}
+          {filteredExcuseItems.length > 0 && (
+            <div className="px-6 py-3 bg-teal-50 border-t border-teal-100 flex items-center justify-between text-xs text-teal-800 font-bold">
+              <span>
+                📋 {filteredExcuseItems.length} excusa{filteredExcuseItems.length !== 1 ? 's' : ''} en el reporte
+                {excuseFilterStudent !== 'ALL' && ` • Alumno: ${students.find(s => s.id === excuseFilterStudent)?.nombre_original}`}
+              </span>
+              <button
+                type="button"
+                onClick={handleExportExcuses}
+                disabled={isExportingExcuses}
+                className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all disabled:opacity-50"
+              >
+                {isExportingExcuses ? <RefreshCw size={12} className="animate-spin" /> : <FileSpreadsheet size={12} />}
+                Exportar Reporte Excel
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Missing September Warning Banner */}
       {!availableMonths.some(m => m.key >= '2026-09') && (

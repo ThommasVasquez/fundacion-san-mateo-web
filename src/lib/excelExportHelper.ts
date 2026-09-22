@@ -1084,3 +1084,132 @@ export async function exportBulkImportTemplateExcel() {
 
   await downloadWorkbook(workbook, 'Plantilla_Carga_Masiva_Documentos_FSM.xlsx');
 }
+
+export interface ExcuseExportItem {
+  consecutivo: number;
+  nombre: string;
+  documento: string;
+  fecha: string;
+  diaSemana: string;
+  tipo: string;
+  observaciones: string;
+}
+
+export async function exportExcusesReportToExcel(options: {
+  groupName: string;
+  jornada: string;
+  tipo: string;
+  periodTitle: string;
+  studentFilterTitle?: string;
+  excuses: ExcuseExportItem[];
+}) {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'Fundación San Mateo - Control de Excusas Médicas';
+  workbook.created = new Date();
+
+  const worksheet = workbook.addWorksheet('Excusas_Médicas', {
+    views: [{ showGridLines: true, state: 'frozen', xSplit: 0, ySplit: 5 }]
+  });
+
+  const logoBase64 = await getFSMLogoBase64();
+  if (logoBase64) {
+    const imageId = workbook.addImage({
+      base64: logoBase64,
+      extension: 'png',
+    });
+    worksheet.addImage(imageId, {
+      tl: { col: 0.1, row: 0.1 },
+      ext: { width: 50, height: 50 },
+    });
+  }
+
+  // Row 1: Title
+  const titleRow = worksheet.getRow(1);
+  titleRow.getCell(2).value = 'FUNDACIÓN SAN MATEO — REPORTE OFICIAL DE EXCUSAS MÉDICAS';
+  titleRow.getCell(2).font = { name: 'Calibri', size: 13, bold: true, color: { argb: 'FFFFFFFF' } };
+  for (let c = 1; c <= 7; c++) {
+    titleRow.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + FSM_COLORS.NAVY_HEADER } };
+  }
+  titleRow.height = 28;
+
+  // Row 2: Subtitle
+  const subRow = worksheet.getRow(2);
+  subRow.getCell(2).value = `GRUPO: ${options.groupName.toUpperCase()} | JORNADA: ${options.jornada.toUpperCase()} | TIPO: ${options.tipo.toUpperCase()}`;
+  subRow.getCell(2).font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+  for (let c = 1; c <= 7; c++) {
+    subRow.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + FSM_COLORS.NAVY_ACCENT } };
+  }
+  subRow.height = 20;
+
+  // Row 3: Filter details
+  const metaRow = worksheet.getRow(3);
+  metaRow.getCell(1).value = `PERÍODO: ${options.periodTitle.toUpperCase()}${options.studentFilterTitle ? ` | ALUMNO: ${options.studentFilterTitle.toUpperCase()}` : ''} | TOTAL EXCUSAS: ${options.excuses.length}`;
+  metaRow.getCell(1).font = { name: 'Calibri', size: 9, bold: true, color: { argb: 'FF' + FSM_COLORS.TEXT_MUTED } };
+  metaRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left' };
+  metaRow.height = 20;
+
+  // Row 4: Spacer / empty
+  worksheet.getRow(4).height = 8;
+
+  // Row 5: Column Headers
+  const headerRow = worksheet.getRow(5);
+  const headers = ['#', 'ESTUDIANTE', 'DOCUMENTO', 'FECHA', 'DÍA', 'TIPO DE EXCUSA', 'OBSERVACIÓN / JUSTIFICACIÓN MÉDICA'];
+  headers.forEach((h, idx) => {
+    const cell = headerRow.getCell(idx + 1);
+    cell.value = h;
+    cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + FSM_COLORS.NAVY_DARK } };
+    cell.alignment = { vertical: 'middle', horizontal: idx === 0 || idx === 2 || idx === 3 || idx === 4 ? 'center' : 'left' };
+    cell.border = {
+      top: { style: 'medium', color: { argb: 'FF' + FSM_COLORS.NAVY_DARK } },
+      bottom: { style: 'medium', color: { argb: 'FF' + FSM_COLORS.NAVY_DARK } },
+      left: { style: 'thin', color: { argb: 'FF' + FSM_COLORS.GRAY_BORDER } },
+      right: { style: 'thin', color: { argb: 'FF' + FSM_COLORS.GRAY_BORDER } }
+    };
+  });
+  headerRow.height = 24;
+
+  // Data rows
+  options.excuses.forEach((item, i) => {
+    const row = worksheet.getRow(6 + i);
+    const isEven = i % 2 === 0;
+    const bgArgb = isEven ? 'FFFFFFFF' : 'FF' + FSM_COLORS.GRAY_LIGHT;
+
+    row.getCell(1).value = item.consecutivo;
+    row.getCell(2).value = item.nombre;
+    row.getCell(3).value = item.documento || 'Sin Doc';
+    row.getCell(4).value = item.fecha;
+    row.getCell(5).value = item.diaSemana;
+    row.getCell(6).value = item.tipo;
+    row.getCell(7).value = item.observaciones || 'Sin observación registrada';
+
+    for (let c = 1; c <= 7; c++) {
+      const cell = row.getCell(c);
+      cell.font = { name: 'Calibri', size: 10, color: { argb: 'FF' + FSM_COLORS.TEXT_DARK } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgArgb } };
+      cell.alignment = { vertical: 'middle', horizontal: c === 1 || c === 3 || c === 4 || c === 5 ? 'center' : 'left' };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FF' + FSM_COLORS.GRAY_BORDER } },
+        bottom: { style: 'thin', color: { argb: 'FF' + FSM_COLORS.GRAY_BORDER } },
+        left: { style: 'thin', color: { argb: 'FF' + FSM_COLORS.GRAY_BORDER } },
+        right: { style: 'thin', color: { argb: 'FF' + FSM_COLORS.GRAY_BORDER } }
+      };
+      if (c === 6) {
+        cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: item.tipo.includes('AIPI') ? 'FF701A75' : 'FF0F766E' } };
+      }
+    }
+    row.height = 22;
+  });
+
+  worksheet.getColumn(1).width = 6;
+  worksheet.getColumn(2).width = 38;
+  worksheet.getColumn(3).width = 16;
+  worksheet.getColumn(4).width = 14;
+  worksheet.getColumn(5).width = 12;
+  worksheet.getColumn(6).width = 24;
+  worksheet.getColumn(7).width = 46;
+
+  const safeGroup = options.groupName.replace(/[^a-zA-Z0-9_-]/g, '_');
+  await downloadWorkbook(workbook, `Excusas_Medicas_${safeGroup}.xlsx`);
+}
+
