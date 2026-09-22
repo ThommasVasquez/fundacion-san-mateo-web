@@ -1360,7 +1360,7 @@ export default function GroupAttendanceMatrix({
                       const maxAllowedAbsences = effectiveTotalClasses > 0 
                         ? Math.max(3, Math.floor(effectiveTotalClasses * 0.15)) 
                         : 3;
-                      const isAtRisk = totalAbsents >= 3 || (effectiveTotalClasses > 0 && selectedMonth === 'ALL' && (totalAbsents / effectiveTotalClasses) >= 0.15);
+                      const isAtRisk = totalAbsents >= effectiveRiskThreshold || (effectiveTotalClasses > 0 && selectedMonth === 'ALL' && (totalAbsents / effectiveTotalClasses) >= 0.15);
 
                       return (
                         <td className={`p-3 text-center font-black border-l ${
