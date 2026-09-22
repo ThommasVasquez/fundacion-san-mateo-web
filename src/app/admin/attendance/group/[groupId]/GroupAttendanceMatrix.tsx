@@ -201,12 +201,25 @@ export default function GroupAttendanceMatrix({
     day: '2-digit'
   }).format(new Date()), []);
 
+  // Count of sessions held/evaluated to date (excluding holidays and pre-CB)
+  const taughtSessionsCount = useMemo(() => {
+    return sessions.filter(s => {
+      const isCB = (groupName || '').toUpperCase().includes('CB') || (tipo || '').toUpperCase().includes('CALENDARIO_B');
+      const isPreCB = isCB && s.fecha < '2026-09-01';
+      const holidayInfo = isColombiaHoliday(s.fecha);
+      if (isPreCB || holidayInfo.isHoliday) return false;
+      return s.fecha <= todayStr;
+    }).length;
+  }, [sessions, groupName, tipo, todayStr]);
+
   // Group summary metrics
   const groupMetrics = useMemo(() => {
     let totalStudentsWithAbsences = 0;
     let totalStudentsAtRisk = 0;
     let totalGroupAbsents = 0;
     let totalGroupLectivos = 0;
+
+    const maxAllowed = effectiveTotalClasses > 0 ? Math.max(3, Math.floor(effectiveTotalClasses * 0.15)) : 3;
 
     students.forEach(st => {
       let stAbsents = 0;
@@ -236,7 +249,9 @@ export default function GroupAttendanceMatrix({
         }
       });
       if (stAbsents > 0) totalStudentsWithAbsences++;
-      if (stAbsents >= 3) totalStudentsAtRisk++;
+      if (stAbsents >= maxAllowed || (effectiveTotalClasses > 0 && (stAbsents / effectiveTotalClasses) >= 0.15) || stAbsents >= 3) {
+        totalStudentsAtRisk++;
+      }
       totalGroupAbsents += stAbsents;
       totalGroupLectivos += stLectivos;
     });
@@ -250,7 +265,7 @@ export default function GroupAttendanceMatrix({
       totalStudentsAtRisk,
       avgAttendance
     };
-  }, [students, sessions, records, groupName, tipo, todayStr]);
+  }, [students, sessions, records, groupName, tipo, todayStr, effectiveTotalClasses]);
 
   // Handler to update group total classes
   const handleSaveTotalClasses = async (val: number | null) => {
@@ -1042,13 +1057,16 @@ export default function GroupAttendanceMatrix({
             )}
           </div>
           <div className="flex items-baseline gap-1.5 mt-0.5">
-            <span className="text-xl font-black text-fsm-blue">
-              {effectiveTotalClasses}
+            <span className="text-xl font-black text-fsm-blue" title={`${taughtSessionsCount} clases dictadas a la fecha sobre ${effectiveTotalClasses} clases programadas del semestre`}>
+              {taughtSessionsCount} <span className="text-xs font-bold text-gray-400">/ {effectiveTotalClasses}</span>
             </span>
             <span className="text-[9px] font-bold text-gray-400 truncate max-w-[90px]" title={groupTotalClasses ? 'Total personalizado para este grupo' : defaultProgramTotalClasses ? `Heredado de ${programName || 'Oferta Educativa'}` : 'Sesiones en calendario'}>
               {groupTotalClasses ? '• Personalizado' : defaultProgramTotalClasses ? '• Oferta' : '• Calendario'}
             </span>
           </div>
+          <span className="block text-[9px] text-gray-400 font-semibold mt-0.5">
+            {taughtSessionsCount} dictadas ({effectiveTotalClasses > 0 ? Math.min(100, Math.round((taughtSessionsCount / effectiveTotalClasses) * 100)) : 0}% avance)
+          </span>
         </div>
 
         <div className="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-2xs">
@@ -1153,7 +1171,7 @@ export default function GroupAttendanceMatrix({
                 <th className="p-3.5 text-[10px] font-black uppercase text-center bg-emerald-950/80 text-emerald-200 min-w-[85px]">
                   <div>% Asist.</div>
                   <div className="text-[8px] font-normal text-emerald-300/80 normal-case tracking-normal">
-                    Base: {effectiveTotalClasses} cl.
+                    {selectedMonth !== 'ALL' ? 'Mes actual' : 'A la fecha'}
                   </div>
                 </th>
               </tr>
@@ -1279,31 +1297,43 @@ export default function GroupAttendanceMatrix({
                     })}
 
                     {/* Total Absences */}
-                    <td className={`p-3 text-center font-black border-l ${
-                      isFocused 
-                        ? 'bg-amber-100/90 border-amber-300 text-red-800 text-sm' 
-                        : totalAbsents >= 3 
-                          ? 'bg-red-100/80 border-red-200 text-red-700' 
-                          : totalAbsents > 0
-                            ? 'bg-amber-50/60 border-gray-100 text-amber-800'
-                            : 'bg-emerald-50/30 border-gray-100 text-emerald-700'
-                    }`}>
-                      <div className="flex items-center justify-center gap-1">
-                        {totalAbsents >= 3 && <AlertTriangle size={13} className="text-red-600 animate-pulse shrink-0" />}
-                        <span className="text-xs font-black">{totalAbsents}</span>
-                      </div>
-                      {totalAbsents >= 3 && (
-                        <span className="block text-[8px] font-extrabold uppercase tracking-tighter text-red-600 mt-0.5">
-                          Riesgo
-                        </span>
-                      )}
-                    </td>
+                    {(() => {
+                      const maxAllowedAbsences = effectiveTotalClasses > 0 
+                        ? Math.max(3, Math.floor(effectiveTotalClasses * 0.15)) 
+                        : 3;
+                      const isAtRisk = totalAbsents >= 3 || (effectiveTotalClasses > 0 && selectedMonth === 'ALL' && (totalAbsents / effectiveTotalClasses) >= 0.15);
+
+                      return (
+                        <td className={`p-3 text-center font-black border-l ${
+                          isFocused 
+                            ? 'bg-amber-100/90 border-amber-300 text-red-800 text-sm' 
+                            : isAtRisk 
+                              ? 'bg-red-100/80 border-red-200 text-red-700' 
+                              : totalAbsents > 0
+                                ? 'bg-amber-50/60 border-gray-100 text-amber-800'
+                                : 'bg-emerald-50/30 border-gray-100 text-emerald-700'
+                        }`}>
+                          <div 
+                            className="flex items-center justify-center gap-1"
+                            title={`${totalAbsents} inasistencias en el período.${selectedMonth === 'ALL' && effectiveTotalClasses > 0 ? ` Límite crítico (15%): ${maxAllowedAbsences} fallas sobre ${effectiveTotalClasses} clases programadas.` : ''}`}
+                          >
+                            {isAtRisk && <AlertTriangle size={13} className="text-red-600 animate-pulse shrink-0" />}
+                            <span className="text-xs font-black">{totalAbsents}</span>
+                          </div>
+                          {isAtRisk && (
+                            <span className="block text-[8px] font-extrabold uppercase tracking-tighter text-red-600 mt-0.5">
+                              Riesgo
+                            </span>
+                          )}
+                        </td>
+                      );
+                    })()}
 
                     {/* Attendance Percentage */}
                     {(() => {
-                      const studentPct = effectiveTotalClasses > 0
-                        ? Math.min(100, Math.round((validAttendances / effectiveTotalClasses) * 100))
-                        : (totalLectivos > 0 ? Math.round(((totalLectivos - totalAbsents) / totalLectivos) * 100) : null);
+                      const studentPct = totalLectivos > 0
+                        ? Math.round((validAttendances / totalLectivos) * 100)
+                        : null;
 
                       return (
                         <td className={`p-3 text-center font-black ${
@@ -1314,13 +1344,15 @@ export default function GroupAttendanceMatrix({
                               : 'bg-emerald-50/40 text-emerald-700'
                         }`}>
                           {studentPct !== null ? (
-                            <div title={`${validAttendances} asistencias válidas sobre ${effectiveTotalClasses} clases totales`}>
+                            <div title={`${validAttendances} asistencias válidas sobre ${totalLectivos} clases dictadas (${studentPct}% a la fecha).${effectiveTotalClasses > 0 && selectedMonth === 'ALL' ? ` Meta programada del semestre: ${effectiveTotalClasses} clases.` : ''}`}>
                               <span className="text-xs font-black">{studentPct}%</span>
                               <span className="block text-[8px] font-semibold text-gray-400 mt-0.5">
-                                {validAttendances}/{effectiveTotalClasses} cl.
+                                {validAttendances}/{totalLectivos} {selectedMonth !== 'ALL' ? 'mes' : 'dict.'}
                               </span>
                             </div>
-                          ) : '—'}
+                          ) : (
+                            <span className="text-gray-300 text-xs">—</span>
+                          )}
                         </td>
                       );
                     })()}
@@ -1612,7 +1644,7 @@ export default function GroupAttendanceMatrix({
             </div>
 
             <p className="text-xs text-gray-600 leading-relaxed">
-              Define la cantidad completa de fechas o clases en las que se basa el porcentaje de asistencia de este grupo (módulo o semestre).
+              Define la meta programada de clases del semestre o módulo para este grupo. El porcentaje individual de cada alumno medirá su asistencia sobre las clases dictadas a la fecha, mientras que esta meta semestral proyecta el avance del curso y el límite crítico de fallas permitidas (15% según reglamento).
             </p>
 
             {defaultProgramTotalClasses && (

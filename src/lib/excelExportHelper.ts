@@ -134,7 +134,8 @@ export async function exportGroupMatrixToExcel(options: MatrixExportOptions) {
 
   // Row 4: Metadata Bar
   const metaRow = worksheet.getRow(4);
-  metaRow.getCell(1).value = `Jornada: ${jornada}  |  Tipo: ${tipo}  |  Estudiantes Matriculados: ${students.length}  |  Sesiones de Clase: ${sessions.length}  |  Generado: ${new Date().toLocaleDateString('es-CO')} ${new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}`;
+  const progClasesMeta = options.totalClases && options.totalClases > 0 ? `  |  Clases Programadas: ${options.totalClases}` : '';
+  metaRow.getCell(1).value = `Jornada: ${jornada}  |  Tipo: ${tipo}  |  Estudiantes Matriculados: ${students.length}  |  Sesiones en Período: ${sessions.length}${progClasesMeta}  |  Generado: ${new Date().toLocaleDateString('es-CO')} ${new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}`;
   metaRow.getCell(1).font = { name: 'Calibri', size: 9, italic: true, bold: true, color: { argb: 'FF' + FSM_COLORS.TEXT_MUTED } };
   worksheet.mergeCells(4, 1, 4, sessions.length + 5);
   metaRow.height = 20;
@@ -157,9 +158,7 @@ export async function exportGroupMatrixToExcel(options: MatrixExportOptions) {
   const totalAbsCol = sessions.length + 4;
   const pctCol = sessions.length + 5;
   headerRow.getCell(totalAbsCol).value = 'TOTAL\nFALLAS';
-  headerRow.getCell(pctCol).value = options.totalClases && options.totalClases > 0 
-    ? `%\nASIST.\n(${options.totalClases} CLASES)` 
-    : '%\nASIST.';
+  headerRow.getCell(pctCol).value = '%\nASIST.\n(A LA FECHA)';
 
   headerRow.height = 36;
   headerRow.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
@@ -272,13 +271,10 @@ export async function exportGroupMatrixToExcel(options: MatrixExportOptions) {
     absCell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: totalAbsents > 0 ? 'FF991B1B' : 'FF475569' } };
     absCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: totalAbsents > 0 ? 'FFFEE2E2' : bgArgb } };
 
-    // % Asistencia
+    // % Asistencia calculado sobre las clases dictadas/evaluadas en el período
     const validAttendances = Math.max(0, totalLectivos - totalAbsents);
-    const effectiveTotal = (options.totalClases && options.totalClases > 0) 
-      ? options.totalClases 
-      : totalLectivos;
-    const pct = effectiveTotal > 0 
-      ? Math.min(100, Math.round((validAttendances / effectiveTotal) * 100)) 
+    const pct = totalLectivos > 0 
+      ? Math.round((validAttendances / totalLectivos) * 100) 
       : null;
     const pctCell = row.getCell(pctCol);
     pctCell.value = pct !== null ? `${pct}%` : '—';
