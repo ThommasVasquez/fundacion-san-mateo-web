@@ -1394,16 +1394,25 @@ export default function GroupAttendanceMatrix({
                         ? Math.round((validAttendances / totalLectivos) * 100)
                         : null;
 
+                      // Mirror the same risk logic as the Fallas column so both columns stay in sync
+                      const isStudentAtRisk = totalAbsents >= effectiveRiskThreshold ||
+                        (effectiveTotalClasses > 0 && selectedMonth === 'ALL' && (totalAbsents / effectiveTotalClasses) >= 0.15);
+
+                      // Derived minimum attendance % that corresponds to the configured threshold
+                      const riskPct = effectiveTotalClasses > 0 && effectiveRiskThreshold < effectiveTotalClasses
+                        ? Math.round(((effectiveTotalClasses - effectiveRiskThreshold) / effectiveTotalClasses) * 100)
+                        : null;
+
                       return (
                         <td className={`p-3 text-center font-black ${
                           isFocused 
                             ? 'bg-amber-100/90 text-emerald-900 text-sm' 
-                            : studentPct !== null && studentPct < 80
+                            : isStudentAtRisk
                               ? 'bg-red-50 text-red-700 font-black'
                               : 'bg-emerald-50/40 text-emerald-700'
                         }`}>
                           {studentPct !== null ? (
-                            <div title={`${validAttendances} asistencias válidas sobre ${totalLectivos} clases dictadas (${studentPct}% a la fecha).${effectiveTotalClasses > 0 && selectedMonth === 'ALL' ? ` Meta programada del semestre: ${effectiveTotalClasses} clases.` : ''}`}>
+                            <div title={`${validAttendances} asistencias válidas sobre ${totalLectivos} clases dictadas (${studentPct}% a la fecha).${riskPct !== null && selectedMonth === 'ALL' ? ` Mínimo requerido según umbral configurado (${effectiveRiskThreshold} fallas / ${effectiveTotalClasses} clases): ${riskPct}%.` : ''}`}>
                               <span className="text-xs font-black">{studentPct}%</span>
                               <span className="block text-[8px] font-semibold text-gray-400 mt-0.5">
                                 {validAttendances}/{totalLectivos} {selectedMonth !== 'ALL' ? 'mes' : 'dict.'}
@@ -1411,6 +1420,11 @@ export default function GroupAttendanceMatrix({
                             </div>
                           ) : (
                             <span className="text-gray-300 text-xs">—</span>
+                          )}
+                          {isStudentAtRisk && (
+                            <span className="block text-[8px] font-extrabold uppercase tracking-tighter text-red-600 mt-0.5">
+                              Riesgo
+                            </span>
                           )}
                         </td>
                       );
