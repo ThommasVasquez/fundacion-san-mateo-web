@@ -478,8 +478,9 @@ export default function GroupAttendanceMatrix({
       students.forEach(st => {
         const record = records[`${st.id}_${s.id}`];
         if (!record) return;
-        const isExcuse = record.estado === 'EXCUSA_MEDICA' || record.estado === 'EXCUSA_PRACTICAS_AIPI';
-        if (!isExcuse) return;
+        // En los reportes de excusas médicas, se excluyen siempre las prácticas (EXCUSA_PRACTICAS_AIPI, PRACTICAS, etc.)
+        const isMedicalExcuse = record.estado === 'EXCUSA_MEDICA';
+        if (!isMedicalExcuse) return;
         items.push({
           studentId: st.id,
           studentName: st.nombre_original,
@@ -540,7 +541,7 @@ export default function GroupAttendanceMatrix({
           documento: item.studentDoc,
           fecha: item.fecha.split('-').reverse().join('/'),
           diaSemana: item.diaSemana,
-          tipo: item.estado === 'EXCUSA_PRACTICAS_AIPI' ? 'Excusa Prácticas AIPI' : 'Excusa Médica',
+          tipo: 'Excusa Médica',
           observaciones: item.observaciones,
         })),
       });
@@ -878,12 +879,8 @@ export default function GroupAttendanceMatrix({
                         {item.diaSemana.slice(0, 3)}
                       </td>
                       <td className="px-3 py-2">
-                        <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black ${
-                          item.estado === 'EXCUSA_PRACTICAS_AIPI'
-                            ? 'bg-fuchsia-100 text-fuchsia-800'
-                            : 'bg-teal-100 text-teal-800'
-                        }`}>
-                          {item.estado === 'EXCUSA_PRACTICAS_AIPI' ? 'Prácticas AIPI' : 'Médica (E)'}
+                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-black bg-teal-100 text-teal-800">
+                          Médica (E)
                         </span>
                       </td>
                       <td className="px-3 py-2 text-gray-600 font-medium max-w-[300px] truncate" title={item.observaciones}>

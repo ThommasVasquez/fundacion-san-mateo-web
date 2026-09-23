@@ -1099,6 +1099,11 @@ export async function exportExcusesReportToExcel(options: {
   studentFilterTitle?: string;
   excuses: ExcuseExportItem[];
 }) {
+  // Asegurar que en los reportes de excusas médicas siempre se quiten las prácticas
+  const medicalExcuses = options.excuses.filter(
+    item => !item.tipo.toUpperCase().includes('PRACTICA') && !item.tipo.toUpperCase().includes('PRÁCTICA')
+  );
+
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Fundación San Mateo - Control de Excusas Médicas';
   workbook.created = new Date();
@@ -1139,7 +1144,7 @@ export async function exportExcusesReportToExcel(options: {
 
   // Row 3: Filter details
   const metaRow = worksheet.getRow(3);
-  metaRow.getCell(1).value = `PERÍODO: ${options.periodTitle.toUpperCase()}${options.studentFilterTitle ? ` | ALUMNO: ${options.studentFilterTitle.toUpperCase()}` : ''} | TOTAL EXCUSAS: ${options.excuses.length}`;
+  metaRow.getCell(1).value = `PERÍODO: ${options.periodTitle.toUpperCase()}${options.studentFilterTitle ? ` | ALUMNO: ${options.studentFilterTitle.toUpperCase()}` : ''} | TOTAL EXCUSAS: ${medicalExcuses.length}`;
   metaRow.getCell(1).font = { name: 'Calibri', size: 9, bold: true, color: { argb: 'FF' + FSM_COLORS.TEXT_MUTED } };
   metaRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left' };
   metaRow.height = 20;
@@ -1166,12 +1171,12 @@ export async function exportExcusesReportToExcel(options: {
   headerRow.height = 24;
 
   // Data rows
-  options.excuses.forEach((item, i) => {
+  medicalExcuses.forEach((item, i) => {
     const row = worksheet.getRow(6 + i);
     const isEven = i % 2 === 0;
     const bgArgb = isEven ? 'FFFFFFFF' : 'FF' + FSM_COLORS.GRAY_LIGHT;
 
-    row.getCell(1).value = item.consecutivo;
+    row.getCell(1).value = i + 1;
     row.getCell(2).value = item.nombre;
     row.getCell(3).value = item.documento || 'Sin Doc';
     row.getCell(4).value = item.fecha;
@@ -1191,7 +1196,7 @@ export async function exportExcusesReportToExcel(options: {
         right: { style: 'thin', color: { argb: 'FF' + FSM_COLORS.GRAY_BORDER } }
       };
       if (c === 6) {
-        cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: item.tipo.includes('AIPI') ? 'FF701A75' : 'FF0F766E' } };
+        cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF0F766E' } };
       }
     }
     row.height = 22;
