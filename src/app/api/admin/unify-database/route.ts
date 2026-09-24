@@ -113,6 +113,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, students });
     }
 
+    if (body.action === 'fix_mobile_sedes_yanguas') {
+      const updatedEvents = await sql`
+        UPDATE attendance_events
+        SET sede = 'Yanguas'
+        WHERE (origen = 'movil_profesor' OR reader_id LIKE 'movil%')
+          AND (sede = 'Sede 1' OR sede IS NULL OR sede = '')
+        RETURNING id, student_id, rfid_tag_uid, reader_id, sede, timestamp
+      `;
+
+      const updatedReaders = await sql`
+        UPDATE readers
+        SET sede = 'Yanguas'
+        WHERE tipo = 'mobile_nfc' OR ubicacion ILIKE '%Yanguas%'
+        RETURNING id, ubicacion, tipo, sede
+      `;
+
+      return NextResponse.json({
+        success: true,
+        updatedEventsCount: updatedEvents.length,
+        updatedEvents,
+        updatedReadersCount: updatedReaders.length,
+        updatedReaders
+      });
+    }
+
     if (body.action === 'inspect_student_detail') {
       const studentName = (body.nombre || 'ACEVEDO FONSECA YISLENNY STEFANNY').trim();
       const students = await sql`
