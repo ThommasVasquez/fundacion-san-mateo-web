@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     let teacherSede: string | null = null;
 
     const teachers = await sql`
-      SELECT id, nombre, email, password_hash, sede 
+      SELECT id, nombre, email, password_hash 
       FROM teachers 
       WHERE LOWER(email) = ${email} 
       LIMIT 1
@@ -49,14 +49,13 @@ export async function POST(req: Request) {
         teacherId = teacher.id;
         teacherNombre = teacher.nombre || email;
         teacherEmail = teacher.email || email;
-        teacherSede = teacher.sede || null;
       }
     }
 
     // 2. Si no coincide en teachers, buscar en admin_users (rol docente, profesor o admin)
     if (!passwordMatch) {
       const adminUsers = await sql`
-        SELECT id, nombre, email, password_hash, role, activo, sede 
+        SELECT id, nombre, email, password_hash, role, activo 
         FROM admin_users 
         WHERE LOWER(email) = ${email} 
         LIMIT 1
@@ -79,7 +78,6 @@ export async function POST(req: Request) {
           teacherId = adminUser.id;
           teacherNombre = adminUser.nombre || email;
           teacherEmail = adminUser.email || email;
-          teacherSede = adminUser.sede || null;
         }
       }
     }

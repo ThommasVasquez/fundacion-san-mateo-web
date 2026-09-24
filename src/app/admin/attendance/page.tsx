@@ -158,7 +158,6 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
           OR (g.jornada != 'SABADO' AND (g.jornada != 'NOCHE' OR ${isNightShiftConcluded}))
         )
         ${filterGrado ? sql`AND g.nombre = ${filterGrado}` : sql``}
-        ${filterSede ? sql`AND ar.sede = ${filterSede}` : sql``}
     `,
     filterAbsencesOnly ? sql`
       SELECT 
@@ -169,7 +168,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         'sin_marcacion' as origen,
         'inasistencia' as tipo_evento,
         cs.fecha::text as timestamp,
-        COALESCE(ar.sede, '') as sede,
+        '' as sede,
         COALESCE(ar.observaciones, 'Sin marcación en torniquete') as observaciones,
         'AUSENTE' as estado,
         'Sin marcación de entrada' as reader_name
@@ -193,7 +192,6 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
           OR (g.jornada != 'SABADO' AND (g.jornada != 'NOCHE' OR ${isNightShiftConcluded}))
         )
         ${filterGrado ? sql`AND g.nombre = ${filterGrado}` : sql``}
-        ${filterSede ? sql`AND ar.sede = ${filterSede}` : sql``}
       ORDER BY cs.fecha DESC, s.nombre ASC
     ` : sql`
       SELECT 
@@ -239,18 +237,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
     `,
     sql`SELECT id, nombre, jornada FROM groups ORDER BY nombre`,
     getPendingAbsenceAlertsCount(),
-    sql`
-      SELECT DISTINCT sede FROM (
-        SELECT sede FROM attendance_events WHERE sede IS NOT NULL AND sede != ''
-        UNION
-        SELECT sede FROM readers WHERE sede IS NOT NULL AND sede != ''
-        UNION
-        SELECT sede FROM teachers WHERE sede IS NOT NULL AND sede != ''
-        UNION
-        SELECT sede FROM admin_users WHERE sede IS NOT NULL AND sede != ''
-      ) s
-      ORDER BY sede
-    `
+    sql`SELECT DISTINCT sede FROM attendance_events WHERE sede IS NOT NULL AND sede != '' ORDER BY sede`
   ]);
 
   const totalScans = parseInt(totalScansRes[0].count);
@@ -512,8 +499,8 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
   }
 
   const allStudentsForManual = studentsRes;
-  const pendingAlerts = alertsRes;
-  const availableSedes: string[] = sedesRes.map((r: any) => r.sede).filter(Boolean);
+  const dbSedes: string[] = sedesRes.map((r: any) => r.sede).filter(Boolean);
+  const availableSedes: string[] = Array.from(new Set([...dbSedes, 'Sede 1', 'Sede 2', 'Yanguas'])).sort();
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 relative">

@@ -56,20 +56,12 @@ export default async function TeacherAttendancePage() {
   if (mobileReaders.length > 0) {
     readerId = mobileReaders[0].id;
   } else {
-    // Look up teacher's configured sede before provisioning
-    const teacherSedeRes = await sql`
-      SELECT sede FROM teachers WHERE id = ${teacherId}::uuid
-      UNION ALL
-      SELECT sede FROM admin_users WHERE id = ${teacherId}::uuid
-      LIMIT 1
-    `;
-    const teacherSede = teacherSedeRes[0]?.sede || null;
     // Auto-provision mobile NFC reader for this teacher
     const newReaderId = `movil-${teacherId.slice(0, 8)}`;
     await sql`
       INSERT INTO readers (id, ubicacion, tipo, teacher_id, sede)
-      VALUES (${newReaderId}, ${`Lector Móvil - ${teacherName}`}, 'mobile_nfc', ${teacherId}::uuid, ${teacherSede})
-      ON CONFLICT (id) DO UPDATE SET teacher_id = ${teacherId}::uuid, sede = ${teacherSede}
+      VALUES (${newReaderId}, ${`Lector Móvil - ${teacherName}`}, 'mobile_nfc', ${teacherId}::uuid, NULL)
+      ON CONFLICT (id) DO UPDATE SET teacher_id = ${teacherId}::uuid
     `;
     readerId = newReaderId;
   }

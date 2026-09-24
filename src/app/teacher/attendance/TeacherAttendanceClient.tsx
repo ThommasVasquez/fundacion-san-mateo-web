@@ -79,6 +79,19 @@ export default function TeacherAttendanceClient({
   const [mode, setMode] = useState<'nfc' | 'manual'>('nfc');
   const [manualInput, setManualInput] = useState('');
   const [matchingStudents, setMatchingStudents] = useState<Student[]>([]);
+  const [selectedSede, setSelectedSede] = useState<string>('Yanguas');
+
+  useEffect(() => {
+    const savedSede = localStorage.getItem('teacher_selected_sede');
+    if (savedSede) {
+      setSelectedSede(savedSede);
+    }
+  }, []);
+
+  const handleSedeChange = (sede: string) => {
+    setSelectedSede(sede);
+    localStorage.setItem('teacher_selected_sede', sede);
+  };
 
   // 1. Detectar soporte y arrancar NFC automáticamente
   useEffect(() => {
@@ -180,7 +193,8 @@ export default function TeacherAttendanceClient({
           reader_id: readerId,
           tag_uid: tagUid,
           tipo_evento: 'entrada',
-          registrado_por: teacherId
+          registrado_por: teacherId,
+          sede: selectedSede
         })
       });
 
@@ -279,6 +293,29 @@ export default function TeacherAttendanceClient({
       {/* 2. Cuerpo Central: LECTOR NFC / REGISTRO MANUAL */}
       <main className="flex-1 p-6 flex flex-col justify-center items-center max-w-md mx-auto w-full space-y-6">
         
+        {/* Selector de Sede */}
+        <div className="w-full flex items-center justify-between bg-slate-800/80 px-4 py-2.5 rounded-2xl border border-slate-700/60 mb-2">
+          <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            🏫 Sede:
+          </span>
+          <div className="flex gap-1.5">
+            {['Yanguas', 'Sede 1', 'Sede 2'].map(s => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => handleSedeChange(s)}
+                className={`px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                  selectedSede === s
+                    ? 'bg-amber-500 text-slate-950 shadow-md scale-105 font-black'
+                    : 'bg-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700'
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Selector de Modo si NFC está soportado */}
         {nfcSupported !== false && (
           <div className="w-full flex bg-slate-800/80 p-1 rounded-2xl border border-slate-700/60 mb-2">
