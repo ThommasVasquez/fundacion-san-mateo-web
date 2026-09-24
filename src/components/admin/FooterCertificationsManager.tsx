@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { updateFooterCertification, addFooterCertification, deleteFooterCertification } from "@/app/actions";
 import { Plus, Trash2, Save, Image as ImageIcon, Loader2, CheckCircle, ArrowUp, ArrowDown } from "lucide-react";
-import { compressImageToBase64 } from "@/lib/imageUpload";
+import { uploadImage } from "@/lib/imageUpload";
 import toast from "react-hot-toast";
 
 interface FooterCertification {
@@ -136,10 +136,10 @@ export default function FooterCertificationsManager({ initialItems }: FooterCert
                     const file = e.target.files?.[0];
                     if (file) {
                       try {
-                        const base64 = await compressImageToBase64(file);
-                        setNewItem({ ...newItem, image_url: base64 });
-                      } catch (err) {
-                        toast.error("Error al procesar la imagen");
+                        const url = await uploadImage(file);
+                        setNewItem({ ...newItem, image_url: url });
+                      } catch (err: any) {
+                        toast.error("Error al subir la imagen: " + (err.message || 'Error'));
                       }
                     }
                   }}
@@ -191,10 +191,10 @@ export default function FooterCertificationsManager({ initialItems }: FooterCert
                           const file = e.target.files?.[0];
                           if (file) {
                             try {
-                              const base64 = await compressImageToBase64(file);
-                              handleUpdate(t.id, "image_url", base64);
-                            } catch (err) {
-                              toast.error("Error al procesar la imagen");
+                              const url = await uploadImage(file);
+                              handleUpdate(t.id, "image_url", url);
+                            } catch (err: any) {
+                              toast.error("Error al subir la imagen: " + (err.message || 'Error'));
                             }
                           }
                         }}

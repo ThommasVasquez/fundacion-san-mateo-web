@@ -5,7 +5,7 @@ import { Plus, Trash2, Edit2, Save, X, Image as ImageIcon, Calendar, Tag, Link a
 import { addNewsEvent, updateNewsEvent, deleteNewsEvent } from "@/app/actions";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { compressImageToBase64 } from "@/lib/imageUpload";
+import { uploadImage } from "@/lib/imageUpload";
 
 interface NewsEvent {
   id: string;
@@ -189,10 +189,10 @@ const NewsManager = ({ news: initialNews }: NewsManagerProps) => {
                     const file = e.target.files?.[0];
                     if (file) {
                       try {
-                        const base64 = await compressImageToBase64(file);
-                        setEditForm({ ...editForm, image_url: base64 });
-                      } catch (err) {
-                        toast.error("Error procesando imagen");
+                        const url = await uploadImage(file);
+                        setEditForm({ ...editForm, image_url: url });
+                      } catch (err: any) {
+                        toast.error("Error al subir imagen: " + (err.message || 'Error'));
                       }
                     }
                   }}

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { upsertBlogPost } from '@/app/actions';
 import { Save, ArrowLeft, Image as ImageIcon, Layout, Type, FileText } from 'lucide-react';
 import Link from 'next/link';
+import { uploadImage } from '@/lib/imageUpload';
 
 interface BlogFormProps {
   initialData?: {
@@ -63,36 +64,16 @@ export default function BlogForm({ initialData, isNew = false }: BlogFormProps) 
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new window.Image();
-      img.src = event.target?.result as string;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1200;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > MAX_WIDTH) {
-          height = Math.round((height * MAX_WIDTH) / width);
-          width = MAX_WIDTH;
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-          const compressed = canvas.toDataURL('image/jpeg', 0.8);
-          setFormData(prev => ({ ...prev, image_base64: compressed }));
-        }
-      };
-    };
+    try {
+      const url = await uploadImage(file);
+      setFormData(prev => ({ ...prev, image_base64: url }));
+    } catch (err: any) {
+      alert("Error al subir imagen: " + (err.message || 'Error'));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

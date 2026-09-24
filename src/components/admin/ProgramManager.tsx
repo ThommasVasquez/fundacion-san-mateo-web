@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { updateProgram, addProgram, deleteProgram, updateProgramsOrder } from '@/app/actions';
 import { Plus, Trash2, Save, GraduationCap, Link as LinkIcon, Image as ImageIcon, FileText, Loader2, CheckCircle, Star, ArrowUp, ArrowDown } from 'lucide-react';
-import { compressImageToBase64 } from '@/lib/imageUpload';
+import { uploadImage } from '@/lib/imageUpload';
 
 interface Program {
   id: string;
@@ -202,10 +202,10 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                     const file = e.target.files?.[0];
                     if (file) {
                       try {
-                        const base64 = await compressImageToBase64(file);
-                        setNewProgram({...newProgram, image_url: base64});
-                      } catch (err) {
-                        alert("Error procesando imagen");
+                        const url = await uploadImage(file);
+                        setNewProgram({...newProgram, image_url: url});
+                      } catch (err: any) {
+                        alert("Error al subir la imagen: " + (err.message || 'Error desconocido'));
                       }
                     }
                   }}
@@ -313,10 +313,10 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                           const file = e.target.files?.[0];
                           if (file) {
                             try {
-                              const base64 = await compressImageToBase64(file);
-                              handleUpdate(p.id, 'image_url', base64);
-                            } catch (err) {
-                              alert("Error procesando imagen");
+                              const url = await uploadImage(file);
+                              handleUpdate(p.id, 'image_url', url);
+                            } catch (err: any) {
+                              alert("Error al subir la imagen: " + (err.message || 'Error desconocido'));
                             }
                           }
                         }}
@@ -536,10 +536,10 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                             const file = e.target.files?.[0];
                             if (file) {
                               try {
-                                const base64 = await compressImageToBase64(file);
-                                handleDetailsChange('banner_image', base64);
-                              } catch (err) {
-                                alert("Error procesando imagen");
+                                const url = await uploadImage(file);
+                                handleDetailsChange('banner_image', url);
+                              } catch (err: any) {
+                                alert("Error al subir la imagen: " + (err.message || 'Error desconocido'));
                               }
                             }
                           }}
@@ -811,10 +811,10 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                             const file = e.target.files?.[0];
                             if (file) {
                               try {
-                                const base64 = await compressImageToBase64(file);
-                                handleDetailsChange('banner_image', base64);
-                              } catch (err) {
-                                alert("Error procesando imagen");
+                                const url = await uploadImage(file);
+                                handleDetailsChange('banner_image', url);
+                              } catch (err: any) {
+                                alert("Error al subir la imagen: " + (err.message || 'Error desconocido'));
                               }
                             }
                           }}

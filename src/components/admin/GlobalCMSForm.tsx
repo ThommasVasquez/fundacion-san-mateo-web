@@ -30,6 +30,7 @@ import FooterAddressManager from "./FooterAddressManager";
 import FooterSocialsManager from "./FooterSocialsManager";
 import FooterCertificationsManager from "./FooterCertificationsManager";
 import { Newspaper, Image as GalleryIcon, CalendarDays } from "lucide-react";
+import { uploadImage } from "@/lib/imageUpload";
 
 interface GlobalCMSFormProps {
   initialContent: Record<string, string>;
@@ -1109,39 +1110,10 @@ export default function GlobalCMSForm({
   const handleImageUpload = async (key: string, file: File) => {
     setLoadingMap((prev) => ({ ...prev, [key]: true }));
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new window.Image();
-        img.src = event.target?.result as string;
-        img.onload = async () => {
-          const canvas = document.createElement("canvas");
-          const MAX_WIDTH = 1200;
-          let width = img.width;
-          let height = img.height;
-          if (width > MAX_WIDTH) {
-            height = Math.round((height * MAX_WIDTH) / width);
-            width = MAX_WIDTH;
-          }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, width, height);
-            const compressedBase64 = canvas.toDataURL("image/jpeg", 0.8);
-            await handleUpdate(key, compressedBase64, "image");
-          } else {
-            alert("Error interno en el navegador. Intenta con otro.");
-            setLoadingMap((prev) => ({ ...prev, [key]: false }));
-          }
-        };
-      };
-      reader.onerror = () => {
-        alert("No se pudo leer la imagen.");
-        setLoadingMap((prev) => ({ ...prev, [key]: false }));
-      };
+      const publicUrl = await uploadImage(file);
+      await handleUpdate(key, publicUrl, "image");
     } catch (e: any) {
-      alert("Error fatal al procesar la imagen: " + e.message);
+      alert("Error al subir la imagen: " + (e?.message || "Error inesperado"));
       setLoadingMap((prev) => ({ ...prev, [key]: false }));
     }
   };
@@ -1238,7 +1210,10 @@ export default function GlobalCMSForm({
 
             <div className="space-y-6">
               {(fields as any[]).map((field) => {
-                const currentValue = contentMap[field.key] ?? field.default;
+                const rawVal = contentMap[field.key] ?? field.default;
+                const currentValue = (typeof rawVal === "string" && rawVal.startsWith("data:image/"))
+                  ? (field.default || "")
+                  : rawVal;
 
                 return (
                   <div

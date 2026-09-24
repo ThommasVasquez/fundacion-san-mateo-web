@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { decrypt } from '@/lib/auth';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 
-/** Solo lo justo para leer una cookie por nombre, sin traer una dependencia. */
+/** Lee una cookie por nombre sin dependencias adicionales */
 function readCookie(header: string | null, name: string): string | undefined {
   if (!header) return undefined;
   for (const part of header.split(';')) {
@@ -13,17 +14,7 @@ function readCookie(header: string | null, name: string): string | undefined {
   return undefined;
 }
 
-/**
- * Vive bajo /admin y no comprobaba nada.
- *
- * Hoy no llega a escribir — el cuerpo se descarta y se devuelve una URL
- * simulada — así que no hay nada que robar todavía. Pero en cuanto se restaure
- * la escritura en R2, sin esto sería un endpoint de subida abierto a cualquiera
- * que conozca la URL: un desconocido llenando el bucket del colegio, o dejando
- * ahí lo que quisiera para servirlo desde su dominio.
- *
- * El día que se reactive R2, la comprobación ya está puesta.
- */
+/** Verifica que el usuario tenga sesión administrativa activa */
 async function esAdmin(req: Request): Promise<boolean> {
   const session = readCookie(req.headers.get('cookie'), 'session');
   if (!session) return false;
@@ -38,29 +29,108 @@ async function esAdmin(req: Request): Promise<boolean> {
 export async function POST(req: Request) {
   try {
     if (!(await esAdmin(req))) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+      return NextResponse.json({ error: 'No autorizado. Se requiere sesión de administrador.' }, { status: 401 });
     }
 
-    const url = new URL(req.url);
-    const key = url.searchParams.get('key');
-    const ext = url.searchParams.get('ext');
+    let fileBuffer: ArrayBuffer;
+    let originalName = 'imagen.jpg';
+    let mimeType = 'image/jpeg';
+    let ext = 'jpg';
 
-    if (!key || !ext) {
-      return NextResponse.json({ error: 'Falta llave o extensión' }, { status: 400 });
+    const contentTypeHeader = req.headers.get('content-type') || '';
+
+    if (contentTypeHeader.includes('multipart/form-data')) {
+      const formData = await req.formData();
+      const file = formData.get('file') as File | null;
+
+      if (!file || file.size === 0) {
+        return NextResponse.json({ error: 'No se ha seleccionado ningún archivo o está vacío.' }, { status: 400 });
+      }
+
+      if (file.size > 25 * 1024 * 1024) {
+        return NextResponse.json({ error: 'El archivo supera el límite máximo de 25MB.' }, { status: 400 });
+      }
+
+      fileBuffer = await file.arrayBuffer();
+      originalName = file.name || 'imagen.jpg';
+      mimeType = file.type || 'image/jpeg';
+      ext = originalName.split('.').pop()?.toLowerCase() || 'jpg';
+    } else {
+      // Soporte para carga directa como ArrayBuffer con parámetros query
+      const url = new URL(req.url);
+      const keyParam = url.searchParams.get('key');
+      const extParam = url.searchParams.get('ext') || 'jpg';
+
+      if (!keyParam) {
+        return NextResponse.json({ error: 'Falta llave o archivo' }, { status: 400 });
+      }
+
+      fileBuffer = await req.arrayBuffer();
+      if (!fileBuffer || fileBuffer.byteLength === 0) {
+        return NextResponse.json({ error: 'El archivo está vacío' }, { status: 400 });
+      }
+
+      originalName = `${keyParam}.${extParam}`;
+      ext = extParam.toLowerCase();
+      mimeType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : ext === 'gif' ? 'image/gif' : ext === 'svg' ? 'image/svg+xml' : 'image/jpeg';
     }
 
-    const arrayBuffer = await req.arrayBuffer();
-    if (!arrayBuffer || arrayBuffer.byteLength === 0) {
-      return NextResponse.json({ error: 'El archivo está vacío' }, { status: 400 });
+    // Normalizar y limpiar nombre de archivo
+    const baseName = originalName
+      .replace(/\.[^/.]+$/, '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
+      .substring(0, 50);
+
+    const timestamp = Date.now();
+    const r2Key = `images/${timestamp}_${baseName}.${ext}`;
+
+    // Obtener contexto de Cloudflare
+    let env: any;
+    try {
+      const cfContext = await getCloudflareContext({ async: true });
+      env = cfContext?.env;
+    } catch (cfError: any) {
+      console.warn('No se pudo obtener el contexto de Cloudflare en upload de imagen:', cfError);
     }
 
-    // SAFE MODE TEST: Temporarily bypass R2 binding to see if Worker stays alive
-    const publicUrl = `https://mock.energysoftmedia.workers.dev/${key}-mock.${ext}`;
+    const bucket = env?.IMAGES_BUCKET;
 
-    return NextResponse.json({ url: publicUrl, test_size: arrayBuffer.byteLength });
+    if (!bucket) {
+      console.error('El bucket R2 IMAGES_BUCKET no está disponible en este entorno.');
+      return NextResponse.json(
+        { error: 'El almacenamiento de imágenes R2 no está disponible en este entorno.' },
+        { status: 503 }
+      );
+    }
+
+    // Guardar en R2
+    await bucket.put(r2Key, fileBuffer, {
+      httpMetadata: {
+        contentType: mimeType,
+      },
+      customMetadata: {
+        originalName,
+        uploadedAt: new Date().toISOString(),
+      },
+    });
+
+    const publicUrl = `/api/documents/file/${r2Key}`;
+
+    return NextResponse.json({
+      success: true,
+      url: publicUrl,
+      key: r2Key,
+      file_name: originalName,
+      size: fileBuffer.byteLength,
+    });
 
   } catch (error: any) {
-    console.error('Safe Mode Upload Error:', error);
-    return NextResponse.json({ error: error.message || 'Error', details: String(error) }, { status: 400 });
+    console.error('Error al subir imagen a R2:', error);
+    return NextResponse.json(
+      { error: error.message || 'Error al procesar la imagen' },
+      { status: 500 }
+    );
   }
 }

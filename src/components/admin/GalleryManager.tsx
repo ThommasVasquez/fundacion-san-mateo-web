@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Plus, Trash2, Edit2, Save, X, Image as ImageIcon, Layout, MoveUp, MoveDown } from 'lucide-react';
 import { addGalleryItem, updateGalleryItem, deleteGalleryItem } from '@/app/actions';
 import toast from 'react-hot-toast';
-import { compressImageToBase64 } from '@/lib/imageUpload';
+import { uploadImage } from '@/lib/imageUpload';
 
 interface GalleryItem {
   id: string;
@@ -133,11 +133,11 @@ export default function GalleryManager({ galleryItems: initialItems }: GalleryMa
                     const file = e.target.files?.[0];
                     if (file) {
                       try {
-                        const base64 = await compressImageToBase64(file);
+                        const url = await uploadImage(file);
                         // Store it in both image_url and thumb_url for backward compatibility
-                        setFormData({...formData, image_url: base64, thumb_url: base64});
-                      } catch (err) {
-                        toast.error("Error procesando imagen");
+                        setFormData({...formData, image_url: url, thumb_url: url});
+                      } catch (err: any) {
+                        toast.error("Error al subir imagen: " + (err.message || 'Error'));
                       }
                     }
                   }}

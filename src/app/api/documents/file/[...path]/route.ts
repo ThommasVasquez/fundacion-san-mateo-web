@@ -59,8 +59,16 @@ export async function GET(
         contentType = 'image/png';
       } else if (key.endsWith('.jpg') || key.endsWith('.jpeg')) {
         contentType = 'image/jpeg';
+      } else if (key.endsWith('.webp')) {
+        contentType = 'image/webp';
+      } else if (key.endsWith('.svg')) {
+        contentType = 'image/svg+xml';
+      } else if (key.endsWith('.gif')) {
+        contentType = 'image/gif';
+      } else if (key.endsWith('.avif')) {
+        contentType = 'image/avif';
       } else {
-        contentType = 'application/pdf';
+        contentType = 'application/octet-stream';
       }
       headers.set('Content-Type', contentType);
     }

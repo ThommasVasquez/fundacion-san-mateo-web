@@ -31,7 +31,11 @@ export default async function AdminHomePage() {
   // Serialize for client component
   const initialContentMap: Record<string, string> = {};
   content.forEach((item: any) => {
-    initialContentMap[item.content_key] = item.value;
+    let val = item.value;
+    if (val && typeof val === 'string' && val.startsWith('data:image/')) {
+      val = '';
+    }
+    initialContentMap[item.content_key] = val;
   });
 
   const serializedNews = newsEvents.map((item: any) => ({

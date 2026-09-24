@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { updateContent } from '@/app/actions';
 import { Save, Image as ImageIcon, FileText, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
+import { uploadImage } from '@/lib/imageUpload';
 
 interface ContentItem {
   id: string;
@@ -48,50 +49,10 @@ export default function ContentEditor({ initialData }: { initialData: ContentIte
     setLoadingMap(prev => ({ ...prev, [item.content_key]: true }));
     
     try {
-      // 1. Client-Side Compression & Base64 Encoding
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      
-      reader.onload = (event) => {
-        const img = new window.Image();
-        img.src = event.target?.result as string;
-        
-        img.onload = async () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 1200;
-          let width = img.width;
-          let height = img.height;
-
-          // Resize keeping aspect ratio
-          if (width > MAX_WIDTH) {
-            height = Math.round((height * MAX_WIDTH) / width);
-            width = MAX_WIDTH;
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-             ctx.drawImage(img, 0, 0, width, height);
-             // Compress to WebP or Fast JPEG
-             const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
-             
-             // 2. Direct Database Storage (Bypassing Edge API constraints)
-             await handleUpdate(item, compressedBase64);
-          } else {
-             alert('Error interno en el navegador. Intenta con otro.');
-             setLoadingMap(prev => ({ ...prev, [item.content_key]: false }));
-          }
-        };
-      };
-      
-      reader.onerror = () => {
-         alert('No se pudo leer la imagen.');
-         setLoadingMap(prev => ({ ...prev, [item.content_key]: false }));
-      };
+      const publicUrl = await uploadImage(file);
+      await handleUpdate(item, publicUrl);
     } catch (e: any) {
-      alert("Error fatal al procesar la imagen de forma nativa: " + e.message);
+      alert("Error al subir la imagen: " + (e?.message || "Error desconocido"));
       setLoadingMap(prev => ({ ...prev, [item.content_key]: false }));
     }
   };
@@ -141,7 +102,7 @@ export default function ContentEditor({ initialData }: { initialData: ContentIte
                       </div>
                     ) : (
                     <div className="flex flex-col gap-4">
-                      {item.value && (
+                      {item.value && !item.value.startsWith('data:image/') && (
                         <div className="relative w-full h-40 rounded-xl overflow-hidden bg-gray-200">
                            <Image src={item.value} alt={item.content_key} fill className="object-cover" />
                         </div>
