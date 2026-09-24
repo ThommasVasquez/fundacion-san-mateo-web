@@ -1444,8 +1444,9 @@ export async function teacherLogin(formData: FormData) {
     let passwordMatch = false;
 
     // 1. Buscar en teachers
+    let teacherSede: string | null = null;
     const teachers = await sql`
-      SELECT id, nombre, email, password_hash 
+      SELECT id, nombre, email, password_hash, sede 
       FROM teachers 
       WHERE LOWER(email) = ${cleanInput} 
       LIMIT 1
@@ -1455,13 +1456,14 @@ export async function teacherLogin(formData: FormData) {
       if (passwordMatch) {
         teacherId = teachers[0].id;
         teacherNombre = teachers[0].nombre || email;
+        teacherSede = teachers[0].sede || null;
       }
     }
 
     // 2. Si no coincide, buscar en admin_users
     if (!passwordMatch) {
       const adminUsers = await sql`
-        SELECT id, nombre, email, password_hash, role, activo 
+        SELECT id, nombre, email, password_hash, role, activo, sede 
         FROM admin_users 
         WHERE LOWER(email) = ${cleanInput} 
         LIMIT 1
@@ -1471,6 +1473,7 @@ export async function teacherLogin(formData: FormData) {
         if (passwordMatch) {
           teacherId = adminUsers[0].id;
           teacherNombre = adminUsers[0].nombre || email;
+          teacherSede = adminUsers[0].sede || null;
         }
       }
     }
@@ -1479,20 +1482,36 @@ export async function teacherLogin(formData: FormData) {
       return { error: 'Credenciales inválidas' };
     }
 
-    // Provisionar lector móvil si no existe
-    const readerId = `movil-${teacherId.slice(0, 8)}`;
-    await sql`
-      INSERT INTO readers (id, ubicacion, tipo, teacher_id, sede)
-      VALUES (${readerId}, ${`Lector Móvil - ${teacherNombre}`}, 'mobile_nfc', ${teacherId}::uuid, 'Sede 1')
-      ON CONFLICT (id) DO UPDATE SET teacher_id = ${teacherId}::uuid
+    // Provisionar lector móvil si no existe o actualizar su sede
+    const existingReaders = await sql`
+      SELECT id FROM readers 
+      WHERE tipo = 'mobile_nfc' AND teacher_id = ${teacherId}::uuid 
+      LIMIT 1
     `;
+    let assignedReaderId = '';
+    if (existingReaders.length > 0) {
+      assignedReaderId = existingReaders[0].id;
+      await sql`
+        UPDATE readers 
+        SET sede = ${teacherSede}, ubicacion = ${`Lector Móvil - ${teacherNombre}`}
+        WHERE id = ${assignedReaderId}
+      `;
+    } else {
+      assignedReaderId = `movil-${teacherId.slice(0, 8)}`;
+      await sql`
+        INSERT INTO readers (id, ubicacion, tipo, teacher_id, sede)
+        VALUES (${assignedReaderId}, ${`Lector Móvil - ${teacherNombre}`}, 'mobile_nfc', ${teacherId}::uuid, ${teacherSede})
+        ON CONFLICT (id) DO UPDATE SET teacher_id = ${teacherId}::uuid, sede = ${teacherSede}, ubicacion = ${`Lector Móvil - ${teacherNombre}`}
+      `;
+    }
 
     // Create session
     const sessionToken = await encrypt({ 
       teacherId, 
       email: cleanInput, 
       nombre: teacherNombre, 
-      role: 'teacher' 
+      role: 'teacher',
+      sede: teacherSede
     });
     
     (await cookies()).set('session', sessionToken, {
@@ -2261,7 +2280,7 @@ export async function createAdminUserAction(formData: FormData) {
       const readerId = `movil-${newUserId.slice(0, 8)}`;
       await sql`
         INSERT INTO readers (id, ubicacion, tipo, teacher_id, sede)
-        VALUES (${readerId}, ${`Lector Móvil - ${nombre}`}, 'mobile_nfc', ${newUserId}::uuid, 'Sede 1')
+        VALUES (${readerId}, ${`Lector Móvil - ${nombre}`}, 'mobile_nfc', ${newUserId}::uuid, NULL)
         ON CONFLICT (id) DO UPDATE SET teacher_id = ${newUserId}::uuid, ubicacion = ${`Lector Móvil - ${nombre}`}
       `;
     }
@@ -2363,10 +2382,17 @@ export async function updateAdminUserAction(userIdOrFormData: string | FormData,
           END
       `;
       const readerId = `movil-${userId.slice(0, 8)}`;
+      const teacherSedeRes = await sql`
+        SELECT sede FROM admin_users WHERE id = ${userId}::uuid
+        UNION ALL
+        SELECT sede FROM teachers WHERE id = ${userId}::uuid
+        LIMIT 1
+      `;
+      const teacherSede = teacherSedeRes[0]?.sede || null;
       await sql`
         INSERT INTO readers (id, ubicacion, tipo, teacher_id, sede)
-        VALUES (${readerId}, ${`Lector Móvil - ${nombre}`}, 'mobile_nfc', ${userId}::uuid, 'Sede 1')
-        ON CONFLICT (id) DO UPDATE SET teacher_id = ${userId}::uuid, ubicacion = ${`Lector Móvil - ${nombre}`}
+        VALUES (${readerId}, ${`Lector Móvil - ${nombre}`}, 'mobile_nfc', ${userId}::uuid, ${teacherSede})
+        ON CONFLICT (id) DO UPDATE SET teacher_id = ${userId}::uuid, ubicacion = ${`Lector Móvil - ${nombre}`}, sede = ${teacherSede}
       `;
     } else {
       // Si el rol ya no es docente o el usuario está inactivo, revocar acceso en teachers y lectores móviles
@@ -2428,12 +2454,14 @@ export async function toggleAdminUserStatusAction(userId: string, newStatus: boo
               password_hash = EXCLUDED.password_hash
           `;
           const readerId = `movil-${userId.slice(0, 8)}`;
+          const teacherSede = u[0]?.sede || null;
           await sql`
             INSERT INTO readers (id, ubicacion, tipo, teacher_id, sede)
-            VALUES (${readerId}, ${`Lector Móvil - ${u[0].nombre}`}, 'mobile_nfc', ${userId}::uuid, 'Sede 1')
+            VALUES (${readerId}, ${`Lector Móvil - ${u[0].nombre}`}, 'mobile_nfc', ${userId}::uuid, ${teacherSede})
             ON CONFLICT (id) DO UPDATE SET 
               teacher_id = ${userId}::uuid, 
-              ubicacion = ${`Lector Móvil - ${u[0].nombre}`}
+              ubicacion = ${`Lector Móvil - ${u[0].nombre}`},
+              sede = ${teacherSede}
           `;
         }
       }

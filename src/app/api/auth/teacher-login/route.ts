@@ -20,9 +20,10 @@ export async function POST(req: Request) {
     let teacherId = '';
     let teacherNombre = '';
     let teacherEmail = email;
+    let teacherSede: string | null = null;
 
     const teachers = await sql`
-      SELECT id, nombre, email, password_hash 
+      SELECT id, nombre, email, password_hash, sede 
       FROM teachers 
       WHERE LOWER(email) = ${email} 
       LIMIT 1
@@ -48,13 +49,14 @@ export async function POST(req: Request) {
         teacherId = teacher.id;
         teacherNombre = teacher.nombre || email;
         teacherEmail = teacher.email || email;
+        teacherSede = teacher.sede || null;
       }
     }
 
     // 2. Si no coincide en teachers, buscar en admin_users (rol docente, profesor o admin)
     if (!passwordMatch) {
       const adminUsers = await sql`
-        SELECT id, nombre, email, password_hash, role, activo 
+        SELECT id, nombre, email, password_hash, role, activo, sede 
         FROM admin_users 
         WHERE LOWER(email) = ${email} 
         LIMIT 1
@@ -77,6 +79,7 @@ export async function POST(req: Request) {
           teacherId = adminUser.id;
           teacherNombre = adminUser.nombre || email;
           teacherEmail = adminUser.email || email;
+          teacherSede = adminUser.sede || null;
         }
       }
     }
@@ -89,19 +92,36 @@ export async function POST(req: Request) {
     }
 
     // 3. Obtener o crear lector móvil para este profesor en la tabla readers
-    const newReaderId = `movil-${teacherId.slice(0, 8)}`;
-    await sql`
-      INSERT INTO readers (id, ubicacion, tipo, teacher_id, sede)
-      VALUES (${newReaderId}, ${`Lector Móvil - ${teacherNombre}`}, 'mobile_nfc', ${teacherId}::uuid, 'Sede 1')
-      ON CONFLICT (id) DO UPDATE SET teacher_id = ${teacherId}::uuid
+    const existingReaders = await sql`
+      SELECT id FROM readers 
+      WHERE tipo = 'mobile_nfc' AND teacher_id = ${teacherId}::uuid 
+      LIMIT 1
     `;
+
+    let assignedReaderId = '';
+    if (existingReaders.length > 0) {
+      assignedReaderId = existingReaders[0].id;
+      await sql`
+        UPDATE readers 
+        SET sede = ${teacherSede}, ubicacion = ${`Lector Móvil - ${teacherNombre}`}
+        WHERE id = ${assignedReaderId}
+      `;
+    } else {
+      assignedReaderId = `movil-${teacherId.slice(0, 8)}`;
+      await sql`
+        INSERT INTO readers (id, ubicacion, tipo, teacher_id, sede)
+        VALUES (${assignedReaderId}, ${`Lector Móvil - ${teacherNombre}`}, 'mobile_nfc', ${teacherId}::uuid, ${teacherSede})
+        ON CONFLICT (id) DO UPDATE SET teacher_id = ${teacherId}::uuid, sede = ${teacherSede}, ubicacion = ${`Lector Móvil - ${teacherNombre}`}
+      `;
+    }
 
     // 4. Generar token JWT con vigencia de 30 días para uso en la app móvil
     const tokenPayload = {
       teacherId,
       email: teacherEmail,
       nombre: teacherNombre,
-      role: 'teacher'
+      role: 'teacher',
+      sede: teacherSede
     };
     const sessionToken = await encrypt(tokenPayload);
 
@@ -112,7 +132,8 @@ export async function POST(req: Request) {
         id: teacherId,
         nombre: teacherNombre,
         email: teacherEmail,
-        readerId: newReaderId
+        readerId: assignedReaderId,
+        sede: teacherSede
       }
     });
 

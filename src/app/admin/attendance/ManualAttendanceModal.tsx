@@ -16,13 +16,15 @@ interface StudentItem {
 
 interface ManualAttendanceModalProps {
   students: StudentItem[];
+  sedes?: string[];
 }
 
-export default function ManualAttendanceModal({ students }: ManualAttendanceModalProps) {
+export default function ManualAttendanceModal({ students, sedes }: ManualAttendanceModalProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [selectedSede, setSelectedSede] = useState('Sede 1');
+  const optionsSedes = sedes && sedes.length > 0 ? sedes : ['Sede 1', 'Sede 2', 'Yanguas'];
+  const [selectedSede, setSelectedSede] = useState(optionsSedes[0] || 'Sede 1');
   const [observaciones, setObservaciones] = useState('');
   const [filterGrado, setFilterGrado] = useState('');
   const [loading, setLoading] = useState<Record<string, boolean>>({});
@@ -113,8 +115,9 @@ export default function ManualAttendanceModal({ students }: ManualAttendanceModa
                     onChange={e => setSelectedSede(e.target.value)}
                     className="bg-transparent font-black text-xs uppercase text-fsm-blue outline-none cursor-pointer"
                   >
-                    <option value="Sede 1">Sede 1</option>
-                    <option value="Sede 2">Sede 2</option>
+                    {optionsSedes.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
                   </select>
                 </div>
 

@@ -45,7 +45,7 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
       const studentName = ev.student_name || 'Tarjeta no asignada';
       const grado = ev.student_grado || 'N/A';
       const tipoEvento = ev.tipo_evento === 'salida' ? 'Salida' : 'Entrada';
-      const sede = ev.sede || 'Sede 1';
+      const sede = ev.sede || '-';
       const reader = ev.reader_name || ev.reader_id;
       const isAbsence = (ev as any).estado === 'AUSENTE' || ev.tipo_evento === 'inasistencia' || ev.origen === 'sin_marcacion';
       const origen = isAbsence
@@ -154,7 +154,7 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
       grado: ev.student_grado || 'General',
       timestamp: ev.timestamp,
       tipo_evento: ev.tipo_evento,
-      sede: ev.sede || 'Sede 1',
+      sede: ev.sede || '',
       rfid_tag_uid: ev.rfid_tag_uid,
       origen: ev.origen,
       observaciones: ev.observaciones

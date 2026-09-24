@@ -133,7 +133,7 @@ export default async function StudentAttendanceHistoryPage({
 
     let estado = 'AUSENTE';
     let fuente = 'MANUAL';
-    let sede = 'Sede 1';
+    let sede = '';
     let observaciones = '';
     let scanTime = undefined;
 
@@ -152,12 +152,12 @@ export default async function StudentAttendanceHistoryPage({
     } else if (override) {
       estado = override.estado;
       fuente = override.fuente || 'MANUAL';
-      sede = override.sede || 'Sede 1';
+      sede = override.sede || '';
       observaciones = override.observaciones || (followup?.comentarios ? `Llamada: ${followup.comentarios}` : '');
     } else if (rfidScan) {
       estado = 'PRESENTE';
       fuente = 'RFID';
-      sede = rfidScan.sede || 'Sede 1';
+      sede = rfidScan.sede || '';
       observaciones = rfidScan.observaciones || (followup?.comentarios ? `Llamada: ${followup.comentarios}` : '');
       const dateObj = new Date(rfidScan.timestamp);
       scanTime = dateObj.toLocaleTimeString('es-CO', { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit' });

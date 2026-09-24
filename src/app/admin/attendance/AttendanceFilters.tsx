@@ -15,6 +15,7 @@ interface AttendanceFiltersProps {
   filterAbsencesOnly: boolean;
   todayStr: string;
   grades: string[];
+  sedes: string[];
   totalAnomalies: number;
   totalRealAbsencesCount: number;
   absencesListLength: number;
@@ -31,6 +32,7 @@ export default function AttendanceFilters({
   filterAbsencesOnly,
   todayStr,
   grades,
+  sedes,
   totalAnomalies,
   totalRealAbsencesCount,
   absencesListLength,
@@ -264,8 +266,9 @@ export default function AttendanceFilters({
               className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none cursor-pointer"
             >
               <option value="">Todas las Sedes</option>
-              <option value="Sede 1">Sede 1</option>
-              <option value="Sede 2">Sede 2</option>
+              {sedes.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
             </select>
           </div>
 

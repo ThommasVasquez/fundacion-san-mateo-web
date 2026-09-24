@@ -196,7 +196,7 @@ export async function POST(req: Request) {
     const reader = readers[0];
     const origen = reader.tipo === 'mobile_nfc' ? 'movil_profesor' : 'panel';
     const fallbackRegistradoPor = registrado_por || reader.teacher_id || null;
-    const readerSede = reader.sede || body.sede || 'Sede 1';
+    const readerSede = reader.sede || body.sede || null;
 
     // Se calculan antes del modo matrícula porque ambos los necesitan.
     const tagHex = String(tag_uid).replace(/\s+/g, '').toUpperCase();

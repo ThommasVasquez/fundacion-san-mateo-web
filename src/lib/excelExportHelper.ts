@@ -645,7 +645,7 @@ export async function exportAttendanceEventsToExcel(events: AttendanceEventExpor
     row.getCell(6).value = (ev.tipo_evento || 'ENTRADA').toUpperCase();
     row.getCell(6).alignment = { vertical: 'middle', horizontal: 'center' };
 
-    row.getCell(7).value = ev.sede || 'Sede 1';
+    row.getCell(7).value = ev.sede || '';
     row.getCell(7).alignment = { vertical: 'middle', horizontal: 'center' };
 
     row.getCell(8).value = (ev.origen || 'Torniquete').toUpperCase();

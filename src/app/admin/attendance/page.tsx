@@ -106,7 +106,8 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
     eventsOrAbsencesRes,
     studentsRes,
     groupsRes,
-    alertsRes
+    alertsRes,
+    sedesRes
   ] = await Promise.all([
     sql`
       SELECT count(*) FROM attendance_events 
@@ -168,7 +169,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         'sin_marcacion' as origen,
         'inasistencia' as tipo_evento,
         cs.fecha::text as timestamp,
-        'Sede 1' as sede,
+        COALESCE(ar.sede, '') as sede,
         COALESCE(ar.observaciones, 'Sin marcación en torniquete') as observaciones,
         'AUSENTE' as estado,
         'Sin marcación de entrada' as reader_name
@@ -237,7 +238,19 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
       ORDER BY s.nombre ASC
     `,
     sql`SELECT id, nombre, jornada FROM groups ORDER BY nombre`,
-    getPendingAbsenceAlertsCount()
+    getPendingAbsenceAlertsCount(),
+    sql`
+      SELECT DISTINCT sede FROM (
+        SELECT sede FROM attendance_events WHERE sede IS NOT NULL AND sede != ''
+        UNION
+        SELECT sede FROM readers WHERE sede IS NOT NULL AND sede != ''
+        UNION
+        SELECT sede FROM teachers WHERE sede IS NOT NULL AND sede != ''
+        UNION
+        SELECT sede FROM admin_users WHERE sede IS NOT NULL AND sede != ''
+      ) s
+      ORDER BY sede
+    `
   ]);
 
   const totalScans = parseInt(totalScansRes[0].count);
@@ -279,7 +292,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         (filterGrado === 'II DIURNO A CB' && ev.student_grado === 'II DIURNO CB');
       if (!matchGrado) return false;
     }
-    if (filterSede && (ev.sede || 'Sede 1') !== filterSede) return false;
+    if (filterSede && (ev.sede || '') !== filterSede) return false;
     if (filterAnomalyOnly && !ev.isAnomaly) return false;
     if (filterSearch) {
       const nameMatch = (ev.student_name || 'Tarjeta no asignada').toLowerCase().includes(searchLower);
@@ -287,7 +300,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         (searchLower.includes('ii diurno cb') && (ev.student_grado || '').toLowerCase().includes('ii diurno a cb'));
       const uidMatch = (ev.rfid_tag_uid || '').toLowerCase().includes(searchLower);
       const readerMatch = (ev.reader_name || ev.reader_id || '').toLowerCase().includes(searchLower);
-      const sedeMatch = (ev.sede || 'Sede 1').toLowerCase().includes(searchLower);
+      const sedeMatch = (ev.sede || '').toLowerCase().includes(searchLower);
       const obsMatch = (ev.observaciones || '').toLowerCase().includes(searchLower);
       return nameMatch || gradoMatch || uidMatch || readerMatch || sedeMatch || obsMatch;
     }
@@ -409,13 +422,13 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
           let origen = fStr > todayStr ? 'Calendario Institucional' : 'Sistema';
           let timestamp = fStr;
           let observaciones = isStudentFrozen ? 'Estudiante congelado/inactivo' : (fStr > todayStr ? 'Programada' : '');
-          let sede = 'Sede 1';
+          let sede = '';
 
           if (ov) {
             estado = ov.estado;
             tipo_evento = ov.estado.toLowerCase();
             observaciones = ov.observaciones || '';
-            sede = ov.sede || 'Sede 1';
+            sede = ov.sede || '';
 
             if (ov.estado === 'LIBRE') {
               reader_name = 'Día Libre / No Lectivo Programado';
@@ -470,7 +483,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             origen = rfid.origen === 'movil_profesor' ? 'Dispositivo Móvil' : 'Lector Fijo';
             timestamp = rfid.timestamp;
             observaciones = rfid.observaciones || '';
-            sede = rfid.sede || 'Sede 1';
+            sede = rfid.sede || '';
           }
 
           return {
@@ -500,6 +513,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
 
   const allStudentsForManual = studentsRes;
   const pendingAlerts = alertsRes;
+  const availableSedes: string[] = sedesRes.map((r: any) => r.sede).filter(Boolean);
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 relative">
@@ -526,6 +540,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                 grado: s.grado,
                 activo: Boolean(s.activo)
               }))} 
+              sedes={availableSedes}
             />
           )}
           <ExportCsvButton events={filteredEvents} startDate={filterStartDate} endDate={filterEndDate} />
@@ -609,6 +624,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         filterAbsencesOnly={filterAbsencesOnly}
         todayStr={todayStr}
         grades={grades}
+        sedes={availableSedes}
         totalAnomalies={totalAnomalies}
         totalRealAbsencesCount={totalRealAbsencesCount}
         absencesListLength={filteredEvents.length}
@@ -665,9 +681,11 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                     <td className="py-4 px-6 font-bold text-gray-700">{ev.student_grado || 'N/A'}</td>
                     <td className="py-4 px-6">
                       <div className="space-y-1">
-                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase bg-blue-50 text-fsm-blue px-2 py-0.5 rounded-md border border-blue-200">
-                          🏫 {ev.sede || 'Sede 1'}
-                        </span>
+                        {ev.sede ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase bg-blue-50 text-fsm-blue px-2 py-0.5 rounded-md border border-blue-200">
+                            🏫 {ev.sede}
+                          </span>
+                        ) : null}
                         <p className="font-bold text-gray-800 text-xs">{ev.reader_name || 'Lector Entrada'}</p>
                       </div>
                     </td>

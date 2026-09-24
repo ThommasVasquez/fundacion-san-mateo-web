@@ -147,7 +147,7 @@ export default function StudentHistoryClient({ studentId, records }: StudentHist
                   </td>
 
                   <td className="py-3 px-4 text-gray-500 font-semibold">
-                    🏫 {r.sede || 'Sede 1'} ({r.fuente})
+                    {r.sede ? `🏫 ${r.sede} ` : ''}({r.fuente})
                   </td>
 
                   <td className="py-3 px-4">
