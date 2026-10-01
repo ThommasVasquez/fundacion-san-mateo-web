@@ -214,68 +214,60 @@ export async function POST(req: Request) {
 
     // 2. Check if Enrollment Mode is active for a student
     const enrollmentKeys = await sql`
-      SELECT value
+      SELECT content_key, value
       FROM site_content
-      WHERE content_key = 'enrollment_active_student_id'
-      LIMIT 1
+      WHERE content_key IN ('enrollment_active_student_id', 'enrollment_active_card_type')
     `;
 
-    let activeStudentId = null;
-    // Por qué no se pudo vincular, si es que se intentó. Viaja en la respuesta
-    // para que la página de matrícula pueda decirlo, sin que eso cueste el pase.
-    let enrollmentBlocked: string | null = null;
-    if (enrollmentKeys.length > 0 && enrollmentKeys[0].value.trim() !== '') {
-      activeStudentId = enrollmentKeys[0].value.trim();
+    let activeStudentId: string | null = null;
+    let targetCardType: 'rfid' | 'nfc' = 'rfid';
+    for (const row of enrollmentKeys) {
+      if (row.content_key === 'enrollment_active_student_id' && row.value?.trim()) {
+        activeStudentId = row.value.trim();
+      }
+      if (row.content_key === 'enrollment_active_card_type' && row.value?.trim()) {
+        targetCardType = row.value.trim() === 'nfc' ? 'nfc' : 'rfid';
+      }
+    }
 
-      // ¿La tarjeta ya es de alguien?
-      //
-      // rfid_tag_uid es único, así que asignar a ciegas una tarjeta que ya tiene
-      // dueño reventaba la petición entera con un 500 de clave duplicada: no se
-      // matriculaba, no se registraba el pase, y la página de matrícula se
-      // quedaba esperando para siempre un escaneo que sí había llegado.
-      //
-      // Se comprueba antes y se rechaza. Quitarle la tarjeta a quien la tiene
-      // para dársela a otro es una decisión que se toma sabiendo a quién se la
-      // quitas -- nunca algo que ocurra porque el modo matrícula estaba activo
-      // cuando esa persona pasó por la puerta.
+    let enrollmentBlocked: string | null = null;
+    if (activeStudentId) {
+      // ¿La tarjeta ya es de alguien (como RFID o como NFC)?
       const dueno = await sql`
         SELECT id, nombre FROM students
          WHERE rfid_tag_uid = ${tagHex}
+            OR nfc_tag_uid = ${tagHex}
             OR (${tarjetaNum}::bigint IS NOT NULL AND tarjeta_numero = ${tarjetaNum}::bigint)
          LIMIT 1`;
 
       if (dueno.length > 0 && dueno[0].id !== activeStudentId) {
-        // No se vincula, pero el pase SIGUE su curso.
-        //
-        // Devolver aquí un error abortaba la petición y con ella el registro de
-        // asistencia: mientras alguien se dejara el modo matrícula encendido,
-        // cada persona que pasaba una tarjeta ya asignada dejaba de fichar. Una
-        // pantalla de matrícula abierta y olvidada apagaba la puerta entera, y
-        // en los datos no quedaba ni rastro de por qué.
-        //
-        // La matrícula es una tarea de oficina; el registro de asistencia es lo
-        // que no puede fallar. Así que se anota que no se pudo vincular, se
-        // deja el modo activo para que puedan probar con otra tarjeta, y se
-        // sigue adelante con el pase como cualquier otro día.
         enrollmentBlocked = `Esa tarjeta ya es de ${dueno[0].nombre}. Usa otra, o quítasela primero.`;
         activeStudentId = null;
       } else {
-      await sql`
-        UPDATE students
-           SET rfid_tag_uid = ${tagHex},
-               tarjeta_numero = COALESCE(${tarjetaNum}::bigint, tarjeta_numero)
-         WHERE id = ${activeStudentId}
-      `;
+        if (targetCardType === 'nfc') {
+          await sql`
+            UPDATE students
+               SET nfc_tag_uid = ${tagHex}
+             WHERE id = ${activeStudentId}
+          `;
+        } else {
+          await sql`
+            UPDATE students
+               SET rfid_tag_uid = ${tagHex},
+                   tarjeta_numero = COALESCE(${tarjetaNum}::bigint, tarjeta_numero)
+             WHERE id = ${activeStudentId}
+          `;
+        }
 
         await sql`
           UPDATE site_content
           SET value = ''
-          WHERE content_key = 'enrollment_active_student_id'
+          WHERE content_key IN ('enrollment_active_student_id', 'enrollment_active_card_type')
         `;
       }
     }
 
-    // 3. Find student by tag_uid, tarjeta_numero or documento
+    // 3. Find student by tag_uid (RFID or NFC), tarjeta_numero or documento
     const cleanDigits = tagHex.replace(/\D/g, '');
     const directNumeric = cleanDigits.length > 0 && cleanDigits.length <= 15 ? cleanDigits : null;
 
@@ -284,6 +276,7 @@ export async function POST(req: Request) {
       FROM students
       WHERE (
         rfid_tag_uid = ${tagHex}
+        OR nfc_tag_uid = ${tagHex}
         OR (${tarjetaNum}::bigint IS NOT NULL AND tarjeta_numero = ${tarjetaNum}::bigint)
         OR (${directNumeric}::bigint IS NOT NULL AND (tarjeta_numero = ${directNumeric}::bigint OR documento = ${cleanDigits}))
       )

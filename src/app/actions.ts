@@ -825,11 +825,16 @@ export async function deleteFooterCertification(id: string) {
   }
 }
 
-export async function setEnrollmentStudent(studentId: string | null) {
+export async function setEnrollmentStudent(studentId: string | null, cardType: 'rfid' | 'nfc' = 'rfid') {
   try {
     await sql`
       INSERT INTO site_content (content_key, content_type, value, page_path)
       VALUES ('enrollment_active_student_id', 'text', ${studentId || ''}, '/admin/attendance')
+      ON CONFLICT (content_key) DO UPDATE SET value = EXCLUDED.value
+    `;
+    await sql`
+      INSERT INTO site_content (content_key, content_type, value, page_path)
+      VALUES ('enrollment_active_card_type', 'text', ${cardType}, '/admin/attendance')
       ON CONFLICT (content_key) DO UPDATE SET value = EXCLUDED.value
     `;
     return { success: true };
@@ -839,36 +844,51 @@ export async function setEnrollmentStudent(studentId: string | null) {
   }
 }
 
-export async function linkStudentTag(studentId: string, tagUid: string) {
+export async function linkStudentTag(studentId: string, tagUid: string, cardType: 'rfid' | 'nfc' = 'rfid') {
   const auth = await assertActionPermission('students_manage');
   if (!auth.authorized) {
     return { error: auth.error };
   }
 
   try {
-    // Check if tag is already linked
+    const cleanUid = tagUid.trim().toUpperCase().replace(/[^A-F0-9]/g, '');
+    if (!cleanUid) {
+      return { error: 'UID de tarjeta no válido' };
+    }
+
+    // Check if tag is already linked to another student as RFID or NFC
     const existing = await sql`
       SELECT id, nombre FROM students 
-      WHERE rfid_tag_uid = ${tagUid} AND id != ${studentId}::uuid 
+      WHERE (rfid_tag_uid = ${cleanUid} OR nfc_tag_uid = ${cleanUid}) AND id != ${studentId}::uuid 
       LIMIT 1
     `;
     if (existing.length > 0) {
-      return { error: `Esta tarjeta ya está vinculada a ${existing[0].nombre}` };
+      return { error: `Esta tarjeta (${cleanUid}) ya está vinculada a ${existing[0].nombre}` };
     }
 
-    await sql`
-      UPDATE students 
-      SET rfid_tag_uid = ${tagUid} 
-      WHERE id = ${studentId}::uuid
-    `;
+    if (cardType === 'nfc') {
+      await sql`
+        UPDATE students 
+        SET nfc_tag_uid = ${cleanUid} 
+        WHERE id = ${studentId}::uuid
+      `;
+    } else {
+      await sql`
+        UPDATE students 
+        SET rfid_tag_uid = ${cleanUid} 
+        WHERE id = ${studentId}::uuid
+      `;
+    }
 
     // Backfill previous unassigned attendance events for this card UID
     await sql`
       UPDATE attendance_events 
       SET student_id = ${studentId}::uuid
-      WHERE rfid_tag_uid = ${tagUid} AND student_id IS NULL
+      WHERE rfid_tag_uid = ${cleanUid} AND student_id IS NULL
     `;
 
+    revalidatePath('/admin/attendance/enrollment');
+    revalidatePath('/admin/attendance');
     return { success: true };
   } catch (error: any) {
     console.error('Error linking tag to student:', error);
@@ -876,18 +896,35 @@ export async function linkStudentTag(studentId: string, tagUid: string) {
   }
 }
 
-export async function unlinkStudentTag(studentId: string) {
+export async function unlinkStudentTag(studentId: string, cardType: 'rfid' | 'nfc' | 'both' = 'both') {
   const auth = await assertActionPermission('students_manage');
   if (!auth.authorized) {
     return { error: auth.error };
   }
 
   try {
-    await sql`
-      UPDATE students 
-      SET rfid_tag_uid = NULL, tarjeta_numero = NULL
-      WHERE id = ${studentId}::uuid
-    `;
+    if (cardType === 'rfid') {
+      await sql`
+        UPDATE students 
+        SET rfid_tag_uid = NULL, tarjeta_numero = NULL
+        WHERE id = ${studentId}::uuid
+      `;
+    } else if (cardType === 'nfc') {
+      await sql`
+        UPDATE students 
+        SET nfc_tag_uid = NULL
+        WHERE id = ${studentId}::uuid
+      `;
+    } else {
+      await sql`
+        UPDATE students 
+        SET rfid_tag_uid = NULL, tarjeta_numero = NULL, nfc_tag_uid = NULL
+        WHERE id = ${studentId}::uuid
+      `;
+    }
+
+    revalidatePath('/admin/attendance/enrollment');
+    revalidatePath('/admin/attendance');
     return { success: true };
   } catch (error: any) {
     console.error('Error unlinking student tag:', error);
@@ -909,6 +946,7 @@ export async function updateStudentDetails(
     domicilio?: string;
     tarjeta_numero?: string;
     rfid_tag_uid?: string;
+    nfc_tag_uid?: string;
     cumpleanos?: string;
     inicio_practicas?: string;
     activo?: boolean;
@@ -962,13 +1000,19 @@ export async function updateStudentDetails(
       ? (rawUid ? rawUid.toUpperCase().replace(/[^A-F0-9]/g, '') : null) 
       : undefined;
 
+    const rawNfcUid = data.nfc_tag_uid !== undefined ? (data.nfc_tag_uid.trim() || null) : undefined;
+    const nfcTagUid = rawNfcUid !== undefined 
+      ? (rawNfcUid ? rawNfcUid.toUpperCase().replace(/[^A-F0-9]/g, '') : null) 
+      : undefined;
+
     const cumpleanos = data.cumpleanos !== undefined ? (data.cumpleanos.trim() || null) : undefined;
     const inicioPracticas = data.inicio_practicas !== undefined ? (data.inicio_practicas.trim() || null) : undefined;
     const activo = data.activo !== undefined ? data.activo : true;
 
-    // Asegurar columna email preventiva
+    // Asegurar columnas preventivas
     try {
       await sql`ALTER TABLE students ADD COLUMN IF NOT EXISTS email TEXT`;
+      await sql`ALTER TABLE students ADD COLUMN IF NOT EXISTS nfc_tag_uid TEXT`;
     } catch {}
 
     await sql`
@@ -986,6 +1030,7 @@ export async function updateStudentDetails(
         domicilio = CASE WHEN ${domicilio !== undefined} THEN ${domicilio} ELSE domicilio END,
         tarjeta_numero = CASE WHEN ${tarjetaNumero !== undefined} THEN ${tarjetaNumero} ELSE tarjeta_numero END,
         rfid_tag_uid = CASE WHEN ${rfidTagUid !== undefined} THEN ${rfidTagUid} ELSE rfid_tag_uid END,
+        nfc_tag_uid = CASE WHEN ${nfcTagUid !== undefined} THEN ${nfcTagUid} ELSE nfc_tag_uid END,
         cumpleanos = CASE WHEN ${cumpleanos !== undefined} THEN ${cumpleanos ? cumpleanos : null}::date ELSE cumpleanos END,
         inicio_practicas = CASE WHEN ${inicioPracticas !== undefined} THEN ${inicioPracticas ? inicioPracticas : null}::date ELSE inicio_practicas END,
         activo = ${activo}
@@ -1002,6 +1047,19 @@ export async function updateStudentDetails(
         `;
       } catch (err) {
         console.warn('Could not backfill attendance_events for student card:', err);
+      }
+    }
+
+    if (nfcTagUid) {
+      try {
+        await sql`
+          UPDATE attendance_events
+          SET student_id = ${studentId}::uuid
+          WHERE (rfid_tag_uid = ${nfcTagUid} OR rfid_tag_uid ILIKE ${nfcTagUid})
+            AND student_id IS NULL
+        `;
+      } catch (err) {
+        console.warn('Could not backfill attendance_events for student NFC card:', err);
       }
     }
 
@@ -1051,6 +1109,7 @@ export async function createStudent(data: {
   domicilio?: string;
   tarjeta_numero?: string;
   rfid_tag_uid?: string;
+  nfc_tag_uid?: string;
   cumpleanos?: string;
   inicio_practicas?: string;
   activo?: boolean;
@@ -1106,24 +1165,28 @@ export async function createStudent(data: {
     const rawUid = data.rfid_tag_uid?.trim() || null;
     const rfidTagUid = rawUid ? rawUid.toUpperCase().replace(/[^A-F0-9]/g, '') : null;
 
+    const rawNfcUid = data.nfc_tag_uid?.trim() || null;
+    const nfcTagUid = rawNfcUid ? rawNfcUid.toUpperCase().replace(/[^A-F0-9]/g, '') : null;
+
     const cumpleanos = data.cumpleanos?.trim() || null;
     const inicioPracticas = data.inicio_practicas?.trim() || null;
     const activo = data.activo ?? true;
 
-    // Asegurar columna email si aún no existe
+    // Asegurar columnas si aún no existen
     try {
       await sql`ALTER TABLE students ADD COLUMN IF NOT EXISTS email TEXT`;
+      await sql`ALTER TABLE students ADD COLUMN IF NOT EXISTS nfc_tag_uid TEXT`;
     } catch {}
 
     const res = await sql`
       INSERT INTO students (
         id, nombre, nombre_normalizado, documento, usuario_nro, grado, departamento,
-        tarjeta_numero, rfid_tag_uid, telefono, email, domicilio, sede, rol, activo,
+        tarjeta_numero, rfid_tag_uid, nfc_tag_uid, telefono, email, domicilio, sede, rol, activo,
         cumpleanos, inicio_practicas, created_at
       )
       VALUES (
         gen_random_uuid(), ${nombre}, ${nombreNormalizado}, ${documento}, ${usuarioNro}, ${grado}, ${departamento},
-        ${tarjetaNumero}, ${rfidTagUid}, ${telefono}, ${email}, ${domicilio}, ${sede}, 'Estudiante', ${activo},
+        ${tarjetaNumero}, ${rfidTagUid}, ${nfcTagUid}, ${telefono}, ${email}, ${domicilio}, ${sede}, 'Estudiante', ${activo},
         ${cumpleanos ? cumpleanos : null}::date,
         ${inicioPracticas ? inicioPracticas : null}::date,
         NOW()

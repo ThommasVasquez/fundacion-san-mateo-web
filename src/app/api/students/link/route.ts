@@ -44,56 +44,65 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const { tag_uid, nombre, grado, sede } = await req.json();
+    const { tag_uid, nombre, grado, sede, tipo, card_type } = await req.json();
     if (!tag_uid || !nombre) {
       return NextResponse.json({ error: 'Faltan tag_uid o nombre' }, { status: 400 });
     }
 
     const tagHex = String(tag_uid).replace(/\s+/g, '').toUpperCase();
     const decimal = tarjetaDecimal(tagHex);
+    const requestedType = (tipo || card_type || '').toLowerCase();
+    const isNfc = requestedType === 'nfc' || (requestedType !== 'rfid' && tagHex.length !== 10);
 
-    // ¿La tarjeta ya es de alguien? Se mira por las dos formas, porque los del
-    // padrón solo tienen el decimal y los vinculados aquí solo el UID.
+    // ¿La tarjeta ya es de alguien? Se mira por RFID, NFC y decimal.
     const yaEstan = await sql`
       SELECT id, nombre FROM students
        WHERE rfid_tag_uid = ${tagHex}
+          OR nfc_tag_uid = ${tagHex}
           OR (${decimal}::bigint IS NOT NULL AND tarjeta_numero = ${decimal}::bigint)
        LIMIT 1`;
 
     if (yaEstan.length > 0) {
-      // Se actualiza el nombre, no se crea otro. Reasignar una tarjeta a otra
-      // persona es una decisión deliberada que se toma en la página de
-      // matrícula, mirando a quién se la quitas; no algo que deba ocurrir de
-      // rebote porque alguien matriculó desde el móvil sin saber que esa
-      // tarjeta ya tenía dueño.
-      await sql`
-        UPDATE students
-           SET nombre = ${nombre},
-               rfid_tag_uid = ${tagHex},
-               grado = COALESCE(${grado ?? null}, grado),
-               sede = COALESCE(${sede ?? null}::smallint, sede)
-         WHERE id = ${yaEstan[0].id}`;
+      if (isNfc) {
+        await sql`
+          UPDATE students
+             SET nombre = ${nombre},
+                 nfc_tag_uid = ${tagHex},
+                 grado = COALESCE(${grado ?? null}, grado),
+                 sede = COALESCE(${sede ?? null}::smallint, sede)
+           WHERE id = ${yaEstan[0].id}`;
+      } else {
+        await sql`
+          UPDATE students
+             SET nombre = ${nombre},
+                 rfid_tag_uid = ${tagHex},
+                 grado = COALESCE(${grado ?? null}, grado),
+                 sede = COALESCE(${sede ?? null}::smallint, sede)
+           WHERE id = ${yaEstan[0].id}`;
+      }
 
       return NextResponse.json({
         status: 'actualizado',
         anterior: yaEstan[0].nombre,
         nombre,
+        tipo_tarjeta: isNfc ? 'nfc' : 'rfid'
       });
     }
 
     // Nadie tiene esa tarjeta: alta.
-    //
-    // grado va NOT NULL y aquí no se conoce -- las apps preguntan nombre,
-    // cédula y sede, no curso. Se pone un marcador explícito en vez de un
-    // curso inventado: "SIN CURSO" se ve en la tabla y se corrige, un curso
-    // plausible puesto a dedo no se ve y no se corrige nunca.
-    const creado = await sql`
-      INSERT INTO students (nombre, grado, activo, rfid_tag_uid, tarjeta_numero, sede, rol)
-           VALUES (${nombre}, ${grado ?? 'SIN CURSO'}, TRUE, ${tagHex},
-                   ${decimal}, ${sede ?? null}::smallint, 'Estudiante')
-        RETURNING id, nombre, grado`;
+    const creado = isNfc 
+      ? await sql`
+          INSERT INTO students (nombre, grado, activo, nfc_tag_uid, sede, rol)
+               VALUES (${nombre}, ${grado ?? 'SIN CURSO'}, TRUE, ${tagHex},
+                       ${sede ?? null}::smallint, 'Estudiante')
+            RETURNING id, nombre, grado`
+      : await sql`
+          INSERT INTO students (nombre, grado, activo, rfid_tag_uid, tarjeta_numero, sede, rol)
+               VALUES (${nombre}, ${grado ?? 'SIN CURSO'}, TRUE, ${tagHex},
+                       ${decimal}, ${sede ?? null}::smallint, 'Estudiante')
+            RETURNING id, nombre, grado`;
 
-    return NextResponse.json({ status: 'creado', ...creado[0] }, { status: 201 });
+    return NextResponse.json({ status: 'creado', tipo_tarjeta: isNfc ? 'nfc' : 'rfid', ...creado[0] }, { status: 201 });
   } catch (error: any) {
     console.error('students/link:', error);
     return NextResponse.json(

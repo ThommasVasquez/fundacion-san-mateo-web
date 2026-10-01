@@ -59,6 +59,7 @@ export async function GET(req: Request) {
       SELECT id, nombre, grado FROM students
        WHERE activo = TRUE
          AND (rfid_tag_uid = ${tagHex}
+              OR nfc_tag_uid = ${tagHex}
               OR (${decimal}::bigint IS NOT NULL AND tarjeta_numero = ${decimal}::bigint))
        LIMIT 1`;
 

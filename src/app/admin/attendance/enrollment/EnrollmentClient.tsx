@@ -35,6 +35,7 @@ interface Student {
   grado: string;
   grupo_matriculado?: string | null;
   rfid_tag_uid: string | null;
+  nfc_tag_uid?: string | null;
   tarjeta_numero?: string | null;
   telefono?: string | null;
   email?: string | null;
@@ -49,6 +50,7 @@ interface Student {
 interface EnrollmentClientProps {
   students: Student[];
   activeStudentId: string | null;
+  activeCardType?: 'rfid' | 'nfc';
   pendingUid?: string;
   availableGroups?: GroupItem[];
 }
@@ -56,6 +58,7 @@ interface EnrollmentClientProps {
 export default function EnrollmentClient({ 
   students, 
   activeStudentId, 
+  activeCardType = 'rfid',
   pendingUid = '',
   availableGroups = []
 }: EnrollmentClientProps) {
@@ -65,7 +68,8 @@ export default function EnrollmentClient({
   const [displayLimit, setDisplayLimit] = useState(40);
   const [filterPrograma, setFilterPrograma] = useState('all');
   const [filterGrado, setFilterGrado] = useState('');
-  const [manualUidMap, setManualUidMap] = useState<Record<string, string>>({});
+  const [manualRfidMap, setManualRfidMap] = useState<Record<string, string>>({});
+  const [manualNfcMap, setManualNfcMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [statusMsg, setStatusMsg] = useState({ text: '', type: '' });
 
@@ -88,6 +92,7 @@ export default function EnrollmentClient({
   const [editDomicilio, setEditDomicilio] = useState('');
   const [editTarjetaNumero, setEditTarjetaNumero] = useState('');
   const [editUid, setEditUid] = useState('');
+  const [editNfcUid, setEditNfcUid] = useState('');
   const [editCumpleanos, setEditCumpleanos] = useState('');
   const [editInicioPracticas, setEditInicioPracticas] = useState('');
   const [editActivo, setEditActivo] = useState(true);
@@ -106,6 +111,7 @@ export default function EnrollmentClient({
   const [newDomicilio, setNewDomicilio] = useState('');
   const [newTarjetaNumero, setNewTarjetaNumero] = useState('');
   const [newUid, setNewUid] = useState('');
+  const [newNfcUid, setNewNfcUid] = useState('');
   const [newCumpleanos, setNewCumpleanos] = useState('');
   const [newInicioPracticas, setNewInicioPracticas] = useState('');
   const [newActivo, setNewActivo] = useState(true);
@@ -155,13 +161,13 @@ export default function EnrollmentClient({
     setTimeout(() => setStatusMsg({ text: '', type: '' }), 5000);
   };
 
-  const handleStartEnrollment = async (studentId: string) => {
+  const handleStartEnrollment = async (studentId: string, cardType: 'rfid' | 'nfc' = 'rfid') => {
     setLoading(prev => ({ ...prev, [studentId]: true }));
-    const res = await setEnrollmentStudent(studentId);
+    const res = await setEnrollmentStudent(studentId, cardType);
     setLoading(prev => ({ ...prev, [studentId]: false }));
 
     if (res.success) {
-      showStatus('Modo vinculación activado. Esperando escaneo...', 'success');
+      showStatus(`Modo vinculación ${cardType === 'nfc' ? 'NFC (Celular)' : 'RFID (125 kHz)'} activado. Esperando escaneo...`, 'success');
       router.refresh();
     } else {
       showStatus(res.error || 'Error al iniciar modo vinculación', 'error');
@@ -196,23 +202,26 @@ export default function EnrollmentClient({
     onConfirm: () => {},
   });
 
-  const handleUnlink = async (studentId: string, studentName?: string) => {
+  const handleUnlink = async (studentId: string, cardType: 'rfid' | 'nfc', studentName?: string) => {
+    const isNfc = cardType === 'nfc';
     setConfirmDialog({
       isOpen: true,
-      title: 'DESVINCULAR TARJETA RFID',
+      title: isNfc ? 'DESVINCULAR TARJETA NFC (CELULAR)' : 'DESVINCULAR TARJETA RFID (125 kHz)',
       subtitle: studentName || 'Estudiante',
-      message: `¿Estás seguro de que deseas desvincular la tarjeta física del estudiante ${studentName || ''}? El alumno no podrá ingresar por el lector hasta que se le asocie una nueva tarjeta.`,
-      confirmBtnText: 'Sí, Desvincular Tarjeta',
+      message: isNfc
+        ? `¿Estás seguro de que deseas desvincular la tarjeta NFC / lectura por celular del estudiante ${studentName || ''}? Su tarjeta física RFID de 125 kHz seguirá funcionando.`
+        : `¿Estás seguro de que deseas desvincular la tarjeta física RFID del estudiante ${studentName || ''}? Su tarjeta NFC (si la tiene asignada) seguirá funcionando.`,
+      confirmBtnText: isNfc ? 'Sí, Desvincular NFC' : 'Sí, Desvincular RFID',
       confirmBtnClass: 'bg-fsm-red hover:bg-red-700 text-white',
       badgeText: 'ACCION REVERSIBLE',
       onConfirm: async () => {
         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
         setLoading(prev => ({ ...prev, [studentId]: true }));
-        const res = await unlinkStudentTag(studentId);
+        const res = await unlinkStudentTag(studentId, cardType);
         setLoading(prev => ({ ...prev, [studentId]: false }));
 
         if (res.success) {
-          showStatus('Tarjeta desvinculada con éxito.');
+          showStatus(`Tarjeta ${isNfc ? 'NFC' : 'RFID'} desvinculada con éxito.`);
           router.refresh();
         } else {
           showStatus(res.error || 'Error al desvincular', 'error');
@@ -221,20 +230,25 @@ export default function EnrollmentClient({
     });
   };
 
-  const handleManualLink = async (studentId: string, customUid?: string) => {
-    const uidToLink = customUid || manualUidMap[studentId]?.trim();
+  const handleManualLink = async (studentId: string, cardType: 'rfid' | 'nfc', customUid?: string) => {
+    const isNfc = cardType === 'nfc';
+    const uidToLink = customUid || (isNfc ? manualNfcMap[studentId]?.trim() : manualRfidMap[studentId]?.trim());
     if (!uidToLink) {
-      showStatus('Por favor ingresa un UID válido.', 'error');
+      showStatus(`Por favor ingresa un UID ${isNfc ? 'NFC' : 'RFID'} válido.`, 'error');
       return;
     }
 
     setLoading(prev => ({ ...prev, [studentId]: true }));
-    const res = await linkStudentTag(studentId, uidToLink);
+    const res = await linkStudentTag(studentId, uidToLink, cardType);
     setLoading(prev => ({ ...prev, [studentId]: false }));
 
     if (res.success) {
-      showStatus('Tarjeta vinculada con éxito.');
-      setManualUidMap(prev => ({ ...prev, [studentId]: '' }));
+      showStatus(`Tarjeta ${isNfc ? 'NFC' : 'RFID'} vinculada con éxito.`);
+      if (isNfc) {
+        setManualNfcMap(prev => ({ ...prev, [studentId]: '' }));
+      } else {
+        setManualRfidMap(prev => ({ ...prev, [studentId]: '' }));
+      }
       router.refresh();
     } else {
       showStatus(res.error || 'Error al vincular', 'error');
@@ -263,6 +277,7 @@ export default function EnrollmentClient({
     setEditDomicilio(student.domicilio || '');
     setEditTarjetaNumero(student.tarjeta_numero || '');
     setEditUid(student.rfid_tag_uid || '');
+    setEditNfcUid(student.nfc_tag_uid || '');
     setEditCumpleanos(student.cumpleanos || '');
     setEditInicioPracticas(student.inicio_practicas || '');
     setEditActivo(student.activo);
@@ -297,6 +312,7 @@ export default function EnrollmentClient({
       domicilio: editDomicilio.trim() || undefined,
       tarjeta_numero: editTarjetaNumero.trim() || undefined,
       rfid_tag_uid: editUid.trim() || undefined,
+      nfc_tag_uid: editNfcUid.trim() || undefined,
       cumpleanos: editCumpleanos || undefined,
       inicio_practicas: editInicioPracticas || undefined,
       activo: editActivo,
@@ -379,6 +395,7 @@ export default function EnrollmentClient({
       domicilio: newDomicilio.trim() || undefined,
       tarjeta_numero: newTarjetaNumero.trim() || undefined,
       rfid_tag_uid: newUid.trim() || undefined,
+      nfc_tag_uid: newNfcUid.trim() || undefined,
       cumpleanos: newCumpleanos || undefined,
       inicio_practicas: newInicioPracticas || undefined,
       activo: newActivo,
@@ -399,6 +416,7 @@ export default function EnrollmentClient({
       setNewDomicilio('');
       setNewTarjetaNumero('');
       setNewUid('');
+      setNewNfcUid('');
       setNewCumpleanos('');
       setNewInicioPracticas('');
       setNewActivo(true);
@@ -503,7 +521,7 @@ export default function EnrollmentClient({
   const filteredStudents = useMemo(() => {
     const searchTerms = deferredSearch.toLowerCase().trim().split(/\s+/).filter(Boolean);
     return students.filter(s => {
-      const searchableText = `${s.nombre} ${s.documento || ''} ${s.grado || ''} ${s.rfid_tag_uid || ''} ${s.tarjeta_numero || ''} ${s.telefono || ''} ${s.email || ''} ${s.domicilio || ''}`.toLowerCase();
+      const searchableText = `${s.nombre} ${s.documento || ''} ${s.grado || ''} ${s.rfid_tag_uid || ''} ${s.nfc_tag_uid || ''} ${s.tarjeta_numero || ''} ${s.telefono || ''} ${s.email || ''} ${s.domicilio || ''}`.toLowerCase();
       const matchesSearch = searchTerms.length === 0 || searchTerms.every(term => searchableText.includes(term));
       const matchesGrado = !filterGrado || 
                            s.grado === filterGrado ||
@@ -542,22 +560,37 @@ export default function EnrollmentClient({
 
       {/* Enrollment Listening Banner */}
       {activeStudentId && activeStudent && (
-        <div className="bg-red-50 border border-red-100 rounded-3xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 animate-pulse">
-          <div className="flex items-center gap-4 text-fsm-red">
-            <div className="w-12 h-12 bg-fsm-red/10 rounded-full flex items-center justify-center">
-              <RefreshCw size={24} className="animate-spin text-fsm-red" />
+        <div className={`border rounded-3xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 animate-pulse ${
+          activeCardType === 'nfc' 
+            ? 'bg-purple-50 border-purple-200 text-purple-900' 
+            : 'bg-red-50 border-red-100 text-fsm-red'
+        }`}>
+          <div className="flex items-center gap-4">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+              activeCardType === 'nfc' ? 'bg-purple-100 text-purple-700' : 'bg-fsm-red/10 text-fsm-red'
+            }`}>
+              <RefreshCw size={24} className="animate-spin" />
             </div>
             <div>
-              <span className="text-[10px] font-black tracking-widest uppercase text-fsm-red/70">MODO VINCULACIÓN ACTIVO</span>
-              <h3 className="text-lg font-black uppercase text-fsm-red leading-none mt-1">ESPERANDO ESCANEO FISICO</h3>
+              <span className="text-[10px] font-black tracking-widest uppercase opacity-75">
+                MODO VINCULACIÓN {activeCardType === 'nfc' ? 'NFC (CELULAR)' : 'RFID (125 kHz)'} ACTIVO
+              </span>
+              <h3 className="text-lg font-black uppercase leading-none mt-1">
+                {activeCardType === 'nfc' ? 'ESPERANDO LECTURA NFC (CELULAR)' : 'ESPERANDO ESCANEO FÍSICO RFID'}
+              </h3>
               <p className="text-xs font-semibold text-gray-700 mt-1">
-                Acerca una tarjeta a cualquier lector para asociarla automáticamente a: <strong className="uppercase">{activeStudent.nombre} ({activeStudent.grado})</strong>.
+                {activeCardType === 'nfc' 
+                  ? 'Acerca un teléfono celular o carné NFC al lector para asociarlo como tarjeta NFC a: ' 
+                  : 'Acerca una tarjeta de baja frecuencia (125 kHz) al lector para asociarla a: '}
+                <strong className="uppercase">{activeStudent.nombre} ({activeStudent.grado})</strong>.
               </p>
             </div>
           </div>
           <button
             onClick={handleCancelEnrollment}
-            className="px-6 py-2.5 bg-fsm-red text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red-deep transition-all flex items-center gap-2"
+            className={`px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-2 text-white shadow-sm ${
+              activeCardType === 'nfc' ? 'bg-purple-700 hover:bg-purple-800' : 'bg-fsm-red hover:bg-fsm-red-deep'
+            }`}
           >
             <X size={14} /> Cancelar Espera
           </button>
@@ -566,16 +599,18 @@ export default function EnrollmentClient({
 
       {/* Pending Tag UID Banner */}
       {pendingUid && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-3xl p-6 flex items-center gap-4">
-          <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-700">
-            <AlertCircle size={24} />
-          </div>
-          <div>
-            <span className="text-[10px] font-black tracking-widest uppercase text-yellow-800/70">TARJETA PENDIENTE DE VINCULAR</span>
-            <h3 className="text-lg font-black uppercase text-yellow-800 leading-none mt-1">UID DETECTADO: {pendingUid}</h3>
-            <p className="text-xs font-semibold text-gray-700 mt-1">
-              Selecciona un estudiante de la lista haciendo clic en el botón <strong className="text-yellow-700">"Vincular {pendingUid}"</strong> para asociar esta tarjeta de inmediato.
-            </p>
+        <div className="bg-amber-50 border border-amber-200 rounded-3xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center text-amber-700 shrink-0">
+              <AlertCircle size={24} />
+            </div>
+            <div>
+              <span className="text-[10px] font-black tracking-widest uppercase text-amber-800/70">TARJETA PENDIENTE DE VINCULAR</span>
+              <h3 className="text-lg font-black uppercase text-amber-900 leading-none mt-1">UID DETECTADO: <span className="font-mono">{pendingUid}</span></h3>
+              <p className="text-xs font-semibold text-gray-700 mt-1">
+                Puedes vincular este código como <strong>RFID (baja frecuencia)</strong> o como <strong>NFC (celular)</strong> en el estudiante que desees.
+              </p>
+            </div>
           </div>
         </div>
       )}
@@ -710,8 +745,9 @@ export default function EnrollmentClient({
           </div>
         ) : (
           displayedStudents.map(student => {
-            const hasCard = Boolean(student.rfid_tag_uid || student.tarjeta_numero);
-            const isPendingLink = pendingUid && !hasCard;
+            const hasRfid = Boolean(student.rfid_tag_uid || student.tarjeta_numero);
+            const hasNfc = Boolean(student.nfc_tag_uid);
+            const isPendingLink = pendingUid && (!hasRfid || !hasNfc);
             const isSelected = selectedStudentIds.includes(student.id);
             
             return (
@@ -777,13 +813,22 @@ export default function EnrollmentClient({
                         <span className="text-xs text-gray-700 font-bold flex items-center gap-1">
                           📄 Cédula / Doc: <strong className="font-mono text-gray-900 bg-gray-100 px-1.5 py-0.5 rounded text-[11px]">{student.documento || 'SIN DOCUMENTO'}</strong>
                         </span>
-                        {hasCard ? (
-                          <span className="text-xs text-green-700 font-bold flex items-center gap-1">
-                            <Check size={14} className="text-green-600" /> Tarjeta: <strong className="font-mono bg-green-50 px-1.5 py-0.5 rounded text-[11px]">{student.tarjeta_numero ? `#${student.tarjeta_numero}` : student.rfid_tag_uid}</strong>
+                        {hasRfid ? (
+                          <span className="text-xs text-blue-700 font-bold flex items-center gap-1 bg-blue-50/80 border border-blue-100 px-2 py-0.5 rounded-lg">
+                            <Check size={13} className="text-blue-600" /> 📻 RFID: <strong className="font-mono text-[11px]">{student.tarjeta_numero ? `#${student.tarjeta_numero}` : student.rfid_tag_uid}</strong>
                           </span>
                         ) : (
-                          <span className="text-xs text-gray-400 font-bold flex items-center gap-1">
-                            <AlertTriangle size={14} className="text-gray-400" /> Sin tarjeta
+                          <span className="text-xs text-gray-400 font-bold flex items-center gap-1 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-lg">
+                            <AlertTriangle size={13} className="text-gray-400" /> Sin RFID
+                          </span>
+                        )}
+                        {hasNfc ? (
+                          <span className="text-xs text-purple-700 font-bold flex items-center gap-1 bg-purple-50/80 border border-purple-100 px-2 py-0.5 rounded-lg">
+                            <Check size={13} className="text-purple-600" /> 📱 NFC: <strong className="font-mono text-[11px]">{student.nfc_tag_uid}</strong>
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400 font-bold flex items-center gap-1 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-lg">
+                            <AlertTriangle size={13} className="text-gray-400" /> Sin NFC
                           </span>
                         )}
                         {student.telefono && (
@@ -850,58 +895,126 @@ export default function EnrollmentClient({
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-3 pt-4 border-t border-gray-50">
-                  {hasCard ? (
-                    <button
-                      onClick={() => handleUnlink(student.id)}
-                      disabled={loading[student.id]}
-                      className="w-full py-2.5 bg-red-50 text-fsm-red rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-red hover:text-white transition-all active:scale-95 disabled:opacity-50"
-                    >
-                      {loading[student.id] ? 'Procesando...' : 'Desvincular Tarjeta'}
-                    </button>
-                  ) : (
-                    <>
-                      {/* Scenario 1: Linking pending tag directly */}
-                      {pendingUid ? (
-                        <button
-                          onClick={() => handleManualLink(student.id, pendingUid)}
-                          disabled={loading[student.id]}
-                          className="w-full py-2.5 bg-yellow-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-yellow-600 transition-all active:scale-95 flex items-center justify-center gap-2"
-                        >
-                          <LinkIcon size={14} /> Vincular Tarjeta {pendingUid}
-                        </button>
-                      ) : (
-                        <>
-                          {/* Scenario 2: Active Listening Mode */}
-                          <button
-                            onClick={() => handleStartEnrollment(student.id)}
-                            disabled={loading[student.id] || !!activeStudentId}
-                            className="w-full py-2.5 bg-fsm-blue/5 text-fsm-blue rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-fsm-blue hover:text-white transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
-                          >
-                            <RefreshCw size={14} /> Esperar Escaneo Físico
-                          </button>
-                          
-                          {/* Scenario 3: Manual Input */}
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              placeholder="UID Manual (ej: 04A2B3C4)"
-                              value={manualUidMap[student.id] || ''}
-                              onChange={e => setManualUidMap(prev => ({ ...prev, [student.id]: e.target.value }))}
-                              className="flex-1 px-3 py-2 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none"
-                            />
-                            <button
-                              onClick={() => handleManualLink(student.id)}
-                              disabled={loading[student.id]}
-                              className="px-4 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest transition-all"
-                            >
-                              Vincular
-                            </button>
-                          </div>
-                        </>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 border-t border-gray-100">
+                  {/* Panel Tarjeta RFID 125 kHz */}
+                  <div className="bg-slate-50/80 rounded-2xl p-3 border border-slate-200 flex flex-col justify-between gap-2.5">
+                    <div className="flex items-center justify-between gap-1.5">
+                      <span className="text-[10px] font-black uppercase text-slate-700 flex items-center gap-1">
+                        📻 RFID (125 kHz)
+                      </span>
+                      {hasRfid && (
+                        <span className="font-mono text-[10px] font-bold bg-blue-100 text-blue-900 px-1.5 py-0.5 rounded">
+                          {student.tarjeta_numero ? `#${student.tarjeta_numero}` : student.rfid_tag_uid}
+                        </span>
                       )}
-                    </>
-                  )}
+                    </div>
+
+                    {hasRfid ? (
+                      <button
+                        onClick={() => handleUnlink(student.id, 'rfid', student.nombre)}
+                        disabled={loading[student.id]}
+                        className="w-full py-2 bg-red-50 text-fsm-red rounded-xl font-bold text-[11px] uppercase tracking-wider hover:bg-fsm-red hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                      >
+                        {loading[student.id] ? 'Procesando...' : 'Desvincular RFID'}
+                      </button>
+                    ) : (
+                      <div className="space-y-2">
+                        {pendingUid ? (
+                          <button
+                            onClick={() => handleManualLink(student.id, 'rfid', pendingUid)}
+                            disabled={loading[student.id]}
+                            className="w-full py-2 bg-blue-600 text-white rounded-xl font-bold text-[11px] uppercase tracking-wider hover:bg-blue-700 transition-all active:scale-95 flex items-center justify-center gap-1.5 shadow-sm"
+                          >
+                            <LinkIcon size={12} /> Vincular {pendingUid} a RFID
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleStartEnrollment(student.id, 'rfid')}
+                            disabled={loading[student.id] || !!activeStudentId}
+                            className="w-full py-2 bg-fsm-blue/10 text-fsm-blue rounded-xl font-bold text-[11px] uppercase tracking-wider hover:bg-fsm-blue hover:text-white transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-1.5"
+                          >
+                            <RefreshCw size={12} /> Esperar Escaneo RFID
+                          </button>
+                        )}
+                        <div className="flex gap-1.5">
+                          <input
+                            type="text"
+                            placeholder="UID RFID (10 hex)"
+                            value={manualRfidMap[student.id] || ''}
+                            onChange={e => setManualRfidMap(prev => ({ ...prev, [student.id]: e.target.value.toUpperCase() }))}
+                            className="flex-1 min-w-0 px-2.5 py-1.5 border border-gray-200 rounded-lg font-mono font-bold text-[11px] uppercase outline-none focus:border-blue-500 bg-white"
+                          />
+                          <button
+                            onClick={() => handleManualLink(student.id, 'rfid')}
+                            disabled={loading[student.id]}
+                            className="px-3 bg-slate-200 text-slate-800 hover:bg-slate-300 rounded-lg font-bold text-[10px] uppercase tracking-wider transition-all shrink-0"
+                          >
+                            Vincular
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Panel Tarjeta NFC 13.56 MHz (Celulares) */}
+                  <div className="bg-purple-50/60 rounded-2xl p-3 border border-purple-200 flex flex-col justify-between gap-2.5">
+                    <div className="flex items-center justify-between gap-1.5">
+                      <span className="text-[10px] font-black uppercase text-purple-900 flex items-center gap-1">
+                        📱 NFC (Celular 13.56 MHz)
+                      </span>
+                      {hasNfc && (
+                        <span className="font-mono text-[10px] font-bold bg-purple-100 text-purple-900 px-1.5 py-0.5 rounded">
+                          {student.nfc_tag_uid}
+                        </span>
+                      )}
+                    </div>
+
+                    {hasNfc ? (
+                      <button
+                        onClick={() => handleUnlink(student.id, 'nfc', student.nombre)}
+                        disabled={loading[student.id]}
+                        className="w-full py-2 bg-purple-100 text-purple-900 rounded-xl font-bold text-[11px] uppercase tracking-wider hover:bg-purple-700 hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                      >
+                        {loading[student.id] ? 'Procesando...' : 'Desvincular NFC'}
+                      </button>
+                    ) : (
+                      <div className="space-y-2">
+                        {pendingUid ? (
+                          <button
+                            onClick={() => handleManualLink(student.id, 'nfc', pendingUid)}
+                            disabled={loading[student.id]}
+                            className="w-full py-2 bg-purple-700 text-white rounded-xl font-bold text-[11px] uppercase tracking-wider hover:bg-purple-800 transition-all active:scale-95 flex items-center justify-center gap-1.5 shadow-sm"
+                          >
+                            <LinkIcon size={12} /> Vincular {pendingUid} a NFC
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleStartEnrollment(student.id, 'nfc')}
+                            disabled={loading[student.id] || !!activeStudentId}
+                            className="w-full py-2 bg-purple-100 text-purple-800 rounded-xl font-bold text-[11px] uppercase tracking-wider hover:bg-purple-700 hover:text-white transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-1.5"
+                          >
+                            <RefreshCw size={12} /> Esperar Escaneo NFC
+                          </button>
+                        )}
+                        <div className="flex gap-1.5">
+                          <input
+                            type="text"
+                            placeholder="UID NFC (ej: 04A2B3C4)"
+                            value={manualNfcMap[student.id] || ''}
+                            onChange={e => setManualNfcMap(prev => ({ ...prev, [student.id]: e.target.value.toUpperCase() }))}
+                            className="flex-1 min-w-0 px-2.5 py-1.5 border border-purple-200 rounded-lg font-mono font-bold text-[11px] uppercase outline-none focus:border-purple-600 bg-white"
+                          />
+                          <button
+                            onClick={() => handleManualLink(student.id, 'nfc')}
+                            disabled={loading[student.id]}
+                            className="px-3 bg-purple-200 text-purple-900 hover:bg-purple-300 rounded-lg font-bold text-[10px] uppercase tracking-wider transition-all shrink-0"
+                          >
+                            Vincular
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -1141,44 +1254,82 @@ export default function EnrollmentClient({
                 </div>
               </div>
 
-              {/* Sección 4: Control de Acceso y Tarjeta RFID */}
+              {/* Sección 4: Control de Acceso: Tarjeta RFID y Tarjeta NFC */}
               <div className="bg-slate-50/80 border border-slate-200/60 rounded-2xl p-5 space-y-4">
                 <div className="flex items-center gap-2 border-b border-slate-200/60 pb-2">
                   <CreditCard size={16} className="text-purple-600" />
-                  <h4 className="text-xs font-black uppercase text-purple-800 tracking-wider">4. Control de Acceso, Torniquetes y Tarjeta RFID</h4>
+                  <h4 className="text-xs font-black uppercase text-purple-800 tracking-wider">4. Control de Acceso: Tarjeta RFID (125 kHz) y Tarjeta NFC (Celular 13.56 MHz)</h4>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                  <div className="sm:col-span-6">
-                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Número de Tarjeta Física (Plástico):</label>
-                    <input 
-                      type="text" 
-                      value={editTarjetaNumero}
-                      onChange={e => setEditTarjetaNumero(e.target.value)}
-                      placeholder="Ej: 3056834 (Impreso en la tarjeta)"
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-purple-600 bg-white font-mono"
-                    />
-                  </div>
-                  <div className="sm:col-span-6">
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="block text-[10px] font-black uppercase text-gray-500">UID Chip RFID / NFC:</label>
-                      {pendingUid && (
-                        <button
-                          type="button"
-                          onClick={() => setEditUid(pendingUid)}
-                          className="text-[9px] font-black text-purple-700 hover:text-purple-900 uppercase underline"
-                        >
-                          Usar {pendingUid}
-                        </button>
-                      )}
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                  {/* Tarjeta RFID 125 kHz */}
+                  <div className="sm:col-span-6 bg-white p-4 rounded-xl border border-gray-200 space-y-3">
+                    <span className="text-[10px] font-black uppercase text-blue-900 block flex items-center gap-1">
+                      📻 Tarjeta RFID (125 kHz)
+                    </span>
+                    <div>
+                      <label className="block text-[9px] font-black uppercase text-gray-500 mb-1">Número Impreso en Plástico:</label>
+                      <input 
+                        type="text" 
+                        value={editTarjetaNumero}
+                        onChange={e => setEditTarjetaNumero(e.target.value)}
+                        placeholder="Ej: 3056834"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg font-bold text-xs uppercase outline-none focus:border-blue-600 bg-white font-mono"
+                      />
                     </div>
-                    <input 
-                      type="text" 
-                      value={editUid}
-                      onChange={e => setEditUid(e.target.value.toUpperCase())}
-                      placeholder="Ej: 5400357EAC"
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-purple-600 bg-white font-mono"
-                    />
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-[9px] font-black uppercase text-gray-500">UID Chip RFID (10 hex):</label>
+                        {pendingUid && (
+                          <button
+                            type="button"
+                            onClick={() => setEditUid(pendingUid)}
+                            className="text-[9px] font-black text-blue-700 hover:text-blue-900 uppercase underline"
+                          >
+                            Usar {pendingUid}
+                          </button>
+                        )}
+                      </div>
+                      <input 
+                        type="text" 
+                        value={editUid}
+                        onChange={e => setEditUid(e.target.value.toUpperCase())}
+                        placeholder="Ej: 5400357EAC"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg font-bold text-xs uppercase outline-none focus:border-blue-600 bg-white font-mono"
+                      />
+                    </div>
                   </div>
+
+                  {/* Tarjeta NFC 13.56 MHz */}
+                  <div className="sm:col-span-6 bg-white p-4 rounded-xl border border-gray-200 space-y-3">
+                    <span className="text-[10px] font-black uppercase text-purple-900 block flex items-center gap-1">
+                      📱 Tarjeta NFC (Celular 13.56 MHz)
+                    </span>
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-[9px] font-black uppercase text-gray-500">UID Chip NFC (8 o 14 hex):</label>
+                        {pendingUid && (
+                          <button
+                            type="button"
+                            onClick={() => setEditNfcUid(pendingUid)}
+                            className="text-[9px] font-black text-purple-700 hover:text-purple-900 uppercase underline"
+                          >
+                            Usar {pendingUid}
+                          </button>
+                        )}
+                      </div>
+                      <input 
+                        type="text" 
+                        value={editNfcUid}
+                        onChange={e => setEditNfcUid(e.target.value.toUpperCase())}
+                        placeholder="Ej: 04A2B3C4 o 048F1234567890"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg font-bold text-xs uppercase outline-none focus:border-purple-600 bg-white font-mono"
+                      />
+                    </div>
+                    <p className="text-[10px] text-gray-500 font-medium">
+                      Permite el ingreso mediante lectura NFC desde teléfonos celulares o carnés de alta frecuencia, coexistiendo de forma independiente con la tarjeta RFID física.
+                    </p>
+                  </div>
+
                   <div className="sm:col-span-12 pt-2">
                     <label className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
                       <input 
@@ -1445,44 +1596,82 @@ export default function EnrollmentClient({
                 </div>
               </div>
 
-              {/* Sección 4: Control de Acceso y Tarjeta RFID */}
+              {/* Sección 4: Control de Acceso: Tarjeta RFID y Tarjeta NFC */}
               <div className="bg-slate-50/80 border border-slate-200/60 rounded-2xl p-5 space-y-4">
                 <div className="flex items-center gap-2 border-b border-slate-200/60 pb-2">
                   <CreditCard size={16} className="text-purple-600" />
-                  <h4 className="text-xs font-black uppercase text-purple-800 tracking-wider">4. Control de Acceso, Torniquetes y Tarjeta RFID</h4>
+                  <h4 className="text-xs font-black uppercase text-purple-800 tracking-wider">4. Control de Acceso: Tarjeta RFID (125 kHz) y Tarjeta NFC (Celular 13.56 MHz)</h4>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                  <div className="sm:col-span-6">
-                    <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Número de Tarjeta Física (Plástico):</label>
-                    <input 
-                      type="text" 
-                      value={newTarjetaNumero}
-                      onChange={e => setNewTarjetaNumero(e.target.value)}
-                      placeholder="Ej: 3056834 (Impreso en la tarjeta)"
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-purple-600 bg-white font-mono"
-                    />
-                  </div>
-                  <div className="sm:col-span-6">
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="block text-[10px] font-black uppercase text-gray-500">UID Chip RFID / NFC:</label>
-                      {pendingUid && (
-                        <button
-                          type="button"
-                          onClick={() => setNewUid(pendingUid)}
-                          className="text-[9px] font-black text-purple-700 hover:text-purple-900 uppercase underline"
-                        >
-                          Usar {pendingUid}
-                        </button>
-                      )}
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                  {/* Tarjeta RFID 125 kHz */}
+                  <div className="sm:col-span-6 bg-white p-4 rounded-xl border border-gray-200 space-y-3">
+                    <span className="text-[10px] font-black uppercase text-blue-900 block flex items-center gap-1">
+                      📻 Tarjeta RFID (125 kHz)
+                    </span>
+                    <div>
+                      <label className="block text-[9px] font-black uppercase text-gray-500 mb-1">Número Impreso en Plástico:</label>
+                      <input 
+                        type="text" 
+                        value={newTarjetaNumero}
+                        onChange={e => setNewTarjetaNumero(e.target.value)}
+                        placeholder="Ej: 3056834"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg font-bold text-xs uppercase outline-none focus:border-blue-600 bg-white font-mono"
+                      />
                     </div>
-                    <input 
-                      type="text" 
-                      value={newUid}
-                      onChange={e => setNewUid(e.target.value.toUpperCase())}
-                      placeholder="Ej: 5400357EAC"
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-purple-600 bg-white font-mono"
-                    />
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-[9px] font-black uppercase text-gray-500">UID Chip RFID (10 hex):</label>
+                        {pendingUid && (
+                          <button
+                            type="button"
+                            onClick={() => setNewUid(pendingUid)}
+                            className="text-[9px] font-black text-blue-700 hover:text-blue-900 uppercase underline"
+                          >
+                            Usar {pendingUid}
+                          </button>
+                        )}
+                      </div>
+                      <input 
+                        type="text" 
+                        value={newUid}
+                        onChange={e => setNewUid(e.target.value.toUpperCase())}
+                        placeholder="Ej: 5400357EAC"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg font-bold text-xs uppercase outline-none focus:border-blue-600 bg-white font-mono"
+                      />
+                    </div>
                   </div>
+
+                  {/* Tarjeta NFC 13.56 MHz */}
+                  <div className="sm:col-span-6 bg-white p-4 rounded-xl border border-gray-200 space-y-3">
+                    <span className="text-[10px] font-black uppercase text-purple-900 block flex items-center gap-1">
+                      📱 Tarjeta NFC (Celular 13.56 MHz)
+                    </span>
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-[9px] font-black uppercase text-gray-500">UID Chip NFC (8 o 14 hex):</label>
+                        {pendingUid && (
+                          <button
+                            type="button"
+                            onClick={() => setNewNfcUid(pendingUid)}
+                            className="text-[9px] font-black text-purple-700 hover:text-purple-900 uppercase underline"
+                          >
+                            Usar {pendingUid}
+                          </button>
+                        )}
+                      </div>
+                      <input 
+                        type="text" 
+                        value={newNfcUid}
+                        onChange={e => setNewNfcUid(e.target.value.toUpperCase())}
+                        placeholder="Ej: 04A2B3C4 o 048F1234567890"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg font-bold text-xs uppercase outline-none focus:border-purple-600 bg-white font-mono"
+                      />
+                    </div>
+                    <p className="text-[10px] text-gray-500 font-medium">
+                      Permite el ingreso mediante lectura NFC desde teléfonos celulares o carnés de alta frecuencia, coexistiendo de forma independiente con la tarjeta RFID física.
+                    </p>
+                  </div>
+
                   <div className="sm:col-span-12 pt-2">
                     <label className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
                       <input 

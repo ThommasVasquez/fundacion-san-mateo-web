@@ -52,8 +52,11 @@ export async function POST(req: Request) {
 
     const soltadas = await sql`
       UPDATE students
-         SET rfid_tag_uid = NULL, tarjeta_numero = NULL
+         SET rfid_tag_uid = CASE WHEN rfid_tag_uid = ${tagHex} THEN NULL ELSE rfid_tag_uid END,
+             tarjeta_numero = CASE WHEN rfid_tag_uid = ${tagHex} OR (${decimal}::bigint IS NOT NULL AND tarjeta_numero = ${decimal}::bigint) THEN NULL ELSE tarjeta_numero END,
+             nfc_tag_uid = CASE WHEN nfc_tag_uid = ${tagHex} THEN NULL ELSE nfc_tag_uid END
        WHERE rfid_tag_uid = ${tagHex}
+          OR nfc_tag_uid = ${tagHex}
           OR (${decimal}::bigint IS NOT NULL AND tarjeta_numero = ${decimal}::bigint)
    RETURNING nombre`;
 

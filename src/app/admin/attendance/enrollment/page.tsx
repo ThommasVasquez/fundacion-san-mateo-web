@@ -46,10 +46,12 @@ export default async function EnrollmentPage({ searchParams }: EnrollmentPagePro
   try {
     await sql`ALTER TABLE students ADD COLUMN IF NOT EXISTS email TEXT`;
     await sql`ALTER TABLE students ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`;
+    await sql`ALTER TABLE students ADD COLUMN IF NOT EXISTS nfc_tag_uid TEXT`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_students_nfc_tag_uid ON students(nfc_tag_uid)`;
   } catch {}
 
   const students = await sql`
-    SELECT s.id, s.nombre, s.documento, s.usuario_nro, s.grado, s.rfid_tag_uid, s.tarjeta_numero, s.activo,
+    SELECT s.id, s.nombre, s.documento, s.usuario_nro, s.grado, s.rfid_tag_uid, s.nfc_tag_uid, s.tarjeta_numero, s.activo,
            s.telefono, s.email, s.domicilio, s.departamento, s.sede, s.cumpleanos, s.inicio_practicas,
            g.id as group_id, g.nombre as grupo_matriculado, e.activo as matricula_activa
     FROM students s
@@ -66,14 +68,22 @@ export default async function EnrollmentPage({ searchParams }: EnrollmentPagePro
     ORDER BY nombre ASC
   `;
 
-  // 3. Fetch active enrollment student id
+  // 3. Fetch active enrollment student id and card type
   const activeKeys = await sql`
-    SELECT value 
+    SELECT content_key, value 
     FROM site_content 
-    WHERE content_key = 'enrollment_active_student_id' 
-    LIMIT 1
+    WHERE content_key IN ('enrollment_active_student_id', 'enrollment_active_card_type')
   `;
-  const activeStudentId = activeKeys.length > 0 ? activeKeys[0].value.trim() : null;
+  let activeStudentId: string | null = null;
+  let activeCardType: 'rfid' | 'nfc' = 'rfid';
+  for (const row of activeKeys) {
+    if (row.content_key === 'enrollment_active_student_id' && row.value?.trim()) {
+      activeStudentId = row.value.trim();
+    }
+    if (row.content_key === 'enrollment_active_card_type' && row.value?.trim()) {
+      activeCardType = row.value.trim() === 'nfc' ? 'nfc' : 'rfid';
+    }
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
@@ -111,6 +121,7 @@ export default async function EnrollmentPage({ searchParams }: EnrollmentPagePro
           grado: s.grado,
           grupo_matriculado: s.grupo_matriculado || null,
           rfid_tag_uid: s.rfid_tag_uid,
+          nfc_tag_uid: s.nfc_tag_uid || null,
           tarjeta_numero: s.tarjeta_numero ? String(s.tarjeta_numero) : null,
           telefono: s.telefono || null,
           email: s.email || null,
@@ -122,6 +133,7 @@ export default async function EnrollmentPage({ searchParams }: EnrollmentPagePro
           activo: s.activo
         }))} 
         activeStudentId={activeStudentId} 
+        activeCardType={activeCardType}
         pendingUid={pendingUid}
         availableGroups={availableGroups.map((g: any) => ({
           id: g.id,
