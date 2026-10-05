@@ -19,6 +19,7 @@ interface AttendanceFiltersProps {
   totalAnomalies: number;
   totalRealAbsencesCount: number;
   absencesListLength: number;
+  totalMobileCount?: number;
 }
 
 export default function AttendanceFilters({
@@ -36,6 +37,7 @@ export default function AttendanceFilters({
   totalAnomalies,
   totalRealAbsencesCount,
   absencesListLength,
+  totalMobileCount = 0,
 }: AttendanceFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -266,9 +268,15 @@ export default function AttendanceFilters({
               className="bg-transparent font-bold text-xs uppercase text-gray-700 outline-none cursor-pointer"
             >
               <option value="">Todas las Sedes</option>
-              {sedes.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
+              <optgroup label="Dispositivos / Tipo de Lectura">
+                <option value="APP_MOVIL">📱 App de Celular (Docentes){totalMobileCount > 0 ? ` (${totalMobileCount})` : ''}</option>
+                <option value="PANEL_FIJO">🖥️ Solo Torniquetes / Paneles Fijos</option>
+              </optgroup>
+              <optgroup label="Sedes Físicas">
+                {sedes.map((s) => (
+                  <option key={s} value={s}>🏫 {s}</option>
+                ))}
+              </optgroup>
             </select>
           </div>
 
@@ -307,6 +315,23 @@ export default function AttendanceFilters({
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          {/* Quick Filter: Solo App Celular */}
+          <button
+            type="button"
+            onClick={() => {
+              const nextVal = sede === 'APP_MOVIL' ? '' : 'APP_MOVIL';
+              setSede(nextVal);
+              applyFilters({ sede: nextVal });
+            }}
+            className={`flex items-center gap-2 cursor-pointer font-bold text-xs uppercase select-none px-3.5 py-2 rounded-xl border transition-all ${
+              sede === 'APP_MOVIL'
+                ? 'bg-blue-600 text-white border-blue-700 shadow-sm font-black'
+                : 'bg-blue-50/80 text-blue-900 border-blue-200 hover:bg-blue-100'
+            }`}
+          >
+            <span>📱 Solo App Celular ({totalMobileCount})</span>
+          </button>
+
           {/* Anomaly Checkbox */}
           <label
             className={`flex items-center gap-2 cursor-pointer font-bold text-xs uppercase select-none px-3.5 py-2 rounded-xl border transition-all ${

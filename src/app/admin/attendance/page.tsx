@@ -270,6 +270,28 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
     });
   }
 
+  const isMobileAppEvent = (ev: any): boolean => {
+    if (!ev) return false;
+    const origen = String(ev.origen || '').toLowerCase().trim();
+    const readerId = String(ev.reader_id || '').toLowerCase().trim();
+    const readerTipo = String(ev.reader_tipo || '').toLowerCase().trim();
+    const readerName = String(ev.reader_name || '').toLowerCase().trim();
+
+    return (
+      origen === 'movil_profesor' ||
+      origen === 'movil' ||
+      origen === 'app_movil' ||
+      origen === 'celular' ||
+      readerTipo === 'mobile_nfc' ||
+      readerId.startsWith('movil') ||
+      readerName.includes('móvil') ||
+      readerName.includes('movil') ||
+      readerName.includes('celular')
+    );
+  };
+
+  const totalMobileCount = rawEvents.filter(isMobileAppEvent).length;
+
   // Filter in memory by search, degree, sede, and anomaly
   const searchLower = filterSearch.toLowerCase();
   let filteredEvents = rawEvents.filter((ev: any) => {
@@ -279,7 +301,15 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         (filterGrado === 'II DIURNO A CB' && ev.student_grado === 'II DIURNO CB');
       if (!matchGrado) return false;
     }
-    if (filterSede && (ev.sede || '') !== filterSede) return false;
+    if (filterSede) {
+      if (filterSede === 'APP_MOVIL' || filterSede === 'CELULAR' || filterSede === 'APP_CELULAR') {
+        if (!isMobileAppEvent(ev)) return false;
+      } else if (filterSede === 'PANEL_FIJO' || filterSede === 'TORNIQUETES') {
+        if (isMobileAppEvent(ev) || ev.origen === 'manual' || ev.origen === 'sin_marcacion') return false;
+      } else {
+        if ((ev.sede || '') !== filterSede) return false;
+      }
+    }
     if (filterAnomalyOnly && !ev.isAnomaly) return false;
     if (filterSearch) {
       const nameMatch = (ev.student_name || 'Tarjeta no asignada').toLowerCase().includes(searchLower);
@@ -289,7 +319,8 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
       const readerMatch = (ev.reader_name || ev.reader_id || '').toLowerCase().includes(searchLower);
       const sedeMatch = (ev.sede || '').toLowerCase().includes(searchLower);
       const obsMatch = (ev.observaciones || '').toLowerCase().includes(searchLower);
-      return nameMatch || gradoMatch || uidMatch || readerMatch || sedeMatch || obsMatch;
+      const mobileMatch = (searchLower.includes('movil') || searchLower.includes('celular') || searchLower.includes('app')) ? isMobileAppEvent(ev) : false;
+      return nameMatch || gradoMatch || uidMatch || readerMatch || sedeMatch || obsMatch || mobileMatch;
     }
     return true;
   });
@@ -615,6 +646,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         totalAnomalies={totalAnomalies}
         totalRealAbsencesCount={totalRealAbsencesCount}
         absencesListLength={filteredEvents.length}
+        totalMobileCount={totalMobileCount}
       />
 
       {/* Attendance Grid */}
@@ -668,12 +700,18 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                     <td className="py-4 px-6 font-bold text-gray-700">{ev.student_grado || 'N/A'}</td>
                     <td className="py-4 px-6">
                       <div className="space-y-1">
-                        {ev.sede ? (
+                        {isMobileAppEvent(ev) ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md border border-blue-200">
+                            📱 App Celular {ev.sede ? `(${ev.sede})` : ''}
+                          </span>
+                        ) : ev.sede ? (
                           <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase bg-blue-50 text-fsm-blue px-2 py-0.5 rounded-md border border-blue-200">
                             🏫 {ev.sede}
                           </span>
                         ) : null}
-                        <p className="font-bold text-gray-800 text-xs">{ev.reader_name || 'Lector Entrada'}</p>
+                        <p className="font-bold text-gray-800 text-xs">
+                          {ev.reader_name || (isMobileAppEvent(ev) ? 'App Móvil Docente' : 'Lector Entrada')}
+                        </p>
                       </div>
                     </td>
                     <td className="py-4 px-6">
@@ -682,16 +720,16 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
                           ? 'bg-red-50 text-red-700 border-red-200 font-black'
                           : ev.origen === 'manual'
                           ? 'bg-purple-50 text-purple-700 border-purple-200'
-                          : ev.origen === 'movil_profesor'
-                          ? 'bg-blue-50 text-blue-700 border-blue-200'
+                          : isMobileAppEvent(ev)
+                          ? 'bg-blue-100 text-blue-800 border-blue-300 font-black shadow-sm'
                           : 'bg-gray-50 text-gray-700 border-gray-200'
                       }`}>
                         {ev.estado === 'AUSENTE' || ev.origen === 'sin_marcacion'
                           ? '🚫 Sin Marcación'
                           : ev.origen === 'manual'
                           ? '✏️ Manual'
-                          : ev.origen === 'movil_profesor'
-                          ? '📱 Móvil'
+                          : isMobileAppEvent(ev)
+                          ? '📱 App Celular'
                           : '🖥️ Panel Fijo'}
                       </span>
                     </td>

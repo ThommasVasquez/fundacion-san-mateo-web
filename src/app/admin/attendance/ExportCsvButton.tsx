@@ -48,13 +48,14 @@ export default function ExportCsvButton({ events, startDate, endDate }: ExportCs
       const sede = ev.sede || '-';
       const reader = ev.reader_name || ev.reader_id;
       const isAbsence = (ev as any).estado === 'AUSENTE' || ev.tipo_evento === 'inasistencia' || ev.origen === 'sin_marcacion';
+      const isMobile = ev.origen === 'movil_profesor' || ev.origen === 'movil' || (ev.reader_id && ev.reader_id.startsWith('movil')) || (ev.reader_name && ev.reader_name.toLowerCase().includes('móvil'));
       const origen = isAbsence
         ? '🚫 Sin marcación'
         : ev.origen === 'manual'
         ? 'Registro Manual Secretaría'
-        : ev.origen === 'movil_profesor'
-        ? 'Móvil Profesor'
-        : 'Panel Fijo';
+        : isMobile
+        ? '📱 App Celular'
+        : '🖥️ Panel Fijo';
       const observaciones = ev.observaciones || '-';
       const estado = ev.isAnomaly ? `Anomalía (${ev.anomalyReason || 'Revisión'})` : 'Correcto';
       const uid = ev.rfid_tag_uid;
