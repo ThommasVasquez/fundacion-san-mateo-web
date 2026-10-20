@@ -22,11 +22,13 @@ function esSenalDeNext(e: unknown): boolean {
 // Simple cache to prevent hitting Neon constantly during a single page render
 const cache = new Map<string, string>();
 
-// Mapeo canónico de imágenes originales por programa y curso
+// Mapeo canónico de imágenes originales por programa y curso (sin repeticiones)
 const DEFAULT_PROGRAM_IMAGES: Record<string, string> = {
   '/programa-enfermeria': '/img/image21.jpg',
   '/programa-primera-infancia': '/img/image25.jpg',
+  '/Programa-preescolar': '/img/image27.jpg',
   '/programa-sistemas': '/img/image8.jpg',
+  '/programa-ingles': '/img/image10.jpg',
   '/programa-contabilidad': '/img/servicio-al-cliente.jpg',
   '/curso-soporte-vital-basico': '/img/curso-soporte-vital-basico.jpg',
   '/curso-manejo-de-duelo': '/img/curso-manejo-de-duelo-2.jpg',
@@ -35,6 +37,7 @@ const DEFAULT_PROGRAM_IMAGES: Record<string, string> = {
   '/curso-suturas': '/img/curso-suturas.jpg',
   '/curso-codigo-blanco-atencion-victimas': '/img/image17.jpg',
   '/curso-socorrismo-y-rescate': '/img/image14.jpg',
+  '/curso-camillero-y-primeros-auxilios': '/img/image13.jpg',
 };
 
 function getOriginalProgramImage(href?: string | null, title?: string | null): string {
@@ -44,20 +47,25 @@ function getOriginalProgramImage(href?: string | null, title?: string | null): s
   const t = `${href || ''} ${title || ''}`.toLowerCase();
   if (t.includes('enfermer')) return '/img/image21.jpg';
   if (t.includes('infancia')) return '/img/image25.jpg';
+  if (t.includes('preescolar')) return '/img/image27.jpg';
+  if (t.includes('sistema') || t.includes('servicio al cliente')) return '/img/image8.jpg';
+  if (t.includes('ingles') || t.includes('inglés')) return '/img/image10.jpg';
   if (t.includes('soporte') || t.includes('vital')) return '/img/curso-soporte-vital-basico.jpg';
   if (t.includes('duelo')) return '/img/curso-manejo-de-duelo-2.jpg';
   if (t.includes('pai') || t.includes('inyectolog')) return '/img/curso-pai-inyectologia.jpg';
+  if (t.includes('camillero')) return '/img/image13.jpg';
   if (t.includes('auxilio')) return '/img/curso-primeros-auxilios.jpg';
   if (t.includes('sutura')) return '/img/curso-suturas.jpg';
   if (t.includes('blanco') || t.includes('victima')) return '/img/image17.jpg';
   if (t.includes('socorrismo') || t.includes('rescate')) return '/img/image14.jpg';
-  return '/img/banner6.jpg';
+  return '/img/banner15.jpg';
 }
 
-function sanitizeImageUrl(url: string | null | undefined, fallback: string = '/img/banner6.jpg'): string {
+function sanitizeImageUrl(url: string | null | undefined, fallback: string = '/img/banner15.jpg'): string {
   if (!url) return fallback;
   if (url.startsWith('data:image/')) return fallback;
   if (url === '/img/banner1.jpg' || url.endsWith('/banner1.jpg')) return fallback;
+  if (url === '/img/banner6.jpg' || url.endsWith('/banner6.jpg')) return fallback;
   return url;
 }
 

@@ -29,23 +29,47 @@ export async function GET(
 
     const bucket = env?.IMAGES_BUCKET;
     if (!bucket) {
-      // Fallback permanente: Si R2 no está configurado, redirigir imágenes al asset institucional
+      // Fallback permanente: Si R2 no está configurado, redirigir imágenes al asset institucional correspondiente y sin repeticiones
       if (key.startsWith('images/')) {
         const lowerKey = key.toLowerCase();
-        if (lowerKey.includes('enfermer')) {
-          return Response.redirect(new URL('/img/image21.jpg', request.url), 302);
-        }
-        if (lowerKey.includes('infancia') || lowerKey.includes('preescolar')) {
-          return Response.redirect(new URL('/img/image25.jpg', request.url), 302);
-        }
-        if (lowerKey.includes('sistemas') || lowerKey.includes('cliente')) {
+        // Hero principal del Home: FSM Inicio
+        if (lowerKey.includes('fsm_img_inicio') || lowerKey.includes('fsm_inicio') || lowerKey.includes('img_2_fsm_inicio')) {
           return Response.redirect(new URL('/img/servicio-al-cliente.jpg', request.url), 302);
         }
-        if (lowerKey.includes('ingles')) {
-          return Response.redirect(new URL('/img/banner1.jpg', request.url), 302);
+        // Enfermería
+        if (lowerKey.includes('enfermer') || lowerKey.includes('3767')) {
+          return Response.redirect(new URL('/img/image18.jpg', request.url), 302);
         }
-        if (lowerKey.includes('ceremonia') || lowerKey.includes('practica')) {
-          return Response.redirect(new URL('/img/pract1.jpg', request.url), 302);
+        // Primera Infancia y Preescolar
+        if (lowerKey.includes('copia_2') || lowerKey.includes('preescolar')) {
+          return Response.redirect(new URL('/img/image25.jpg', request.url), 302);
+        }
+        if (lowerKey.includes('infancia')) {
+          return Response.redirect(new URL('/img/image27.jpg', request.url), 302);
+        }
+        // Información, Sistemas y Servicio al Cliente
+        if (lowerKey.includes('copia') || lowerKey.includes('sistemas') || lowerKey.includes('cliente')) {
+          return Response.redirect(new URL('/img/image8.jpg', request.url), 302);
+        }
+        // Inglés
+        if (lowerKey.includes('ingles') || lowerKey.includes('inglés')) {
+          return Response.redirect(new URL('/img/image10.jpg', request.url), 302);
+        }
+        // Ceremonias y Grados
+        if (lowerKey.includes('ceremonia')) {
+          return Response.redirect(new URL('/img/image2.png', request.url), 302);
+        }
+        // Prácticas Hospitalarias
+        if (lowerKey.includes('practica')) {
+          return Response.redirect(new URL('/img/pract2.jpg', request.url), 302);
+        }
+        // Calendario Académico
+        if (lowerKey.includes('calendario')) {
+          return Response.redirect(new URL('/img/banner7.jpg', request.url), 302);
+        }
+        // Punto de Contacto y Contacto
+        if (lowerKey.includes('punto_de_contacto') || lowerKey.includes('contacto')) {
+          return Response.redirect(new URL('/img/banner9.jpg', request.url), 302);
         }
         return Response.redirect(new URL('/img/banner6.jpg', request.url), 302);
       }

@@ -59,18 +59,23 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
   };
 
   const getBentoImage = (program: Program, index: number) => {
+    // Si la imagen configurada es válida y no es un fallback genérico o repetido, usarla
     if (
       program.image_url &&
       !program.image_url.includes('banner1') &&
-      program.image_url !== '/img/image21.jpg' &&
-      program.image_url !== '/img/image25.jpg'
+      !program.image_url.includes('banner6') &&
+      !program.image_url.startsWith('/api/documents/file/')
     ) {
       return program.image_url;
     }
     const t = `${program.href || ''} ${program.title || ''}`.toLowerCase();
     if (t.includes('enfermer') || index === 0) return '/img/image18.jpg';
     if (t.includes('infancia') || index === 1) return '/img/image27.jpg';
-    return program.image_url || '/img/image18.jpg';
+    if (t.includes('preescolar')) return '/img/image25.jpg';
+    if (t.includes('sistema') || t.includes('cliente') || t.includes('informaci')) return '/img/image8.jpg';
+    if (t.includes('ingles') || t.includes('inglés')) return '/img/image10.jpg';
+    if (t.includes('contabil') || index === 3) return '/img/servicio-al-cliente.jpg';
+    return '/img/image15.jpg';
   };
 
   return (
