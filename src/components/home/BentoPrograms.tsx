@@ -197,7 +197,7 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
                 className="bento-item relative group rounded-[4rem] overflow-hidden shadow-premium h-[300px]"
               >
                 <Image 
-                  src={programs[3].image_url} 
+                  src={getBentoImage(programs[3], 3)} 
                   alt={programs[3].title} 
                   fill 
                   className="object-cover transition-transform duration-1000 group-hover:scale-110 brightness-75 group-hover:brightness-50"

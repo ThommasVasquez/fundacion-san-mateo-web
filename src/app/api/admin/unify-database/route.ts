@@ -97,6 +97,216 @@ export async function POST(req: Request) {
 
     const body = await req.json().catch(() => ({}));
 
+    if (body.action === 'check_cards_inventory') {
+      const allStudentsWithAnyCard = await sql`
+        SELECT id, nombre, documento, grado, rfid_tag_uid, nfc_tag_uid, tarjeta_numero, activo, sede
+        FROM students
+        WHERE (rfid_tag_uid IS NOT NULL AND rfid_tag_uid != '')
+           OR (nfc_tag_uid IS NOT NULL AND nfc_tag_uid != '')
+           OR (tarjeta_numero IS NOT NULL)
+        ORDER BY nombre ASC
+      `;
+
+      // Definición de tarjeta NFC:
+      // - nfc_tag_uid tiene valor
+      // - o rfid_tag_uid tiene 14 caracteres (NTAG 7 bytes) o 8 caracteres (Mifare 4 bytes)
+      // Definición de tarjeta RFID 125 kHz:
+      // - tarjeta_numero IS NOT NULL
+      // - o rfid_tag_uid tiene 10 caracteres (EM4100 5 bytes)
+      const doubleFrequencyStudents = allStudentsWithAnyCard.filter((s: any) => {
+        const hasNfcExplicit = s.nfc_tag_uid && s.nfc_tag_uid.trim() !== '';
+        const rfidUid = (s.rfid_tag_uid || '').trim().toUpperCase();
+        const hasNfcInRfid = rfidUid.length === 14 || rfidUid.length === 8;
+        const hasNfc = hasNfcExplicit || hasNfcInRfid;
+
+        const has125kExplicit = s.tarjeta_numero !== null && s.tarjeta_numero !== undefined;
+        const has125kInRfid = rfidUid.length === 10;
+        const has125k = has125kExplicit || has125kInRfid;
+
+        return hasNfc && has125k;
+      });
+
+      const allWithNfc = allStudentsWithAnyCard.filter((s: any) => {
+        const hasNfcExplicit = s.nfc_tag_uid && s.nfc_tag_uid.trim() !== '';
+        const rfidUid = (s.rfid_tag_uid || '').trim().toUpperCase();
+        return hasNfcExplicit || rfidUid.length === 14 || rfidUid.length === 8;
+      });
+
+      return NextResponse.json({
+        success: true,
+        totalWithCards: allStudentsWithAnyCard.length,
+        allWithNfcCount: allWithNfc.length,
+        allWithNfc,
+        doubleFrequencyCount: doubleFrequencyStudents.length,
+        doubleFrequencyStudents
+      });
+    }
+
+    if (body.action === 'create_images_table') {
+      await sql`
+        CREATE TABLE IF NOT EXISTS uploaded_images (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          file_name TEXT NOT NULL,
+          content_type TEXT NOT NULL,
+          data_base64 TEXT NOT NULL,
+          file_size INT NOT NULL,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        )
+      `;
+      const cols = await sql`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'uploaded_images'
+      `;
+      return NextResponse.json({ success: true, table: 'uploaded_images', columns: cols });
+    }
+
+    if (body.action === 'cleanup_noise_events') {
+      // 1. Eliminar eventos de ruido registrados hoy en la madrugada
+      const deletedEvents = await sql`
+        DELETE FROM attendance_events
+        WHERE reader_id = 'panel-001'
+          AND timestamp >= '2026-10-16 00:00:00-05'::timestamptz
+          AND timestamp < '2026-10-16 06:15:00-05'::timestamptz
+          AND (
+            student_id IS NULL
+            OR rfid_tag_uid = 'C0C0000000'
+            OR rfid_tag_uid = 'TEST_NON_EXISTENT'
+            OR rfid_tag_uid ~* '^0{6,}'
+            OR rfid_tag_uid ~* '^F{6,}'
+          )
+        RETURNING id, rfid_tag_uid
+      `;
+
+      // 2. Limpiar el tag fantasma C0C0000000 o ceros si están asignados a estudiantes
+      const updatedStudents = await sql`
+        UPDATE students
+        SET nfc_tag_uid = CASE WHEN nfc_tag_uid IN ('C0C0000000', '0000000000') THEN NULL ELSE nfc_tag_uid END,
+            rfid_tag_uid = CASE WHEN rfid_tag_uid IN ('C0C0000000', '0000000000') THEN NULL ELSE rfid_tag_uid END
+        WHERE nfc_tag_uid IN ('C0C0000000', '0000000000')
+           OR rfid_tag_uid IN ('C0C0000000', '0000000000')
+        RETURNING id, nombre
+      `;
+
+      return NextResponse.json({
+        success: true,
+        deletedEventsCount: deletedEvents.length,
+        deletedEvents,
+        cleanedStudents: updatedStudents
+      });
+    }
+
+    if (body.action === 'inspect_recent_scans') {
+      const recentEvents = await sql`
+        SELECT 
+          ae.id,
+          (ae.timestamp AT TIME ZONE 'America/Bogota')::text as fecha_bogota,
+          ae.student_id,
+          s.nombre as student_nombre,
+          s.grado as student_grado,
+          s.tarjeta_numero as student_tarjeta,
+          s.rfid_tag_uid as student_rfid,
+          s.nfc_tag_uid as student_nfc,
+          ae.rfid_tag_uid as scanned_tag,
+          ae.reader_id,
+          ae.tipo_evento,
+          ae.origen,
+          ae.sede,
+          ae.registrado_por
+        FROM attendance_events ae
+        LEFT JOIN students s ON s.id = ae.student_id
+        ORDER BY ae.timestamp DESC
+        LIMIT 100
+      `;
+
+      const dailyBreakdown = await sql`
+        SELECT 
+          (ae.timestamp AT TIME ZONE 'America/Bogota')::date::text as fecha,
+          ae.reader_id,
+          COUNT(CASE WHEN ae.student_id IS NOT NULL THEN 1 END) as exitosos,
+          COUNT(CASE WHEN ae.student_id IS NULL THEN 1 END) as erroneos_sin_asignar,
+          COUNT(*) as total
+        FROM attendance_events ae
+        WHERE ae.timestamp >= NOW() - INTERVAL '7 days'
+        GROUP BY (ae.timestamp AT TIME ZONE 'America/Bogota')::date::text, ae.reader_id
+        ORDER BY fecha DESC, total DESC
+      `;
+
+      // Check the unassigned scanned tags from the last 7 days and see if they match any pattern
+      const unassignedScans = await sql`
+        SELECT 
+          ae.rfid_tag_uid as scanned_tag,
+          ae.reader_id,
+          COUNT(*) as occurrences,
+          MAX((ae.timestamp AT TIME ZONE 'America/Bogota')::text) as last_seen
+        FROM attendance_events ae
+        WHERE ae.student_id IS NULL
+          AND ae.timestamp >= NOW() - INTERVAL '7 days'
+        GROUP BY ae.rfid_tag_uid, ae.reader_id
+        ORDER BY occurrences DESC, last_seen DESC
+        LIMIT 50
+      `;
+
+      return NextResponse.json({
+        success: true,
+        recentEvents,
+        dailyBreakdown,
+        unassignedScans
+      });
+    }
+
+    if (body.action === 'inspect_group_months') {
+      const gId = body.groupId || '1652e94d-534a-49fa-8765-be8ece60415d';
+      const monthsRes = await sql`
+        SELECT SUBSTRING(fecha::text, 1, 7) as mes, COUNT(id) as count
+        FROM class_sessions
+        WHERE group_id = ${gId}::uuid
+        GROUP BY SUBSTRING(fecha::text, 1, 7)
+        ORDER BY mes ASC
+      `;
+
+      const scansInPeriod = await sql`
+        SELECT 
+          (ae.timestamp AT TIME ZONE 'America/Bogota')::date::text as fecha,
+          COUNT(ae.id) as scan_count
+        FROM attendance_events ae
+        WHERE ae.student_id IN (
+          SELECT student_id FROM enrollments WHERE group_id = ${gId}::uuid AND (activo IS NULL OR activo = TRUE)
+        )
+        AND ae.timestamp >= '2026-09-01'
+        GROUP BY (ae.timestamp AT TIME ZONE 'America/Bogota')::date::text
+        ORDER BY fecha ASC
+      `;
+
+      const normalizedInPeriod = await sql`
+        SELECT cs.fecha::text as fecha, COUNT(ar.id) as record_count, ar.estado
+        FROM attendance_records_normalized ar
+        JOIN class_sessions cs ON cs.id = ar.session_id
+        WHERE cs.group_id = ${gId}::uuid
+          AND cs.fecha >= '2026-09-01'
+        GROUP BY cs.fecha, ar.estado
+        ORDER BY cs.fecha ASC
+      `;
+
+      const enrolledStudents = await sql`
+        SELECT s.id, s.nombre, s.documento, s.tarjeta_numero, s.rfid_tag_uid, s.nfc_tag_uid
+        FROM enrollments e
+        JOIN students s ON s.id = e.student_id
+        WHERE e.group_id = ${gId}::uuid AND (e.activo IS NULL OR e.activo = TRUE)
+        ORDER BY s.nombre ASC
+      `;
+
+      return NextResponse.json({
+        success: true,
+        groupId: gId,
+        months: monthsRes,
+        enrolledStudentsCount: enrolledStudents.length,
+        enrolledStudents,
+        scansInPeriod,
+        normalizedInPeriod
+      });
+    }
+
     if (body.action === 'search_student') {
       const query = body.query || '';
       const students = await sql`

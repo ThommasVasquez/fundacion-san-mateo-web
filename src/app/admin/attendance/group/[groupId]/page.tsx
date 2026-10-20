@@ -263,23 +263,21 @@ export default async function GroupAttendancePage({
       let finalEstado = 'PRESENTE';
       let finalObs = '';
 
-      if (sess.fecha > todayStr) {
+      if (explicit) {
+        // Registro explícito en BD (cambio manual, excusa o marcado masivo): prioridad total
+        finalEstado = explicit.estado;
+        finalObs = explicit.observaciones || '';
+      } else if (sess.fecha > todayStr) {
         finalEstado = 'PENDIENTE';
         finalObs = 'Clase programada a futuro';
       } else if (sess.fecha === todayStr) {
-        // Día de hoy en curso: no asumir fallas mientras el turno no concluya
-        if (explicit && explicit.estado !== 'AUSENTE' && explicit.estado !== 'PRESENTE') {
-          finalEstado = explicit.estado;
-          finalObs = explicit.observaciones || '';
-        } else if (holiday.isHoliday) {
+        // Día de hoy en curso sin registro explícito: no asumir fallas mientras el turno no concluya
+        if (holiday.isHoliday) {
           finalEstado = 'FESTIVO';
           finalObs = holiday.holidayName || 'Festivo Nacional';
         } else if (hasRealScan) {
           finalEstado = 'PRESENTE';
           finalObs = 'Ingreso registrado en torniquete';
-        } else if (explicit && explicit.observaciones && explicit.observaciones.trim() !== '') {
-          finalEstado = explicit.estado;
-          finalObs = explicit.observaciones;
         } else if (!isShiftConcluded) {
           finalEstado = 'PENDIENTE';
           finalObs = isNight && currentHourBogota < 18 
@@ -290,11 +288,8 @@ export default async function GroupAttendancePage({
           finalObs = 'Sin registro de ingreso en torniquete';
         }
       } else {
-        // Fechas pasadas (sess.fecha < todayStr)
-        if (explicit) {
-          finalEstado = explicit.estado;
-          finalObs = explicit.observaciones || '';
-        } else if (holiday.isHoliday) {
+        // Fechas pasadas (sess.fecha < todayStr) sin registro explícito
+        if (holiday.isHoliday) {
           finalEstado = 'FESTIVO';
           finalObs = holiday.holidayName || 'Festivo Nacional';
         } else if (isGroupCB && sess.fecha < '2026-09-01') {

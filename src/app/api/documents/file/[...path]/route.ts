@@ -29,12 +29,35 @@ export async function GET(
 
     const bucket = env?.IMAGES_BUCKET;
     if (!bucket) {
+      // Fallback permanente: Si R2 no está configurado, redirigir imágenes al asset institucional
+      if (key.startsWith('images/')) {
+        const lowerKey = key.toLowerCase();
+        if (lowerKey.includes('enfermer')) {
+          return Response.redirect(new URL('/img/image21.jpg', request.url), 302);
+        }
+        if (lowerKey.includes('infancia') || lowerKey.includes('preescolar')) {
+          return Response.redirect(new URL('/img/image25.jpg', request.url), 302);
+        }
+        if (lowerKey.includes('sistemas') || lowerKey.includes('cliente')) {
+          return Response.redirect(new URL('/img/servicio-al-cliente.jpg', request.url), 302);
+        }
+        if (lowerKey.includes('ingles')) {
+          return Response.redirect(new URL('/img/banner1.jpg', request.url), 302);
+        }
+        if (lowerKey.includes('ceremonia') || lowerKey.includes('practica')) {
+          return Response.redirect(new URL('/img/pract1.jpg', request.url), 302);
+        }
+        return Response.redirect(new URL('/img/banner6.jpg', request.url), 302);
+      }
       return new Response('Almacenamiento no disponible', { status: 503 });
     }
 
     const object = await bucket.get(key);
 
     if (!object) {
+      if (key.startsWith('images/')) {
+        return Response.redirect(new URL('/img/banner6.jpg', request.url), 302);
+      }
       return new Response('Documento no encontrado en el almacenamiento', { status: 404 });
     }
 

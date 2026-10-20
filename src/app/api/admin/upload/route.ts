@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { decrypt } from '@/lib/auth';
+import { sql } from '@/lib/db';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 
 /** Lee una cookie por nombre sin dependencias adicionales */
@@ -86,7 +87,7 @@ export async function POST(req: Request) {
     const timestamp = Date.now();
     const r2Key = `images/${timestamp}_${baseName}.${ext}`;
 
-    // Obtener contexto de Cloudflare
+    // Obtener contexto de Cloudflare para verificar si R2 está disponible
     let env: any;
     try {
       const cfContext = await getCloudflareContext({ async: true });
@@ -97,37 +98,62 @@ export async function POST(req: Request) {
 
     const bucket = env?.IMAGES_BUCKET;
 
-    if (!bucket) {
-      console.error('El bucket R2 IMAGES_BUCKET no está disponible en este entorno.');
-      return NextResponse.json(
-        { error: 'El almacenamiento de imágenes R2 no está disponible en este entorno.' },
-        { status: 503 }
-      );
+    if (bucket) {
+      // Guardar en R2 si el bucket está enlazado
+      await bucket.put(r2Key, fileBuffer, {
+        httpMetadata: {
+          contentType: mimeType,
+        },
+        customMetadata: {
+          originalName,
+          uploadedAt: new Date().toISOString(),
+        },
+      });
+
+      const publicUrl = `/api/documents/file/${r2Key}`;
+      return NextResponse.json({
+        success: true,
+        url: publicUrl,
+        key: r2Key,
+        file_name: originalName,
+        size: fileBuffer.byteLength,
+      });
     }
 
-    // Guardar en R2
-    await bucket.put(r2Key, fileBuffer, {
-      httpMetadata: {
-        contentType: mimeType,
-      },
-      customMetadata: {
-        originalName,
-        uploadedAt: new Date().toISOString(),
-      },
-    });
+    // Si R2 no está configurado, guardar de forma segura en Postgres
+    const base64Data = Buffer.from(fileBuffer).toString('base64');
+    
+    // Asegurar que la tabla existe
+    await sql`
+      CREATE TABLE IF NOT EXISTS uploaded_images (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        file_name TEXT NOT NULL,
+        content_type TEXT NOT NULL,
+        data_base64 TEXT NOT NULL,
+        file_size INT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `;
 
-    const publicUrl = `/api/documents/file/${r2Key}`;
+    const inserted = await sql`
+      INSERT INTO uploaded_images (file_name, content_type, data_base64, file_size)
+      VALUES (${originalName}, ${mimeType}, ${base64Data}, ${fileBuffer.byteLength})
+      RETURNING id
+    `;
+
+    const imageId = inserted[0]?.id;
+    const publicUrl = `/api/images/${imageId}`;
 
     return NextResponse.json({
       success: true,
       url: publicUrl,
-      key: r2Key,
+      id: imageId,
       file_name: originalName,
       size: fileBuffer.byteLength,
     });
 
   } catch (error: any) {
-    console.error('Error al subir imagen a R2:', error);
+    console.error('Error al subir imagen:', error);
     return NextResponse.json(
       { error: error.message || 'Error al procesar la imagen' },
       { status: 500 }

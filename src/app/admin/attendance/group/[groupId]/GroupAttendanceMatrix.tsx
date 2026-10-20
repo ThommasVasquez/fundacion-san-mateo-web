@@ -250,14 +250,16 @@ export default function GroupAttendanceMatrix({
         const holidayInfo = isColombiaHoliday(s.fecha);
 
         let estado = record ? record.estado : (s.fecha >= todayStr ? 'PENDIENTE' : 'AUSENTE');
-        if (s.fecha === todayStr && (!record || record.estado === 'PENDIENTE')) {
-          estado = 'PENDIENTE';
-        } else if (isPreCB) {
-          estado = record?.estado && record.estado !== 'AUSENTE' ? record.estado : 'CALENDARIO_B';
-        } else if (holidayInfo.isHoliday) {
-          estado = record?.estado && record.estado !== 'AUSENTE' ? record.estado : 'FESTIVO';
-        } else if (s.fecha > todayStr && (!record || record.estado === 'PENDIENTE')) {
-          estado = 'PENDIENTE';
+        if (!record) {
+          if (s.fecha === todayStr) {
+            estado = 'PENDIENTE';
+          } else if (isPreCB) {
+            estado = 'CALENDARIO_B';
+          } else if (holidayInfo.isHoliday) {
+            estado = 'FESTIVO';
+          } else if (s.fecha > todayStr) {
+            estado = 'PENDIENTE';
+          }
         }
 
         if (estado === 'AUSENTE') {
@@ -346,12 +348,11 @@ export default function GroupAttendanceMatrix({
     const isCB = (groupName || '').toUpperCase().includes('CB') || (tipo || '').toUpperCase().includes('CALENDARIO_B');
     const isPreCB = isCB && fechaStr < '2026-09-01';
     const holidayInfo = isColombiaHoliday(fechaStr);
-    const defaultState = isPreCB ? 'CALENDARIO_B' : holidayInfo.isHoliday ? 'FESTIVO' : fechaStr > todayStr ? 'PENDIENTE' : 'AUSENTE';
-
     const currentRecord = records[`${studentId}_${sessionId}`];
-    let current = currentRecord?.estado || defaultState;
-    if (isPreCB && current === 'AUSENTE') current = 'CALENDARIO_B';
-    if (holidayInfo.isHoliday && current === 'AUSENTE') current = 'FESTIVO';
+    let current = currentRecord?.estado;
+    if (!current) {
+      current = isPreCB ? 'CALENDARIO_B' : holidayInfo.isHoliday ? 'FESTIVO' : fechaStr > todayStr ? 'PENDIENTE' : 'AUSENTE';
+    }
 
     const currentObs = currentRecord?.observaciones || '';
 
@@ -1301,14 +1302,16 @@ export default function GroupAttendanceMatrix({
                       const holidayInfo = isColombiaHoliday(s.fecha);
 
                       let estado = record ? record.estado : (s.fecha >= todayStr ? 'PENDIENTE' : 'AUSENTE');
-                      if (s.fecha === todayStr && (!record || record.estado === 'PENDIENTE')) {
-                        estado = 'PENDIENTE';
-                      } else if (isPreCB) {
-                        estado = record?.estado && record.estado !== 'AUSENTE' ? record.estado : 'CALENDARIO_B';
-                      } else if (holidayInfo.isHoliday) {
-                        estado = record?.estado && record.estado !== 'AUSENTE' ? record.estado : 'FESTIVO';
-                      } else if (s.fecha > todayStr && (!record || record.estado === 'PENDIENTE')) {
-                        estado = 'PENDIENTE';
+                      if (!record) {
+                        if (s.fecha === todayStr) {
+                          estado = 'PENDIENTE';
+                        } else if (isPreCB) {
+                          estado = 'CALENDARIO_B';
+                        } else if (holidayInfo.isHoliday) {
+                          estado = 'FESTIVO';
+                        } else if (s.fecha > todayStr) {
+                          estado = 'PENDIENTE';
+                        }
                       }
 
                       const cfg = STATUS_CONFIG[estado] || STATUS_CONFIG.PENDIENTE || STATUS_CONFIG.PRESENTE;

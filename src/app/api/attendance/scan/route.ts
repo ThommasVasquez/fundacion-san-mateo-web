@@ -201,11 +201,21 @@ export async function POST(req: Request) {
     // Se calculan antes del modo matrícula porque ambos los necesitan.
     const tagHex = String(tag_uid).replace(/\s+/g, '').toUpperCase();
 
-    // Rechazar lecturas nulas/ficticias de hardware (0000000000 o FFFFFFFFFF)
-    // Esto ocurre cuando el módulo lector RFID perdiología comunicación SPI o requiere reinicio.
-    if (/^0+$/.test(tagHex) || /^F+$/i.test(tagHex)) {
+    // Rechazar lecturas nulas, tramas corruptas o ruido eléctrico de hardware
+    // Esto ocurre por líneas flotantes, interferencia, caída de voltaje o pérdida de comunicación en el bus SPI/Wiegand.
+    const isHardwareNoise = 
+      /^0+$/.test(tagHex) || 
+      /^F+$/i.test(tagHex) ||
+      /^0{6,}[0-9A-F]{1,4}$/i.test(tagHex) ||
+      /^[0-9A-F]{1,4}0{6,}$/i.test(tagHex) ||
+      /^F{6,}[0-9A-F]{1,4}$/i.test(tagHex) ||
+      /^[0-9A-F]{1,4}F{6,}$/i.test(tagHex) ||
+      /^(C0|F0|00|FF){3,}$/i.test(tagHex) ||
+      tagHex === 'C0C0000000';
+
+    if (isHardwareNoise) {
       return NextResponse.json(
-        { error: 'Lectura nula de hardware (0000000000). Verifique las conexiones del lector RFID o reinícielo.' },
+        { error: 'Lectura rechazada: Trama corrupta o ruido eléctrico de hardware. Verifique cableado o reinicie el lector.' },
         { status: 400 }
       );
     }

@@ -44,6 +44,6 @@ BACKEND_URL = "https://entrada.conjuntos.app"
 # Las que estuvieron publicadas ya estan rotadas; siguen en el historial de git,
 # pero no abren nada. Nada que sea un secreto vuelve a este fichero.
 
-[[r2_buckets]]
-binding = "IMAGES_BUCKET"
-bucket_name = "fsm-images"
+# [[r2_buckets]]
+# binding = "IMAGES_BUCKET"
+# bucket_name = "fsm-images"

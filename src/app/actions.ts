@@ -367,6 +367,9 @@ export async function updateProgram(id: string, data: { title: string; subtitle:
         WHERE id = ${id}
       `;
     }
+    revalidatePath('/admin/pages');
+    revalidatePath('/oferta-academica');
+    revalidatePath('/');
     return { success: true };
   } catch (error) {
     console.error('Update program error:', error);
@@ -383,6 +386,9 @@ export async function addProgram(data: { title: string; subtitle: string; descri
       INSERT INTO academic_programs (title, subtitle, description, image_url, href, category, is_featured, details, total_clases)
       VALUES (${data.title}, ${data.subtitle}, ${data.description}, ${data.image_url}, ${data.href}, ${data.category}, ${data.is_featured}, ${detailsJson}::jsonb, ${tc})
     `;
+    revalidatePath('/admin/pages');
+    revalidatePath('/oferta-academica');
+    revalidatePath('/');
     return { success: true };
   } catch (error) {
     console.error('Add program error:', error);
@@ -393,6 +399,9 @@ export async function addProgram(data: { title: string; subtitle: string; descri
 export async function deleteProgram(id: string) {
   try {
     await sql`DELETE FROM academic_programs WHERE id = ${id}`;
+    revalidatePath('/admin/pages');
+    revalidatePath('/oferta-academica');
+    revalidatePath('/');
     return { success: true };
   } catch (error) {
     console.error('Delete program error:', error);
@@ -405,6 +414,9 @@ export async function updateProgramsOrder(orderedIds: string[]) {
     for (let i = 0; i < orderedIds.length; i++) {
       await sql`UPDATE academic_programs SET order_index = ${i} WHERE id = ${orderedIds[i]}`;
     }
+    revalidatePath('/admin/pages');
+    revalidatePath('/oferta-academica');
+    revalidatePath('/');
     return { success: true };
   } catch (error) {
     console.error('Update programs order error:', error);
@@ -2567,16 +2579,10 @@ export async function deleteAdminUserAction(userId: string) {
 
 async function checkIsAdminFull(): Promise<{ isAdmin: boolean; email: string }> {
   try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get('session')?.value;
+    const session = await getActionSession();
     if (!session) return { isAdmin: false, email: '' };
-    const payload = await decrypt(session);
-    const email = (payload?.email || '').toLowerCase().trim();
-    const isAdmin = (
-      email === 'admin@fundacionsanmateo.edu.co' || 
-      email === 'admin@fundacionsanmateosoacha.edu.co'
-    );
-    return { isAdmin, email };
+    const isAdmin = session.isAdmin || session.hasPermission('attendance_edit');
+    return { isAdmin, email: session.email };
   } catch {
     return { isAdmin: false, email: '' };
   }
@@ -2622,7 +2628,7 @@ export async function updateCellAttendanceAction(
       LIMIT 1
     `;
     const sessInfo = await sql`
-      SELECT cs.fecha, g.nombre as grupo_nombre
+      SELECT cs.fecha, cs.group_id, g.nombre as grupo_nombre
       FROM class_sessions cs
       LEFT JOIN groups g ON g.id = cs.group_id
       WHERE cs.id = ${sessionId}::uuid
@@ -2632,6 +2638,7 @@ export async function updateCellAttendanceAction(
     const stName = stInfo[0]?.nombre || stInfo[0]?.nombre_original || studentId;
     const sessDate = sessInfo[0]?.fecha ? new Date(sessInfo[0].fecha).toISOString().split('T')[0] : sessionId;
     const grpName = sessInfo[0]?.grupo_nombre || '';
+    const targetGroupId = sessInfo[0]?.group_id;
 
     const isExcusa = cleanEstado.startsWith('EXCUSA');
     const excusaDesc = cleanEstado === 'EXCUSA_PRACTICAS_AIPI' 
@@ -2646,6 +2653,12 @@ export async function updateCellAttendanceAction(
       details: `${excusaDesc} para ${stName} ${grpName ? `(${grpName})` : ''} en fecha ${sessDate} a estado [${cleanEstado}]${cleanObs ? ` (Obs: "${cleanObs}")` : ''}`,
       metadata: { studentId, sessionId, estudiante: stName, grupo: grpName, fecha: sessDate, estado: cleanEstado, observaciones: cleanObs }
     });
+
+    if (targetGroupId) {
+      revalidatePath(`/admin/attendance/group/${targetGroupId}`);
+    }
+    revalidatePath('/admin/attendance/alerts');
+    revalidatePath('/admin/attendance');
 
     return { success: true };
   } catch (error: any) {
@@ -3368,6 +3381,7 @@ export async function updateStudentEnrollment(studentId: string, enrollmentId: s
       metadata: { studentId, enrollmentId, newGroupId, newGroupName }
     });
 
+    revalidatePath(`/admin/attendance/group/${newGroupId}`);
     revalidatePath('/admin/attendance/alerts');
     revalidatePath('/admin/attendance/enrollment');
     revalidatePath('/admin/attendance');
@@ -3395,7 +3409,7 @@ export async function keepSingleEnrollment(studentId: string, enrollmentIdToKeep
     if (toKeep.length === 0) {
       return { error: 'Matrícula seleccionada no encontrada' };
     }
-    const { group_name } = toKeep[0];
+    const { group_name, group_id } = toKeep[0];
 
     // 2. Eliminar todas las demás matrículas del estudiante
     await sql`
@@ -3424,6 +3438,9 @@ export async function keepSingleEnrollment(studentId: string, enrollmentIdToKeep
       metadata: { studentId, keptEnrollmentId: enrollmentIdToKeep, group_name }
     });
 
+    if (group_id) {
+      revalidatePath(`/admin/attendance/group/${group_id}`);
+    }
     revalidatePath('/admin/attendance/alerts');
     revalidatePath('/admin/attendance/enrollment');
     revalidatePath('/admin/attendance');
