@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { updateProgram, addProgram, deleteProgram, updateProgramsOrder } from '@/app/actions';
 import { Plus, Trash2, Save, GraduationCap, Link as LinkIcon, Image as ImageIcon, FileText, Loader2, CheckCircle, Star, ArrowUp, ArrowDown } from 'lucide-react';
 import { uploadImage } from '@/lib/imageUpload';
@@ -22,6 +22,81 @@ interface ProgramManagerProps {
   initialPrograms: Program[];
 }
 
+const defaultNursingDetails = {
+  duration: "3 Semestres",
+  certificate: "Técnico por Competencias",
+  uniform_gift: "Uniforme Gratis / Por tiempo limitado",
+  plan_estudios: [
+    "Inducción educativa", "Primer respondiente", "Diagnóstico", "UCI",
+    "Medicamentos", "Salud ocupacional", "Control de infecciones", "Atención integral",
+    "Admisión al usuario", "Vacunación", "Asistencia al usuario", "Normatividad",
+    "Tecnologías TICs", "Práctica geriátrica", "Bioseguridad", "Clínica 1",
+    "Cuidado personal", "Clínica 2"
+  ],
+  admision: {
+    requirements: [
+      "Documento al 150%", "Certificado EPS/SISBEN", "Diploma bachiller (min. 9°)", "2 Fotos 3x4 fondo blanco", "Certificado de vacunas"
+    ],
+    note: "Nota: La matrícula se legaliza de forma presencial en nuestra sede administrativa."
+  },
+  calidad: [
+    { title: "RESOLUCIÓN OFICIAL", text: "Resolución No. 1066 del 1 de junio de 2022 - Secretaría de Educación de Soacha." },
+    { title: "CALIDAD TÉCNICA", text: "Programa acreditado bajo las normas NTC 5555 e ISO 9001:2015." }
+  ],
+  practicas: {
+    description: "Convenios con las mejores IPS y hospitales de la región para garantizar tu aprendizaje práctico.",
+    places: [
+      "Clínica San Francisco", "Hospital Mario Gaitán", "Hospital La Victoria", "CIOSAD", "IP JARBSALUD", "Fundación Geriátrica"
+    ]
+  },
+  perfil_titulo: "COMPROMETIDOS CON LA VOCACIÓN DE SERVIR",
+  perfil_p1: "El Programa Técnico Laboral por Competencias en Auxiliar de Enfermería de la Fundación San Mateo, brinda el enfoque basado en competencias laborales recomendado por la OMS y la Oficina Internacional del trabajo.",
+  perfil_p2: "Formamos auxiliares con sólidos principios éticos, visión humanista y un alto sentido de responsabilidad social, capaces de desempeñarse con excelencia en todos los niveles del sistema nacional de salud.",
+  sidebar_title: "Comienza tu carrera en salud",
+  salida_laboral: [
+    "Auxiliar en enfermería hospitalaria",
+    "Atención domiciliaria y comunitaria",
+    "Servicios de vacunación y triaje",
+    "Cuidado integral del paciente en UCI y clínicas"
+  ]
+};
+
+const defaultChildhoodDetails = {
+  duration: "2 Semestres",
+  certificate: "Educación Inicial",
+  uniform_gift: "Uniforme Gratis / Por tiempo limitado",
+  plan_estudios: [
+    "Inducción educativa", "Primeros auxilios", "Orientación educativa", "Programas académicos",
+    "Prácticas saludables", "Tecnologías TICs", "Educación incluyente", "Práctica 1",
+    "Inglés", "Práctica 2"
+  ],
+  admision: {
+    requirements: [
+      "Documento al 150%", "Certificado EPS/SISBEN", "Diploma bachiller (min. 9°)", "2 Fotos 3x4 fondo blanco", "Mayor de 16 años"
+    ],
+    note: "Nota: Matrículas abiertas permanentemente."
+  },
+  calidad: [
+    { title: "RESOLUCIÓN OFICIAL", text: "Resolución No. 0883 del 29 de mayo de 2023 - Secretaría de Educación de Soacha." },
+    { title: "CERTIFICACIÓN ESPECÍFICA", text: "Programa certificado bajo la Norma Técnica NTC 5581:2011." }
+  ],
+  practicas: {
+    description: "Experiencia real en los mejores centros educativos y jardines infantiles de la zona.",
+    places: [
+      "Jean Fritz Piaget", "Mundo Activo", "Abraham Lincoln", "British School",
+      "Gimnasio Alameda", "Colegio Niño Jesús", "Antonia Santos", "García Márquez",
+      "Eko Garden", "Nueva Generación"
+    ]
+  },
+  perfil_titulo: "FORMANDO EDUCADORES CON VOCACIÓN Y TERNURA",
+  perfil_p1: "El Programa Técnico Laboral por Competencias en Atención Integral a la Primera Infancia de la Fundación San Mateo, promueve el desarrollo de competencias relacionadas con el cuidado y la atención integral (protección, nutrición, salud y educación) de los niños y las niñas de 0 a 6 años.",
+  perfil_p2: "El egresado tendrá una concepción integral del manejo de las necesidades de los infantes al interior de un jardín infantil y contará con las herramientas pedagógicas necesarias para liderar procesos de enseñanza-aprendizaje desde la ternura y la técnica.",
+  sidebar_title: "Impulsa el mañana hoy",
+  salida_laboral: [
+    "Asistente Preescolar", "Madre Comunitaria", "Niñera Profesional", "Líder en Jardines"
+  ]
+};
+
 export default function ProgramManager({ initialPrograms }: ProgramManagerProps) {
   const [programs, setPrograms] = useState<Program[]>(initialPrograms);
   const [loading, setLoading] = useState<Record<string, boolean>>({});
@@ -39,16 +114,38 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
     total_clases: null as number | null
   });
 
+  useEffect(() => {
+    setPrograms(initialPrograms);
+  }, [initialPrograms]);
+
   const handleUpdate = async (id: string, field: keyof Program, value: any) => {
     const updated = programs.map(p => p.id === id ? { ...p, [field]: value } : p);
     setPrograms(updated);
   };
 
-  const saveUpdate = async (id: string) => {
+  const openDetailsModal = (programId: string) => {
+    const p = programs.find(item => item.id === programId);
+    if (p) {
+      const hasDetails = p.details && Object.keys(p.details).length > 0;
+      if (!hasDetails) {
+        const normTitle = (p.title || '').toLowerCase();
+        const normHref = (p.href || '').toLowerCase();
+        if (normHref.includes('enfermer') || normTitle.includes('enfermer')) {
+          handleUpdate(p.id, 'details', { ...defaultNursingDetails, banner_image: p.image_url });
+        } else if (normHref.includes('infancia') || normTitle.includes('infancia')) {
+          handleUpdate(p.id, 'details', { ...defaultChildhoodDetails, banner_image: p.image_url });
+        }
+      }
+    }
+    setSelectedProgramIdForDetails(programId);
+  };
+
+  const saveUpdate = async (id: string): Promise<boolean> => {
     const program = programs.find(p => p.id === id);
-    if (!program) return;
+    if (!program) return false;
 
     setLoading(prev => ({ ...prev, [id]: true }));
+    const detailsToSave = program.details || {};
     const res = await updateProgram(id, { 
       title: program.title, 
       subtitle: program.subtitle || '', 
@@ -57,17 +154,20 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
       href: program.href, 
       category: program.category,
       is_featured: program.is_featured,
-      details: program.details,
+      details: detailsToSave,
       total_clases: program.total_clases ?? null
     });
     
     if (res.success) {
       setSuccess(prev => ({ ...prev, [id]: true }));
       setTimeout(() => setSuccess(prev => ({ ...prev, [id]: false })), 3000);
+      setLoading(prev => ({ ...prev, [id]: false }));
+      return true;
     } else {
-      alert("Error al guardar");
+      alert("Error al guardar: " + (res.error || "No se pudo guardar la información"));
+      setLoading(prev => ({ ...prev, [id]: false }));
+      return false;
     }
-    setLoading(prev => ({ ...prev, [id]: false }));
   };
 
   const handleAdd = async () => {
@@ -370,7 +470,7 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
               </div>
               <div className="flex xl:flex-col gap-3 justify-center items-center px-6 border-l border-gray-50">
                 <button 
-                  onClick={() => setSelectedProgramIdForDetails(p.id)}
+                  onClick={() => openDetailsModal(p.id)}
                   className="p-4 rounded-2xl bg-fsm-blue/5 text-fsm-blue hover:bg-fsm-blue hover:text-white transition-all active:scale-95 shadow-sm"
                   title="Editar Contenido de la Página"
                 >
@@ -424,13 +524,14 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
 
         // Helper to handle nested details updates
         const handleDetailsChange = (field: string, value: any) => {
-          const updatedDetails = { ...details, [field]: value };
+          const updatedDetails = { ...(program.details || {}), [field]: value };
           handleUpdate(program.id, 'details', updatedDetails);
         };
 
         // Convert lists of strings (e.g., plan_estudios, resources, etc.) to multiline text and vice versa
         const getMultilineText = (arr: any) => {
           if (Array.isArray(arr)) return arr.join('\n');
+          if (typeof arr === 'string') return arr;
           return '';
         };
 
@@ -1031,8 +1132,10 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                 </button>
                 <button 
                   onClick={async () => {
-                    await saveUpdate(program.id);
-                    setSelectedProgramIdForDetails(null);
+                    const ok = await saveUpdate(program.id);
+                    if (ok) {
+                      setSelectedProgramIdForDetails(null);
+                    }
                   }}
                   disabled={loading[program.id]}
                   className="px-8 py-3 bg-fsm-blue text-white rounded-2xl font-black text-xs tracking-widest hover:bg-fsm-red transition-all uppercase shadow-lg shadow-fsm-blue/20"

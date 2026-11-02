@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { addNormativityDocument, updateNormativityDocument, deleteNormativityDocument } from '@/app/actions';
-import { Plus, Trash2, Save, FileText, Upload, Link2, Loader2, CheckCircle, AlertCircle, FileCheck, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Trash2, Save, FileText, Upload, Link2, Loader2, CheckCircle, AlertCircle, FileCheck, ArrowUp, ArrowDown, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface NormativityDoc {
@@ -129,6 +129,7 @@ export default function NormativityManager({ initialDocs, initialCategoriesJson 
   const uploadDocFile = async (file: File): Promise<{ url: string; file_name: string }> => {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('folder', 'normativity');
     const res = await fetch('/api/admin/documents/upload', {
       method: 'POST',
       body: formData,
@@ -669,6 +670,18 @@ export default function NormativityManager({ initialDocs, initialCategoriesJson 
                                   onChange={(e) => handleFileChange(e, doc.id)}
                                 />
                               </div>
+
+                              {doc.external_link && !pendingFile && (
+                                <a
+                                  href={doc.external_link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title="Ver archivo PDF en una nueva pestaña"
+                                  className="h-[44px] px-3 bg-fsm-blue/5 hover:bg-fsm-blue text-fsm-blue hover:text-white rounded-xl border border-fsm-blue/20 flex items-center justify-center transition-all shrink-0"
+                                >
+                                  <Eye size={16} />
+                                </a>
+                              )}
 
                               <button
                                 title="Cambiar a Enlace URL"

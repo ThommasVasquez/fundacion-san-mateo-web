@@ -52,60 +52,59 @@ export default async function AdminDocumentsPage() {
   }
 
   const isSuperAdmin = userEmail === 'admin@fundacionsanmateo.edu.co' || userEmail === 'admin@fundacionsanmateosoacha.edu.co';
-  let documents: any[] = [];
-  try {
-    const docsRes = await sql`
+
+  // Ejecutar consultas en paralelo sin saturar memoria ni tiempo de CPU con base64 pesados
+  const [docsRes, nextConsecutivo, studentsRes, progsRes] = await Promise.all([
+    sql`
       SELECT 
         id, consecutivo, student_nombre, student_documento,
         tipo_documento, programa_curso, fecha_expedicion::text,
-        folio, libro, estado, notas, pdf_url, created_at::text
+        folio, libro, estado, notas,
+        CASE 
+          WHEN pdf_url IS NULL OR pdf_url = '' THEN ''
+          WHEN pdf_url LIKE '/%' OR pdf_url LIKE 'http%' THEN pdf_url
+          ELSE ('/api/documents/issued/' || id::text)
+        END as pdf_url,
+        created_at::text
       FROM issued_documents
       ORDER BY created_at DESC
-    `;
-    documents = Array.isArray(docsRes) ? docsRes : [];
-  } catch (err) {
-    console.error('Error fetching issued_documents:', err);
-  }
-
-  let nextConsecutivo = 'FSM-2026-00001';
-  try {
-    nextConsecutivo = await getNextDocumentConsecutivo();
-  } catch (err) {
-    console.error('Error fetching next consecutivo:', err);
-  }
-
-  // Load registered students for fast autocomplete/selection
-  let registeredStudents: { nombre: string; documento: string; programa: string }[] = [];
-  try {
-    const studentsRes = await sql`
+      LIMIT 300
+    `.catch((err: any) => {
+      console.error('Error fetching issued_documents:', err);
+      return [];
+    }),
+    getNextDocumentConsecutivo().catch((err: any) => {
+      console.error('Error fetching next consecutivo:', err);
+      return 'FSM-2026-00001';
+    }),
+    sql`
       SELECT DISTINCT nombre, COALESCE(usuario_nro, '') as documento, COALESCE(grado, '') as programa
       FROM students
       WHERE activo = true
       ORDER BY nombre ASC
-      LIMIT 1000
-    `;
-    registeredStudents = studentsRes.map((s: any) => ({
-      nombre: s.nombre,
-      documento: s.documento,
-      programa: s.programa
-    }));
-  } catch (e) {
-    console.error('Error fetching students for autocomplete:', e);
-  }
-
-  // Load academic programs
-  let academicPrograms: string[] = [];
-  try {
-    const progsRes = await sql`
+      LIMIT 500
+    `.catch((e: any) => {
+      console.error('Error fetching students for autocomplete:', e);
+      return [];
+    }),
+    sql`
       SELECT DISTINCT title 
       FROM programs 
       WHERE active = true 
       ORDER BY title ASC
-    `;
-    academicPrograms = progsRes.map((p: any) => p.title);
-  } catch (e) {
-    academicPrograms = [];
-  }
+    `.catch((e: any) => {
+      console.error('Error fetching programs:', e);
+      return [];
+    })
+  ]);
+
+  const documents = Array.isArray(docsRes) ? docsRes : [];
+  const registeredStudents = (Array.isArray(studentsRes) ? studentsRes : []).map((s: any) => ({
+    nombre: s.nombre,
+    documento: s.documento,
+    programa: s.programa
+  }));
+  const academicPrograms = (Array.isArray(progsRes) ? progsRes : []).map((p: any) => p.title);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">

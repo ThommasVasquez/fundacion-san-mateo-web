@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { updateFooterSocial, addFooterSocial, deleteFooterSocial } from "@/app/actions";
 import { Plus, Trash2, Save, Link as LinkIcon, Loader2, CheckCircle } from "lucide-react";
 
@@ -26,12 +26,34 @@ const AVAILABLE_ICONS = [
   { name: "Globe / Web", value: "globe" }
 ];
 
+function formatUrl(url: string, icon: string): string {
+  let clean = url.trim();
+  if (!clean) return "";
+  if (clean.startsWith("@")) {
+    const handle = clean.replace("@", "");
+    const ic = icon.toLowerCase();
+    if (ic === "tiktok") return `https://tiktok.com/@${handle}`;
+    if (ic === "instagram") return `https://instagram.com/${handle}`;
+    if (ic === "twitter") return `https://x.com/${handle}`;
+    if (ic === "facebook") return `https://facebook.com/${handle}`;
+    return `https://instagram.com/${handle}`;
+  }
+  if (!clean.startsWith("http://") && !clean.startsWith("https://")) {
+    return `https://${clean}`;
+  }
+  return clean;
+}
+
 export default function FooterSocialsManager({ initialItems }: FooterSocialsManagerProps) {
   const [items, setItems] = useState<FooterSocial[]>(initialItems);
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [success, setSuccess] = useState<Record<string, boolean>>({});
   const [isAdding, setIsAdding] = useState(false);
   const [newItem, setNewItem] = useState({ name: "", url: "", icon: "globe" });
+
+  useEffect(() => {
+    setItems(initialItems);
+  }, [initialItems]);
 
   const handleUpdate = async (id: string, field: keyof FooterSocial, value: string) => {
     const updated = items.map((t) => (t.id === id ? { ...t, [field]: value } : t));
@@ -43,13 +65,15 @@ export default function FooterSocialsManager({ initialItems }: FooterSocialsMana
     if (!item) return;
 
     setLoading((prev) => ({ ...prev, [id]: true }));
-    const res = await updateFooterSocial(id, item.name, item.url, item.icon);
+    const cleanUrl = formatUrl(item.url, item.icon);
+    const res = await updateFooterSocial(id, item.name, cleanUrl, item.icon);
 
     if (res.success) {
       setSuccess((prev) => ({ ...prev, [id]: true }));
+      handleUpdate(id, 'url', cleanUrl);
       setTimeout(() => setSuccess((prev) => ({ ...prev, [id]: false })), 3000);
     } else {
-      alert("Error al guardar");
+      alert("Error al guardar: " + (res.error || "No se pudo actualizar"));
     }
     setLoading((prev) => ({ ...prev, [id]: false }));
   };
@@ -61,7 +85,8 @@ export default function FooterSocialsManager({ initialItems }: FooterSocialsMana
     }
 
     setIsAdding(true);
-    const res = await addFooterSocial(newItem.name, newItem.url, newItem.icon);
+    const cleanUrl = formatUrl(newItem.url, newItem.icon);
+    const res = await addFooterSocial(newItem.name, cleanUrl, newItem.icon);
     if (res.success && res.item) {
       const addedItem: FooterSocial = {
         id: res.item.id.toString(),
@@ -73,7 +98,7 @@ export default function FooterSocialsManager({ initialItems }: FooterSocialsMana
       setNewItem({ name: "", url: "", icon: "globe" });
       setIsAdding(false);
     } else {
-      alert("Error al añadir");
+      alert("Error al añadir: " + (res.error || "No se pudo crear"));
       setIsAdding(false);
     }
   };
@@ -85,7 +110,7 @@ export default function FooterSocialsManager({ initialItems }: FooterSocialsMana
     if (res.success) {
       setItems((prev) => prev.filter((t) => t.id !== id));
     } else {
-      alert("Error al eliminar");
+      alert("Error al eliminar: " + (res.error || "No se pudo eliminar"));
     }
   };
 

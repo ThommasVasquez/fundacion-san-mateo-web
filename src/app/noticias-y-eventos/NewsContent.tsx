@@ -20,12 +20,68 @@ interface NewsItem {
   link: string;
 }
 
+export interface SocialItem {
+  id: string;
+  name: string;
+  url: string;
+  icon: string;
+}
+
 interface NewsContentProps {
   news: NewsItem[];
   content: Record<string, string>;
+  socials?: SocialItem[];
 }
 
-export default function NewsContent({ news, content }: NewsContentProps) {
+const TiktokIcon = ({ size = 18, className = "" }: { size?: number; className?: string }) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
+  </svg>
+);
+
+const getSocialIcon = (iconName: string) => {
+  switch (iconName?.toLowerCase()) {
+    case "facebook": return <Facebook size={18} />;
+    case "instagram": return <Instagram size={18} />;
+    case "twitter": return <Twitter size={18} />;
+    case "x": return <Twitter size={18} />;
+    case "youtube": return <Video size={18} />;
+    case "tiktok": return <TiktokIcon size={18} />;
+    default: return <Share2 size={18} />;
+  }
+};
+
+const ensureValidUrl = (url?: string, defaultUrl: string = "#", iconName: string = ""): string => {
+  if (!url) return defaultUrl;
+  let clean = url.trim();
+  if (!clean) return defaultUrl;
+  if (clean.startsWith("@")) {
+    const handle = clean.replace("@", "");
+    const ic = iconName.toLowerCase();
+    if (ic.includes("tiktok")) return `https://tiktok.com/@${handle}`;
+    if (ic.includes("instagram")) return `https://instagram.com/${handle}`;
+    if (ic.includes("twitter") || ic.includes("x")) return `https://x.com/${handle}`;
+    if (ic.includes("facebook")) return `https://facebook.com/${handle}`;
+    return `https://instagram.com/${handle}`;
+  }
+  if (!clean.startsWith("http://") && !clean.startsWith("https://")) {
+    return `https://${clean}`;
+  }
+  return clean;
+};
+
+export default function NewsContent({ news, content, socials = [] }: NewsContentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -114,51 +170,76 @@ export default function NewsContent({ news, content }: NewsContentProps) {
                     Síguenos en nuestras redes oficiales para interactuar con la comunidad Mateista en tiempo real.
                   </p>
                   <div className="space-y-4">
-                      <a 
-                      href="https://facebook.com" 
-                      target="_blank"
-                      className="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white hover:text-fsm-blue transition-all duration-500 font-black text-[10px] tracking-widest uppercase group/social"
-                     >
-                       <span className="flex items-center gap-3">
-                         <Facebook size={18} className="text-fsm-red group-hover/social:text-fsm-blue transition-colors" />
-                         Facebook
-                       </span>
-                       <ArrowRight size={18} className="opacity-40" />
-                     </a>
-                     <a 
-                      href="https://instagram.com" 
-                      target="_blank" 
-                      className="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white hover:text-fsm-blue transition-all duration-500 font-black text-[10px] tracking-widest uppercase group/social"
-                     >
-                       <span className="flex items-center gap-3">
-                         <Instagram size={18} className="text-fsm-red group-hover/social:text-fsm-blue transition-colors" />
-                         Instagram
-                       </span>
-                       <ArrowRight size={18} className="opacity-40" />
-                     </a>
-                     <a 
-                      href="https://tiktok.com/@fundacionsanmateo" 
-                      target="_blank" 
-                      className="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white hover:text-fsm-blue transition-all duration-500 font-black text-[10px] tracking-widest uppercase group/social"
-                     >
-                       <span className="flex items-center gap-3">
-                         <Video size={18} className="text-fsm-red group-hover/social:text-fsm-blue transition-colors" />
-                         TikTok
-                       </span>
-                       <ArrowRight size={18} className="opacity-40" />
-                     </a>
-                     <a 
-                      href="https://x.com/SanMateoF" 
-                      target="_blank" 
-                      className="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white hover:text-fsm-blue transition-all duration-500 font-black text-[10px] tracking-widest uppercase group/social"
-                     >
-                       <span className="flex items-center gap-3">
-                         <Twitter size={18} className="text-fsm-red group-hover/social:text-fsm-blue transition-colors" />
-                         X (Twitter)
-                       </span>
-                       <ArrowRight size={18} className="opacity-40" />
-                     </a>
-
+                    {socials && socials.length > 0 ? (
+                      socials.map((item) => (
+                        <a 
+                          key={item.id}
+                          href={ensureValidUrl(item.url, "#", item.icon || item.name)} 
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white hover:text-fsm-blue transition-all duration-500 font-black text-[10px] tracking-widest uppercase group/social"
+                        >
+                          <span className="flex items-center gap-3">
+                            <span className="text-fsm-red group-hover/social:text-fsm-blue transition-colors">
+                              {getSocialIcon(item.icon)}
+                            </span>
+                            {item.name}
+                          </span>
+                          <ArrowRight size={18} className="opacity-40" />
+                        </a>
+                      ))
+                    ) : (
+                      <>
+                        <a 
+                          href={ensureValidUrl(content['footer_facebook_url'] || content['social_facebook'], "https://facebook.com/fundacionsanmateosoacha", "facebook")} 
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white hover:text-fsm-blue transition-all duration-500 font-black text-[10px] tracking-widest uppercase group/social"
+                        >
+                          <span className="flex items-center gap-3">
+                            <Facebook size={18} className="text-fsm-red group-hover/social:text-fsm-blue transition-colors" />
+                            Facebook
+                          </span>
+                          <ArrowRight size={18} className="opacity-40" />
+                        </a>
+                        <a 
+                          href={ensureValidUrl(content['footer_instagram_url'] || content['social_instagram'], "https://instagram.com/fundacionsanmateosoacha", "instagram")} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white hover:text-fsm-blue transition-all duration-500 font-black text-[10px] tracking-widest uppercase group/social"
+                        >
+                          <span className="flex items-center gap-3">
+                            <Instagram size={18} className="text-fsm-red group-hover/social:text-fsm-blue transition-colors" />
+                            Instagram
+                          </span>
+                          <ArrowRight size={18} className="opacity-40" />
+                        </a>
+                        <a 
+                          href={ensureValidUrl(content['footer_tiktok_url'] || content['social_tiktok'], "https://tiktok.com/@fundacionsanmateo", "tiktok")} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white hover:text-fsm-blue transition-all duration-500 font-black text-[10px] tracking-widest uppercase group/social"
+                        >
+                          <span className="flex items-center gap-3">
+                            <TiktokIcon size={18} className="text-fsm-red group-hover/social:text-fsm-blue transition-colors" />
+                            TikTok
+                          </span>
+                          <ArrowRight size={18} className="opacity-40" />
+                        </a>
+                        <a 
+                          href={ensureValidUrl(content['footer_twitter_url'] || content['social_twitter'], "https://x.com/SanMateoSoacha", "twitter")} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white hover:text-fsm-blue transition-all duration-500 font-black text-[10px] tracking-widest uppercase group/social"
+                        >
+                          <span className="flex items-center gap-3">
+                            <Twitter size={18} className="text-fsm-red group-hover/social:text-fsm-blue transition-colors" />
+                            X (Twitter)
+                          </span>
+                          <ArrowRight size={18} className="opacity-40" />
+                        </a>
+                      </>
+                    )}
                   </div>
                 </div>
 

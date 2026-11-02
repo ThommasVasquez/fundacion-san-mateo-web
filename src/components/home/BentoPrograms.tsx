@@ -26,6 +26,89 @@ interface BentoProgramsProps {
   programs?: Program[];
 }
 
+interface BentoCardProps {
+  program: Program;
+  index: number;
+  variant?: 'tall' | 'wide' | 'medium' | 'compact';
+  className?: string;
+  getProgramStyles: (title: string, index: number) => { icon: React.ReactNode; bg: string };
+  getBentoImage: (program: Program, index: number) => string;
+}
+
+const BentoCard = ({ 
+  program, 
+  index, 
+  variant = 'medium', 
+  className = '',
+  getProgramStyles,
+  getBentoImage 
+}: BentoCardProps) => {
+  const styles = getProgramStyles(program.title, index);
+  const image = getBentoImage(program, index);
+
+  const isTall = variant === 'tall';
+  const isWide = variant === 'wide';
+  const isMedium = variant === 'medium';
+  const isCompact = variant === 'compact';
+
+  return (
+    <Link 
+      href={program.href}
+      className={`bento-item relative group rounded-[2.5rem] sm:rounded-[3.5rem] lg:rounded-[4rem] overflow-hidden shadow-premium block transition-all duration-500 w-full ${className}`}
+    >
+      <Image 
+        src={image} 
+        alt={program.title} 
+        fill 
+        sizes="(max-width: 768px) 100vw, 50vw"
+        priority={index < 2}
+        className="object-cover transition-transform duration-1000 group-hover:scale-110 brightness-75 group-hover:brightness-50"
+      />
+      <div className={`absolute inset-0 p-6 sm:p-8 md:p-10 lg:p-12 flex flex-col justify-end text-white z-10 ${styles.bg}`}>
+        <div className={`rounded-2xl sm:rounded-3xl flex items-center justify-center border border-white/30 transform group-hover:rotate-6 transition-transform duration-500 bg-white/30 ${
+          isTall || isWide 
+            ? 'mb-4 sm:mb-6 w-14 h-14 sm:w-16 sm:h-16' 
+            : 'mb-3 sm:mb-4 w-11 h-11 sm:w-12 sm:h-12'
+        }`}>
+          {styles.icon}
+        </div>
+        {program.details?.show_label !== false && (
+          <p className={`font-black tracking-widest uppercase opacity-75 ${
+            isCompact ? 'text-[8px] sm:text-[9px] mb-1.5 sm:mb-2' : 'text-[9px] sm:text-xs mb-2 sm:mb-4'
+          }`}>
+            {program.details?.label_text || "Técnico Laboral por Competencias"}
+          </p>
+        )}
+        <h4 className={`font-black leading-tight uppercase tracking-tight ${
+          isTall 
+            ? 'text-2xl sm:text-3xl md:text-4xl mb-4 sm:mb-6' 
+            : isWide 
+              ? 'text-2xl sm:text-3xl md:text-4xl mb-4 sm:mb-6' 
+              : isMedium 
+                ? 'text-xl sm:text-2xl md:text-3xl mb-3 sm:mb-4' 
+                : 'text-base sm:text-lg md:text-xl mb-2 sm:mb-3 line-clamp-2'
+        }`}>
+          {program.title}
+        </h4>
+        {isTall || isWide || isMedium ? (
+          <button className={`flex items-center gap-2 font-black text-[10px] tracking-widest px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl w-fit transition-all duration-300 ${
+            index % 2 === 0
+              ? 'bg-white text-fsm-blue group-hover:bg-fsm-red group-hover:text-white'
+              : 'bg-fsm-blue text-white group-hover:bg-white group-hover:text-fsm-blue'
+          }`}>
+            EXPLORAR PROGRAMA <ArrowRight size={14} />
+          </button>
+        ) : (
+          <div className="flex items-center gap-2 font-black text-[10px] tracking-widest uppercase group-hover:translate-x-1.5 transition-transform mt-1">
+            <span>Explorar programa</span>
+            <ArrowRight size={14} />
+          </div>
+        )}
+      </div>
+    </Link>
+  );
+};
+
 const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -78,6 +161,198 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
     return '/img/image15.jpg';
   };
 
+  const renderBentoGrid = () => {
+    const count = programs.length;
+    if (count === 0) return null;
+
+    const cardProps = {
+      getProgramStyles,
+      getBentoImage,
+    };
+
+    // Case 1
+    if (count === 1) {
+      return (
+        <div className="grid grid-cols-1 gap-8">
+          <BentoCard {...cardProps} program={programs[0]} index={0} variant="wide" className="h-[500px]" />
+        </div>
+      );
+    }
+
+    // Case 2
+    if (count === 2) {
+      return (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <BentoCard {...cardProps} program={programs[0]} index={0} variant="wide" className="lg:col-span-7 h-[500px]" />
+          <BentoCard {...cardProps} program={programs[1]} index={1} variant="wide" className="lg:col-span-5 h-[500px]" />
+        </div>
+      );
+    }
+
+    // Case 3
+    if (count === 3) {
+      return (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-5 flex flex-col">
+            <BentoCard {...cardProps} program={programs[0]} index={0} variant="tall" className="h-full min-h-[500px] lg:min-h-[660px]" />
+          </div>
+          <div className="lg:col-span-7 flex flex-col gap-8 justify-between">
+            <BentoCard {...cardProps} program={programs[1]} index={1} variant="wide" className="h-[310px]" />
+            <BentoCard {...cardProps} program={programs[2]} index={2} variant="wide" className="h-[310px]" />
+          </div>
+        </div>
+      );
+    }
+
+    // Case 4 (The classic 4-item bento: 1 tall on left, 1 wide top-right, 2 compact bottom-right)
+    if (count === 4) {
+      return (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-5 flex flex-col">
+            <BentoCard {...cardProps} program={programs[0]} index={0} variant="tall" className="h-full min-h-[500px] lg:min-h-[700px]" />
+          </div>
+          <div className="lg:col-span-7 flex flex-col gap-8 justify-between">
+            <BentoCard {...cardProps} program={programs[1]} index={1} variant="wide" className="h-[380px]" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+              <BentoCard {...cardProps} program={programs[2]} index={2} variant="compact" className="h-[290px]" />
+              <BentoCard {...cardProps} program={programs[3]} index={3} variant="compact" className="h-[290px]" />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Case 5 (5 items: 1 tall on left, 1 wide top-right, 3 compact bottom-right)
+    if (count === 5) {
+      return (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-5 flex flex-col">
+            <BentoCard {...cardProps} program={programs[0]} index={0} variant="tall" className="h-full min-h-[500px] lg:min-h-[700px]" />
+          </div>
+          <div className="lg:col-span-7 flex flex-col gap-8 justify-between">
+            <BentoCard {...cardProps} program={programs[1]} index={1} variant="wide" className="h-[380px]" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <BentoCard {...cardProps} program={programs[2]} index={2} variant="compact" className="h-[290px]" />
+              <BentoCard {...cardProps} program={programs[3]} index={3} variant="compact" className="h-[290px]" />
+              <BentoCard {...cardProps} program={programs[4]} index={4} variant="compact" className="h-[290px]" />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Case 6 (6 items: 1 tall on left, top-right has 2 medium cards, bottom-right has 3 compact cards)
+    if (count === 6) {
+      return (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-5 flex flex-col">
+            <BentoCard {...cardProps} program={programs[0]} index={0} variant="tall" className="h-full min-h-[500px] lg:min-h-[720px]" />
+          </div>
+          <div className="lg:col-span-7 flex flex-col gap-6 justify-between">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <BentoCard {...cardProps} program={programs[1]} index={1} variant="medium" className="h-[345px]" />
+              <BentoCard {...cardProps} program={programs[2]} index={2} variant="medium" className="h-[345px]" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <BentoCard {...cardProps} program={programs[3]} index={3} variant="compact" className="h-[345px]" />
+              <BentoCard {...cardProps} program={programs[4]} index={4} variant="compact" className="h-[345px]" />
+              <BentoCard {...cardProps} program={programs[5]} index={5} variant="compact" className="h-[345px]" />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Case 7 (7 items: Left has 1 medium + 2 compact, Right has 1 wide + 3 compact)
+    if (count === 7) {
+      return (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-5 flex flex-col gap-6 justify-between">
+            <BentoCard {...cardProps} program={programs[0]} index={0} variant="medium" className="h-[360px]" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <BentoCard {...cardProps} program={programs[1]} index={1} variant="compact" className="h-[330px]" />
+              <BentoCard {...cardProps} program={programs[2]} index={2} variant="compact" className="h-[330px]" />
+            </div>
+          </div>
+          <div className="lg:col-span-7 flex flex-col gap-6 justify-between">
+            <BentoCard {...cardProps} program={programs[3]} index={3} variant="wide" className="h-[360px]" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <BentoCard {...cardProps} program={programs[4]} index={4} variant="compact" className="h-[330px]" />
+              <BentoCard {...cardProps} program={programs[5]} index={5} variant="compact" className="h-[330px]" />
+              <BentoCard {...cardProps} program={programs[6]} index={6} variant="compact" className="h-[330px]" />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Case 8 (8 items: 2 balanced inverted bento tiers of 4)
+    if (count === 8) {
+      return (
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-5 flex flex-col">
+              <BentoCard {...cardProps} program={programs[0]} index={0} variant="tall" className="h-full min-h-[480px] lg:min-h-[580px]" />
+            </div>
+            <div className="lg:col-span-7 flex flex-col gap-6 justify-between">
+              <BentoCard {...cardProps} program={programs[1]} index={1} variant="wide" className="h-[280px]" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <BentoCard {...cardProps} program={programs[2]} index={2} variant="compact" className="h-[270px]" />
+                <BentoCard {...cardProps} program={programs[3]} index={3} variant="compact" className="h-[270px]" />
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-7 flex flex-col gap-6 justify-between">
+              <BentoCard {...cardProps} program={programs[4]} index={4} variant="wide" className="h-[280px]" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <BentoCard {...cardProps} program={programs[5]} index={5} variant="compact" className="h-[270px]" />
+                <BentoCard {...cardProps} program={programs[6]} index={6} variant="compact" className="h-[270px]" />
+              </div>
+            </div>
+            <div className="lg:col-span-5 flex flex-col">
+              <BentoCard {...cardProps} program={programs[7]} index={7} variant="tall" className="h-full min-h-[480px] lg:min-h-[580px]" />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Case > 8: Primary 5-item bento + responsive balanced grid for remaining
+    const primary = programs.slice(0, 5);
+    const remaining = programs.slice(5);
+
+    return (
+      <div className="space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-5 flex flex-col">
+            <BentoCard {...cardProps} program={primary[0]} index={0} variant="tall" className="h-full min-h-[500px] lg:min-h-[700px]" />
+          </div>
+          <div className="lg:col-span-7 flex flex-col gap-8 justify-between">
+            <BentoCard {...cardProps} program={primary[1]} index={1} variant="wide" className="h-[380px]" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <BentoCard {...cardProps} program={primary[2]} index={2} variant="compact" className="h-[290px]" />
+              <BentoCard {...cardProps} program={primary[3]} index={3} variant="compact" className="h-[290px]" />
+              <BentoCard {...cardProps} program={primary[4]} index={4} variant="compact" className="h-[290px]" />
+            </div>
+          </div>
+        </div>
+        <div className={`grid grid-cols-1 ${remaining.length % 2 === 0 ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-2 lg:grid-cols-3'} gap-6`}>
+          {remaining.map((p, idx) => (
+            <BentoCard 
+              key={p.id} 
+              {...cardProps}
+              program={p} 
+              index={5 + idx} 
+              variant="compact" 
+              className="h-[300px]" 
+            />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <section ref={containerRef} className="py-32 bg-white overflow-hidden">
       <div className="container mx-auto px-4 md:px-8">
@@ -98,135 +373,8 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
           </Link>
         </div>
 
-        {/* Bento Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 h-full">
-          {/* slot 1: Featured Large Vertical */}
-          {programs[0] && (
-            <Link 
-              href={programs[0].href}
-              className="bento-item md:col-span-8 lg:col-span-5 relative group rounded-[4rem] overflow-hidden shadow-premium h-[500px] lg:min-h-[700px]"
-            >
-                <Image 
-                  src={getBentoImage(programs[0], 0)} 
-                  alt={programs[0].title} 
-                  fill 
-                  className="object-cover transition-transform duration-1000 group-hover:scale-110 brightness-75 group-hover:brightness-50"
-                />
-              <div className={`absolute inset-0 p-12 flex flex-col justify-end text-white z-10 ${getProgramStyles(programs[0].title, 0).bg}`}>
-                <div className="mb-6 w-16 h-16 bg-white/30 rounded-3xl flex items-center justify-center border border-white/30 transform group-hover:rotate-12 transition-transform duration-500">
-                  {getProgramStyles(programs[0].title, 0).icon}
-                </div>
-                {programs[0].details?.show_label !== false && (
-                  <p className="text-xs font-black tracking-widest mb-4 uppercase opacity-70">
-                    {programs[0].details?.label_text || "Técnico Laboral por Competencias"}
-                  </p>
-                )}
-                <h4 className="text-3xl md:text-4xl font-black mb-6 leading-tight uppercase">
-                  {programs[0].title}
-                </h4>
-                <button className="flex items-center gap-2 font-black text-[10px] tracking-widest bg-white text-fsm-blue px-8 py-4 rounded-2xl w-fit group-hover:bg-fsm-red group-hover:text-white transition-all duration-300">
-                  EXPLORAR PROGRAMA <ArrowRight size={14} />
-                </button>
-              </div>
-            </Link>
-          )}
-
-          <div className="md:col-span-12 lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
-            {/* slot 2: Featured Large Horizontal */}
-            {programs[1] && (
-              <Link 
-                href={programs[1].href}
-                className="bento-item md:col-span-2 relative group rounded-[4rem] overflow-hidden shadow-premium h-[400px]"
-              >
-                  <Image 
-                    src={getBentoImage(programs[1], 1)} 
-                    alt={programs[1].title} 
-                    fill 
-                    priority
-                    className="object-cover transition-transform duration-1000 group-hover:scale-110 brightness-75 group-hover:brightness-50"
-                  />
-                <div className={`absolute inset-0 p-12 flex flex-col justify-end text-white z-10 ${getProgramStyles(programs[1].title, 1).bg}`}>
-                  <div className="mb-6 w-16 h-16 bg-white/30 rounded-3xl flex items-center justify-center border border-white/30 transform group-hover:-rotate-12 transition-transform duration-500">
-                    {getProgramStyles(programs[1].title, 1).icon}
-                  </div>
-                  {programs[1].details?.show_label !== false && (
-                    <p className="text-xs font-black tracking-widest mb-4 uppercase opacity-70">
-                      {programs[1].details?.label_text || "Técnico Laboral por Competencias"}
-                    </p>
-                  )}
-                  <h4 className="text-3xl md:text-4xl font-black mb-6 leading-tight uppercase">
-                    {programs[1].title}
-                  </h4>
-                  <button className="flex items-center gap-2 font-black text-[10px] tracking-widest bg-fsm-blue text-white px-8 py-4 rounded-2xl w-fit group-hover:bg-white group-hover:text-fsm-blue transition-all duration-300">
-                    EXPLORAR PROGRAMA <ArrowRight size={14} />
-                  </button>
-                </div>
-              </Link>
-            )}
-
-            {/* slot 3: Smaller Square */}
-            {programs[2] && (
-              <Link 
-                href={programs[2].href}
-                className="bento-item relative group rounded-[4rem] overflow-hidden shadow-premium h-[300px]"
-              >
-                <Image 
-                  src={getBentoImage(programs[2], 2)} 
-                  alt={programs[2].title} 
-                  fill 
-                  className="object-cover transition-transform duration-1000 group-hover:scale-110 brightness-75 group-hover:brightness-50"
-                />
-                <div className={`absolute inset-0 p-8 flex flex-col justify-end text-white z-10 ${getProgramStyles(programs[2].title, 2).bg}`}>
-                  <div className="mb-4 w-12 h-12 bg-white/30 rounded-2xl flex items-center justify-center border border-white/30 transform group-hover:rotate-12 transition-transform duration-500">
-                    {getProgramStyles(programs[2].title, 2).icon}
-                  </div>
-                  {programs[2].details?.show_label === true && (
-                    <p className="text-[9px] font-black tracking-widest mb-2 uppercase opacity-70">
-                      {programs[2].details?.label_text || "Técnico Laboral por Competencias"}
-                    </p>
-                  )}
-                  <h4 className="text-xl md:text-2xl font-black mb-2 uppercase leading-none">
-                    {programs[2].title}
-                  </h4>
-                  <div className="flex items-center gap-2 font-black text-[10px] tracking-widest uppercase mt-4 group-hover:text-fsm-red transition-colors">
-                    Explorar programa <ArrowRight size={14} />
-                  </div>
-                </div>
-              </Link>
-            )}
-
-            {/* slot 4: Smaller Square */}
-            {programs[3] && (
-              <Link 
-                href={programs[3].href}
-                className="bento-item relative group rounded-[4rem] overflow-hidden shadow-premium h-[300px]"
-              >
-                <Image 
-                  src={getBentoImage(programs[3], 3)} 
-                  alt={programs[3].title} 
-                  fill 
-                  className="object-cover transition-transform duration-1000 group-hover:scale-110 brightness-75 group-hover:brightness-50"
-                />
-                <div className={`absolute inset-0 p-8 flex flex-col justify-end text-white z-10 ${getProgramStyles(programs[3].title, 3).bg}`}>
-                  <div className="mb-4 w-12 h-12 bg-white/30 rounded-2xl flex items-center justify-center border border-white/30 transform group-hover:-rotate-12 transition-transform duration-500">
-                    {getProgramStyles(programs[3].title, 3).icon}
-                  </div>
-                  {programs[3].details?.show_label === true && (
-                    <p className="text-[9px] font-black tracking-widest mb-2 uppercase opacity-70">
-                      {programs[3].details?.label_text || "Técnico Laboral por Competencias"}
-                    </p>
-                  )}
-                  <h4 className="text-xl md:text-2xl font-black mb-2 uppercase leading-none">
-                    {programs[3].title}
-                  </h4>
-                  <div className="flex items-center gap-2 font-black text-[10px] tracking-widest uppercase mt-4 group-hover:text-fsm-blue transition-colors">
-                    Explorar programa <ArrowRight size={14} />
-                  </div>
-                </div>
-              </Link>
-            )}
-          </div>
-        </div>
+        {/* Dynamic Bento Grid */}
+        {renderBentoGrid()}
 
         <div className="mt-20 flex justify-center">
           <div className="bg-fsm-red/5 p-12 md:p-16 lg:p-20 rounded-[4rem] border border-fsm-red/10 flex flex-col lg:flex-row items-center gap-12 justify-between w-full max-w-7xl shadow-sm relative overflow-hidden">

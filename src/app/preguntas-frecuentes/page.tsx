@@ -1,6 +1,6 @@
 import React from "react";
 import FAQContent from "./FAQContent";
-import { getFAQs } from "@/lib/content";
+import { getFAQs, getContentMap } from "@/lib/content";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +10,7 @@ export const metadata = {
 };
 
 export default async function FAQPage() {
+  const content = await getContentMap("/preguntas-frecuentes");
   const faqs = await getFAQs();
 
   // Serialize IDs to prevent hydration issues
@@ -21,5 +22,5 @@ export default async function FAQPage() {
     order_index: f.order_index || 0
   }));
 
-  return <FAQContent initialFaqs={serializedFAQs} />;
+  return <FAQContent content={content} initialFaqs={serializedFAQs} />;
 }

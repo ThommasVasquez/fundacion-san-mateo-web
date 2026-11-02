@@ -5,6 +5,7 @@ import WhatsAppButton from "@/components/common/WhatsAppButton";
 import Image from "next/image";
 import { Newspaper } from "lucide-react";
 import { getContentMap, getNewsEvents } from "@/lib/content";
+import { getFooterSocials } from "@/app/actions";
 import NewsContent from "./NewsContent";
 
 export const metadata = {
@@ -17,6 +18,7 @@ export const dynamic = "force-dynamic";
 export default async function NewsPage() {
   const content = await getContentMap("/noticias-y-eventos");
   const rawNews = await getNewsEvents();
+  const rawSocials = await getFooterSocials();
 
   const news = rawNews.map((item: any) => ({
     id: item.id.toString(),
@@ -26,6 +28,13 @@ export default async function NewsPage() {
     date_text: item.date_text || '',
     category: item.category || '',
     link: item.link || ''
+  }));
+
+  const socials = (rawSocials || []).map((item: any) => ({
+    id: item.id.toString(),
+    name: item.name,
+    url: item.url,
+    icon: item.icon || 'globe'
   }));
 
   return (
@@ -65,7 +74,7 @@ export default async function NewsPage() {
         </div>
       </section>
 
-      <NewsContent news={news} content={content} />
+      <NewsContent news={news} content={content} socials={socials} />
 
       <Footer />
       <WhatsAppButton />

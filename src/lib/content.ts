@@ -122,16 +122,28 @@ export async function getDirectoryItems() {
 export async function getPrograms() {
   try {
     await sql`ALTER TABLE academic_programs ADD COLUMN IF NOT EXISTS total_clases INTEGER;`.catch(() => []);
+    await sql`ALTER TABLE academic_programs ADD COLUMN IF NOT EXISTS details JSONB;`.catch(() => []);
     const results = await sql`
-      SELECT id, title, subtitle, description, image_url, href, category, is_featured, order_index, total_clases 
+      SELECT id, title, subtitle, description, image_url, href, category, is_featured, order_index, total_clases, details 
       FROM academic_programs 
       ORDER BY is_featured DESC, order_index ASC
     `;
-    return results.map((p: any) => ({
-      ...p,
-      total_clases: p.total_clases ? Number(p.total_clases) : null,
-      image_url: sanitizeImageUrl(p.image_url, getOriginalProgramImage(p.href, p.title))
-    }));
+    return results.map((p: any) => {
+      let parsedDetails = p.details;
+      if (typeof parsedDetails === 'string') {
+        try {
+          parsedDetails = JSON.parse(parsedDetails);
+        } catch {
+          parsedDetails = {};
+        }
+      }
+      return {
+        ...p,
+        total_clases: p.total_clases ? Number(p.total_clases) : null,
+        details: parsedDetails || {},
+        image_url: sanitizeImageUrl(p.image_url, getOriginalProgramImage(p.href, p.title))
+      };
+    });
   } catch (e) {
     if (esSenalDeNext(e)) throw e;
     console.error("Error fetching programs:", e);
@@ -143,8 +155,17 @@ export async function getProgramByHref(href: string) {
     const results = await sql`SELECT * FROM academic_programs WHERE href = ${href} LIMIT 1`;
     if (results[0]) {
       const defaultImg = getOriginalProgramImage(results[0].href, results[0].title);
+      let parsedDetails = results[0].details;
+      if (typeof parsedDetails === 'string') {
+        try {
+          parsedDetails = JSON.parse(parsedDetails);
+        } catch {
+          parsedDetails = {};
+        }
+      }
       return {
         ...results[0],
+        details: parsedDetails || {},
         image_url: sanitizeImageUrl(results[0].image_url, defaultImg)
       };
     }

@@ -24,10 +24,11 @@ interface FAQ {
 }
 
 interface FAQContentProps {
+  content?: Record<string, string>;
   initialFaqs: FAQ[];
 }
 
-export default function FAQContent({ initialFaqs }: FAQContentProps) {
+export default function FAQContent({ content = {}, initialFaqs }: FAQContentProps) {
   const [openItem, setOpenItem] = useState<{ catId: number; itemId: number } | null>({ catId: 0, itemId: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -93,19 +94,29 @@ export default function FAQContent({ initialFaqs }: FAQContentProps) {
           <div className="max-w-xl">
             <div className="flex items-center gap-3 mb-6">
               <span className="w-12 h-px bg-fsm-red"></span>
-              <span className="text-[10px] font-black tracking-[0.4em] text-fsm-red uppercase">Centro de Ayuda</span>
+              <span className="text-[10px] font-black tracking-[0.4em] text-fsm-red uppercase">
+                {content.faq_hero_subtitle || "Centro de Ayuda"}
+              </span>
             </div>
-            <h1 className="text-5xl md:text-7xl font-black text-fsm-blue leading-none mb-8">
-              PREGUNTAS <br />
-              <span className="text-fsm-blue-light uppercase">Frecuentes</span>
+            <h1 className="text-5xl md:text-7xl font-black text-fsm-blue leading-none mb-8 uppercase">
+              {content.faq_hero_title1 || "PREGUNTAS"} <br />
+              <span className="text-fsm-blue-light uppercase">
+                {content.faq_hero_title2 || "Frecuentes"}
+              </span>
             </h1>
             <p className="text-lg text-gray-700 font-medium leading-relaxed">
-              Resuelva sus dudas sobre nuestros programas, procesos de matrícula, requisitos legales y formas de financiación en un solo lugar.
+              {content.faq_hero_description || "Resuelva sus dudas sobre nuestros programas, procesos de matrícula, requisitos legales y formas de financiación en un solo lugar."}
             </p>
           </div>
         </div>
         <div className="lg:w-1/2 relative min-h-[300px] lg:min-h-full overflow-hidden bg-fsm-blue">
-          <Image src="/img/banner15.jpg" alt="FAQ FSM" fill className="object-cover scale-110 brightness-75" priority />
+          <Image 
+            src={content.faq_hero_image || "/img/banner15.jpg"} 
+            alt="FAQ FSM" 
+            fill 
+            className="object-cover scale-110 brightness-75" 
+            priority 
+          />
           <div className="absolute bottom-12 right-12 z-20 bg-white/10 p-6 rounded-[2.5rem] border border-white/20 shadow-premium">
              <HelpCircle className="text-white opacity-50" size={32} />
           </div>

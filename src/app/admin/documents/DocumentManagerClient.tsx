@@ -337,11 +337,33 @@ export default function DocumentManagerClient({
           fechaExpedicion: newFecha,
           tipoDocumento: newTipo,
         });
-        stampedPdfUrl = uint8ArrayToDataUrl(stampedBytes);
-        if (stampedPdfUrl.length > 950000) {
-          setIsCreating(false);
-          showStatus('El archivo PDF adjunto supera el límite de 700 KB permitido para almacenamiento. Por favor comprímelo antes de subirlo.', 'error');
-          return;
+
+        // Subir PDF oficial estampado al almacenamiento institucional
+        try {
+          const blob = new Blob([stampedBytes as any], { type: 'application/pdf' });
+          const formData = new FormData();
+          const safeName = `${newConsecutivo}_${newNombre.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+          formData.append('file', blob, safeName);
+          formData.append('folder', 'documents');
+
+          const uploadRes = await fetch('/api/admin/documents/upload', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (uploadRes.ok) {
+            const uploadJson = await uploadRes.json();
+            if (uploadJson.success && uploadJson.url) {
+              stampedPdfUrl = uploadJson.url;
+            }
+          }
+        } catch (uploadErr) {
+          console.warn('Fallo upload al servidor institucional, usando respaldo directo:', uploadErr);
+        }
+
+        // Respaldo directo en caso de fallo de red
+        if (!stampedPdfUrl) {
+          stampedPdfUrl = uint8ArrayToDataUrl(stampedBytes);
         }
       } catch (e: any) {
         console.error('Error stamping PDF during document creation:', e);
@@ -548,19 +570,49 @@ export default function DocumentManagerClient({
     }
 
     setIsProcessingBulk(true);
-    const itemsToCreate = pdfFiles.map(p => ({
-      student_nombre: p.studentName,
-      tipo_documento: p.docType,
-      programa_curso: p.program,
-      fecha_expedicion: new Date().toISOString().split('T')[0],
-      notas: `Documento importado desde archivo PDF: ${p.file.name}`
-    }));
+    showStatus(`Subiendo y almacenando ${pdfFiles.length} documentos PDF institucionales...`);
+
+    const itemsToCreate = [];
+
+    for (let i = 0; i < pdfFiles.length; i++) {
+      const p = pdfFiles[i];
+      let pdfUrl: string | undefined = undefined;
+
+      try {
+        const formData = new FormData();
+        formData.append('file', p.file);
+        formData.append('folder', 'documents');
+
+        const uploadRes = await fetch('/api/admin/documents/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (uploadRes.ok) {
+          const uploadJson = await uploadRes.json();
+          if (uploadJson.success && uploadJson.url) {
+            pdfUrl = uploadJson.url;
+          }
+        }
+      } catch (uploadErr) {
+        console.warn(`Error al subir archivo para ${p.studentName}:`, uploadErr);
+      }
+
+      itemsToCreate.push({
+        student_nombre: p.studentName,
+        tipo_documento: p.docType,
+        programa_curso: p.program,
+        fecha_expedicion: new Date().toISOString().split('T')[0],
+        notas: `Documento importado desde archivo PDF: ${p.file.name}`,
+        pdf_url: pdfUrl,
+      });
+    }
 
     const res = await bulkCreateIssuedDocuments(itemsToCreate);
     setIsProcessingBulk(false);
 
     if (res.success) {
-      showStatus(`¡Éxito! Se registraron ${res.count} documentos oficiales con código QR.`);
+      showStatus(`¡Éxito! Se registraron ${res.count} documentos oficiales con código QR y archivos almacenados.`);
       setBulkModalOpen(false);
       setPdfFiles([]);
       router.refresh();
@@ -624,11 +676,33 @@ export default function DocumentManagerClient({
           fechaExpedicion: editFecha,
           tipoDocumento: editTipo,
         });
-        stampedPdfUrl = uint8ArrayToDataUrl(stampedBytes);
-        if (stampedPdfUrl.length > 950000) {
-          setIsSavingEdit(false);
-          showStatus('El nuevo archivo PDF adjunto supera el límite de 700 KB para almacenamiento. Por favor comprímelo antes de subirlo.', 'error');
-          return;
+
+        // Subir al almacenamiento institucional
+        try {
+          const blob = new Blob([stampedBytes as any], { type: 'application/pdf' });
+          const formData = new FormData();
+          const safeName = `${editConsecutivo}_${editNombre.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+          formData.append('file', blob, safeName);
+          formData.append('folder', 'documents');
+
+          const uploadRes = await fetch('/api/admin/documents/upload', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (uploadRes.ok) {
+            const uploadJson = await uploadRes.json();
+            if (uploadJson.success && uploadJson.url) {
+              stampedPdfUrl = uploadJson.url;
+            }
+          }
+        } catch (uploadErr) {
+          console.warn('Fallo upload al servidor institucional en edición, usando respaldo directo:', uploadErr);
+        }
+
+        // Respaldo directo en caso de fallo de red
+        if (!stampedPdfUrl) {
+          stampedPdfUrl = uint8ArrayToDataUrl(stampedBytes);
         }
       } catch (err) {
         console.error('Error stamping updated PDF:', err);

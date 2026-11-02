@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { decrypt } from '@/lib/auth';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { sql } from '@/lib/db';
 
 /** Lee una cookie por nombre sin traer dependencias */
 function readCookie(header: string | null, name: string): string | undefined {
@@ -34,6 +35,7 @@ export async function POST(req: Request) {
 
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
+    const folder = (formData.get('folder') as string) || 'normativity';
 
     if (!file || file.size === 0) {
       return NextResponse.json({ error: 'No se ha seleccionado ningún archivo o está vacío.' }, { status: 400 });
@@ -47,7 +49,7 @@ export async function POST(req: Request) {
     const originalName = file.name || 'documento.pdf';
     const ext = originalName.split('.').pop()?.toLowerCase() || 'pdf';
 
-    // Generar un nombre seguro para el objeto en R2
+    // Generar un nombre seguro para el objeto
     const baseName = originalName
       .replace(/\.[^/.]+$/, '')
       .normalize('NFD')
@@ -55,55 +57,98 @@ export async function POST(req: Request) {
       .replace(/[^a-zA-Z0-9_-]/g, '_')
       .substring(0, 60);
 
+    const safeFolder = folder.replace(/[^a-zA-Z0-9_-]/g, '') || 'normativity';
     const timestamp = Date.now();
-    const r2Key = `normativity/${timestamp}_${baseName}.${ext}`;
+    const fileKey = `${safeFolder}/${timestamp}_${baseName}.${ext}`;
 
-    // Obtener contexto de Cloudflare
+    const arrayBuffer = await file.arrayBuffer();
+    const mimeType = file.type || (ext === 'pdf' ? 'application/pdf' : 'application/octet-stream');
+
+    // Obtener contexto de Cloudflare para verificar si R2 está disponible
     let env: any;
     try {
       const cfContext = await getCloudflareContext({ async: true });
       env = cfContext?.env;
     } catch (cfError: any) {
-      console.warn('No se pudo obtener el contexto de Cloudflare directamente:', cfError);
+      console.warn('No se pudo obtener el contexto de Cloudflare en upload de documento:', cfError);
     }
 
     const bucket = env?.IMAGES_BUCKET;
 
-    if (!bucket) {
-      console.error('El bucket R2 IMAGES_BUCKET no está disponible en este entorno.');
-      return NextResponse.json(
-        { error: 'El almacenamiento institucional R2 no está disponible en este entorno.' },
-        { status: 503 }
-      );
+    // 1. Si R2 está activo y disponible, guardar en R2
+    if (bucket) {
+      try {
+        await bucket.put(fileKey, arrayBuffer, {
+          httpMetadata: {
+            contentType: mimeType,
+          },
+          customMetadata: {
+            originalName,
+            uploadedAt: new Date().toISOString(),
+          },
+        });
+
+        const publicUrl = `/api/documents/file/${fileKey}`;
+
+        return NextResponse.json({
+          success: true,
+          url: publicUrl,
+          file_name: originalName,
+          key: fileKey,
+          size: file.size,
+          storage: 'r2',
+        });
+      } catch (r2Err) {
+        console.warn('Fallo al guardar en R2, procediendo con respaldo en base de datos Postgres:', r2Err);
+      }
     }
 
-    const arrayBuffer = await file.arrayBuffer();
+    // 2. Respaldo de alta resiliencia: Guardar en Postgres (tabla uploaded_documents)
+    const base64Data = Buffer.from(arrayBuffer).toString('base64');
 
-    // Guardar en R2
-    await bucket.put(r2Key, arrayBuffer, {
-      httpMetadata: {
-        contentType: file.type || 'application/pdf',
-      },
-      customMetadata: {
-        originalName,
-        uploadedAt: new Date().toISOString(),
-      },
-    });
+    await sql`
+      CREATE TABLE IF NOT EXISTS uploaded_documents (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        file_key TEXT UNIQUE NOT NULL,
+        file_name TEXT NOT NULL,
+        content_type TEXT NOT NULL,
+        data_base64 TEXT NOT NULL,
+        file_size INT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `;
 
-    const publicUrl = `/api/documents/file/${r2Key}`;
+    await sql`
+      CREATE INDEX IF NOT EXISTS idx_uploaded_documents_file_key ON uploaded_documents (file_key)
+    `;
+
+    await sql`
+      INSERT INTO uploaded_documents (file_key, file_name, content_type, data_base64, file_size)
+      VALUES (${fileKey}, ${originalName}, ${mimeType}, ${base64Data}, ${file.size})
+      ON CONFLICT (file_key) DO UPDATE SET
+        file_name = EXCLUDED.file_name,
+        content_type = EXCLUDED.content_type,
+        data_base64 = EXCLUDED.data_base64,
+        file_size = EXCLUDED.file_size,
+        created_at = NOW()
+    `;
+
+    const publicUrl = `/api/documents/file/${fileKey}`;
 
     return NextResponse.json({
       success: true,
       url: publicUrl,
       file_name: originalName,
-      key: r2Key,
+      key: fileKey,
       size: file.size,
+      storage: 'postgres',
     });
   } catch (error: any) {
-    console.error('Error al subir documento normativo a R2:', error);
+    console.error('Error al subir documento institucional:', error);
     return NextResponse.json(
       { error: error.message || 'Error interno al procesar el documento' },
       { status: 500 }
     );
   }
 }
+

@@ -16,6 +16,7 @@ import {
   Contact,
   GraduationCap,
   HelpCircle,
+  Share2,
 } from "lucide-react";
 import Image from "next/image";
 import TestimonialManager from "./TestimonialManager";
@@ -1378,18 +1379,32 @@ export default function GlobalCMSForm({
               )}
 
               {groupName === "Encabezado Hero" && currentSub === "Noticias y Eventos" && (
-                <div className="mt-12 pt-12 border-t border-gray-100">
-                  <div className="mb-8">
-                    <h4 className="text-lg font-black text-fsm-blue uppercase flex items-center gap-2">
-                      <Newspaper className="text-fsm-red" size={20} /> Gestión
-                      de Noticias
-                    </h4>
-                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">
-                      Administra los eventos y noticias institucionales
-                    </p>
+                <>
+                  <div className="mt-12 pt-12 border-t border-gray-100">
+                    <div className="mb-8">
+                      <h4 className="text-lg font-black text-fsm-blue uppercase flex items-center gap-2">
+                        <Newspaper className="text-fsm-red" size={20} /> Gestión
+                        de Noticias
+                      </h4>
+                      <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">
+                        Administra los eventos y noticias institucionales
+                      </p>
+                    </div>
+                    <NewsManager news={initialNews} />
                   </div>
-                  <NewsManager news={initialNews} />
-                </div>
+
+                  <div className="mt-12 pt-12 border-t border-gray-100">
+                    <div className="mb-8">
+                      <h4 className="text-lg font-black text-fsm-blue uppercase flex items-center gap-2">
+                        <Share2 className="text-fsm-red" size={20} /> Redes Sociales (Comunidad Digital)
+                      </h4>
+                      <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">
+                        Administra los enlaces de Facebook, Instagram, TikTok y X que se muestran en el bloque lateral de Comunidad Digital
+                      </p>
+                    </div>
+                    <FooterSocialsManager initialItems={initialSocials} />
+                  </div>
+                </>
               )}
 
               {groupName === "Interface" && currentSub === "Galería" && (

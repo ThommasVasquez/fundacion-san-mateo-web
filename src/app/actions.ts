@@ -333,66 +333,125 @@ export async function deleteDirectoryItem(id: string) {
 
 export async function updateProgram(id: string, data: { title: string; subtitle: string; description: string; image_url: string; href: string; category: string; is_featured: boolean; details?: any; total_clases?: number | null }) {
   try {
-    const detailsJson = data.details ? (typeof data.details === 'string' ? data.details : JSON.stringify(data.details)) : null;
+    const detailsJson = data.details !== undefined && data.details !== null
+      ? (typeof data.details === 'string' ? data.details : JSON.stringify(data.details))
+      : null;
     await sql`ALTER TABLE academic_programs ADD COLUMN IF NOT EXISTS total_clases INTEGER;`.catch(() => []);
+    await sql`ALTER TABLE academic_programs ADD COLUMN IF NOT EXISTS details JSONB;`.catch(() => []);
     const tc = data.total_clases !== undefined ? (data.total_clases && data.total_clases > 0 ? Math.floor(data.total_clases) : null) : undefined;
     
-    if (tc !== undefined) {
-      await sql`
-        UPDATE academic_programs 
-        SET 
-          title = ${data.title}, 
-          subtitle = ${data.subtitle}, 
-          description = ${data.description}, 
-          image_url = ${data.image_url}, 
-          href = ${data.href}, 
-          category = ${data.category},
-          is_featured = ${data.is_featured},
-          details = ${detailsJson}::jsonb,
-          total_clases = ${tc}
-        WHERE id = ${id}
-      `;
-    } else {
-      await sql`
-        UPDATE academic_programs 
-        SET 
-          title = ${data.title}, 
-          subtitle = ${data.subtitle}, 
-          description = ${data.description}, 
-          image_url = ${data.image_url}, 
-          href = ${data.href}, 
-          category = ${data.category},
-          is_featured = ${data.is_featured},
-          details = ${detailsJson}::jsonb
-        WHERE id = ${id}
-      `;
+    try {
+      if (tc !== undefined) {
+        await sql`
+          UPDATE academic_programs 
+          SET 
+            title = ${data.title}, 
+            subtitle = ${data.subtitle}, 
+            description = ${data.description}, 
+            image_url = ${data.image_url}, 
+            href = ${data.href}, 
+            category = ${data.category},
+            is_featured = ${data.is_featured},
+            details = ${detailsJson}::jsonb,
+            total_clases = ${tc}
+          WHERE id = ${id}
+        `;
+      } else {
+        await sql`
+          UPDATE academic_programs 
+          SET 
+            title = ${data.title}, 
+            subtitle = ${data.subtitle}, 
+            description = ${data.description}, 
+            image_url = ${data.image_url}, 
+            href = ${data.href}, 
+            category = ${data.category},
+            is_featured = ${data.is_featured},
+            details = ${detailsJson}::jsonb
+          WHERE id = ${id}
+        `;
+      }
+    } catch {
+      // Fallback if details column is text
+      if (tc !== undefined) {
+        await sql`
+          UPDATE academic_programs 
+          SET 
+            title = ${data.title}, 
+            subtitle = ${data.subtitle}, 
+            description = ${data.description}, 
+            image_url = ${data.image_url}, 
+            href = ${data.href}, 
+            category = ${data.category},
+            is_featured = ${data.is_featured},
+            details = ${detailsJson},
+            total_clases = ${tc}
+          WHERE id = ${id}
+        `;
+      } else {
+        await sql`
+          UPDATE academic_programs 
+          SET 
+            title = ${data.title}, 
+            subtitle = ${data.subtitle}, 
+            description = ${data.description}, 
+            image_url = ${data.image_url}, 
+            href = ${data.href}, 
+            category = ${data.category},
+            is_featured = ${data.is_featured},
+            details = ${detailsJson}
+          WHERE id = ${id}
+        `;
+      }
     }
     revalidatePath('/admin/pages');
+    revalidatePath('/admin/pages/home');
     revalidatePath('/oferta-academica');
     revalidatePath('/');
+    if (data.href) {
+      revalidatePath(data.href);
+    }
+    revalidatePath('/programa-enfermeria');
+    revalidatePath('/programa-primera-infancia');
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update program error:', error);
-    return { error: 'Failed to update program' };
+    return { error: error?.message || 'Failed to update program' };
   }
 }
 
 export async function addProgram(data: { title: string; subtitle: string; description: string; image_url: string; href: string; category: string; is_featured: boolean; details?: any; total_clases?: number | null }) {
   try {
-    const detailsJson = data.details ? (typeof data.details === 'string' ? data.details : JSON.stringify(data.details)) : null;
+    const detailsJson = data.details !== undefined && data.details !== null
+      ? (typeof data.details === 'string' ? data.details : JSON.stringify(data.details))
+      : null;
     await sql`ALTER TABLE academic_programs ADD COLUMN IF NOT EXISTS total_clases INTEGER;`.catch(() => []);
+    await sql`ALTER TABLE academic_programs ADD COLUMN IF NOT EXISTS details JSONB;`.catch(() => []);
     const tc = data.total_clases && data.total_clases > 0 ? Math.floor(data.total_clases) : null;
-    await sql`
-      INSERT INTO academic_programs (title, subtitle, description, image_url, href, category, is_featured, details, total_clases)
-      VALUES (${data.title}, ${data.subtitle}, ${data.description}, ${data.image_url}, ${data.href}, ${data.category}, ${data.is_featured}, ${detailsJson}::jsonb, ${tc})
-    `;
+    try {
+      await sql`
+        INSERT INTO academic_programs (title, subtitle, description, image_url, href, category, is_featured, details, total_clases)
+        VALUES (${data.title}, ${data.subtitle}, ${data.description}, ${data.image_url}, ${data.href}, ${data.category}, ${data.is_featured}, ${detailsJson}::jsonb, ${tc})
+      `;
+    } catch {
+      await sql`
+        INSERT INTO academic_programs (title, subtitle, description, image_url, href, category, is_featured, details, total_clases)
+        VALUES (${data.title}, ${data.subtitle}, ${data.description}, ${data.image_url}, ${data.href}, ${data.category}, ${data.is_featured}, ${detailsJson}, ${tc})
+      `;
+    }
     revalidatePath('/admin/pages');
+    revalidatePath('/admin/pages/home');
     revalidatePath('/oferta-academica');
     revalidatePath('/');
+    if (data.href) {
+      revalidatePath(data.href);
+    }
+    revalidatePath('/programa-enfermeria');
+    revalidatePath('/programa-primera-infancia');
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add program error:', error);
-    return { error: 'Failed to add program' };
+    return { error: error?.message || 'Failed to add program' };
   }
 }
 
@@ -400,8 +459,11 @@ export async function deleteProgram(id: string) {
   try {
     await sql`DELETE FROM academic_programs WHERE id = ${id}`;
     revalidatePath('/admin/pages');
+    revalidatePath('/admin/pages/home');
     revalidatePath('/oferta-academica');
     revalidatePath('/');
+    revalidatePath('/programa-enfermeria');
+    revalidatePath('/programa-primera-infancia');
     return { success: true };
   } catch (error) {
     console.error('Delete program error:', error);
@@ -415,8 +477,11 @@ export async function updateProgramsOrder(orderedIds: string[]) {
       await sql`UPDATE academic_programs SET order_index = ${i} WHERE id = ${orderedIds[i]}`;
     }
     revalidatePath('/admin/pages');
+    revalidatePath('/admin/pages/home');
     revalidatePath('/oferta-academica');
     revalidatePath('/');
+    revalidatePath('/programa-enfermeria');
+    revalidatePath('/programa-primera-infancia');
     return { success: true };
   } catch (error) {
     console.error('Update programs order error:', error);
@@ -745,6 +810,9 @@ export async function addFooterSocial(name: string, url: string, icon: string) {
       VALUES (${name}, ${url}, ${icon})
       RETURNING id, name, url, icon
     `;
+    revalidatePath('/noticias-y-eventos');
+    revalidatePath('/admin/pages/home');
+    revalidatePath('/');
     return { success: true, item: res[0] };
   } catch (error: any) {
     console.error('Error adding footer social:', error);
@@ -754,7 +822,23 @@ export async function addFooterSocial(name: string, url: string, icon: string) {
 
 export async function deleteFooterSocial(id: string) {
   try {
-    await sql`DELETE FROM footer_socials WHERE id = ${id}::uuid`;
+    try {
+      await sql`DELETE FROM footer_socials WHERE id = ${id}`;
+    } catch {
+      try {
+        const intId = parseInt(id, 10);
+        if (!isNaN(intId)) {
+          await sql`DELETE FROM footer_socials WHERE id = ${intId}`;
+        } else {
+          throw new Error('Not int');
+        }
+      } catch {
+        await sql`DELETE FROM footer_socials WHERE id = ${id}::uuid`;
+      }
+    }
+    revalidatePath('/noticias-y-eventos');
+    revalidatePath('/admin/pages/home');
+    revalidatePath('/');
     return { success: true };
   } catch (error: any) {
     console.error('Error deleting footer social:', error);
@@ -764,11 +848,34 @@ export async function deleteFooterSocial(id: string) {
 
 export async function updateFooterAddress(id: string, name: string, address: string, orderIndex = 0) {
   try {
-    await sql`
-      UPDATE footer_addresses 
-      SET name = ${name}, address = ${address}, order_index = ${orderIndex}
-      WHERE id = ${id}::uuid
-    `;
+    try {
+      await sql`
+        UPDATE footer_addresses 
+        SET name = ${name}, address = ${address}, order_index = ${orderIndex}
+        WHERE id = ${id}
+      `;
+    } catch {
+      try {
+        const intId = parseInt(id, 10);
+        if (!isNaN(intId)) {
+          await sql`
+            UPDATE footer_addresses 
+            SET name = ${name}, address = ${address}, order_index = ${orderIndex}
+            WHERE id = ${intId}
+          `;
+        } else {
+          throw new Error('Not int');
+        }
+      } catch {
+        await sql`
+          UPDATE footer_addresses 
+          SET name = ${name}, address = ${address}, order_index = ${orderIndex}
+          WHERE id = ${id}::uuid
+        `;
+      }
+    }
+    revalidatePath('/admin/pages/home');
+    revalidatePath('/');
     return { success: true };
   } catch (error: any) {
     console.error('Error updating footer address:', error);
@@ -778,11 +885,35 @@ export async function updateFooterAddress(id: string, name: string, address: str
 
 export async function updateFooterSocial(id: string, name: string, url: string, icon: string) {
   try {
-    await sql`
-      UPDATE footer_socials 
-      SET name = ${name}, url = ${url}, icon = ${icon}
-      WHERE id = ${id}::uuid
-    `;
+    try {
+      await sql`
+        UPDATE footer_socials 
+        SET name = ${name}, url = ${url}, icon = ${icon}
+        WHERE id = ${id}
+      `;
+    } catch {
+      try {
+        const intId = parseInt(id, 10);
+        if (!isNaN(intId)) {
+          await sql`
+            UPDATE footer_socials 
+            SET name = ${name}, url = ${url}, icon = ${icon}
+            WHERE id = ${intId}
+          `;
+        } else {
+          throw new Error('Not int');
+        }
+      } catch {
+        await sql`
+          UPDATE footer_socials 
+          SET name = ${name}, url = ${url}, icon = ${icon}
+          WHERE id = ${id}::uuid
+        `;
+      }
+    }
+    revalidatePath('/noticias-y-eventos');
+    revalidatePath('/admin/pages/home');
+    revalidatePath('/');
     return { success: true };
   } catch (error: any) {
     console.error('Error updating footer social:', error);
@@ -815,11 +946,32 @@ export async function addFooterCertification(name: string, imageUrl: string, ord
 
 export async function updateFooterCertification(id: string, name: string, imageUrl: string, orderIndex = 0) {
   try {
-    await sql`
-      UPDATE footer_certifications 
-      SET name = ${name}, image_url = ${imageUrl}, order_index = ${orderIndex}
-      WHERE id = ${id}::uuid
-    `;
+    try {
+      await sql`
+        UPDATE footer_certifications 
+        SET name = ${name}, image_url = ${imageUrl}, order_index = ${orderIndex}
+        WHERE id = ${id}
+      `;
+    } catch {
+      try {
+        const intId = parseInt(id, 10);
+        if (!isNaN(intId)) {
+          await sql`
+            UPDATE footer_certifications 
+            SET name = ${name}, image_url = ${imageUrl}, order_index = ${orderIndex}
+            WHERE id = ${intId}
+          `;
+        } else {
+          throw new Error('Not int');
+        }
+      } catch {
+        await sql`
+          UPDATE footer_certifications 
+          SET name = ${name}, image_url = ${imageUrl}, order_index = ${orderIndex}
+          WHERE id = ${id}::uuid
+        `;
+      }
+    }
     return { success: true };
   } catch (error: any) {
     console.error('Error updating footer certification:', error);
@@ -829,7 +981,20 @@ export async function updateFooterCertification(id: string, name: string, imageU
 
 export async function deleteFooterCertification(id: string) {
   try {
-    await sql`DELETE FROM footer_certifications WHERE id = ${id}::uuid`;
+    try {
+      await sql`DELETE FROM footer_certifications WHERE id = ${id}`;
+    } catch {
+      try {
+        const intId = parseInt(id, 10);
+        if (!isNaN(intId)) {
+          await sql`DELETE FROM footer_certifications WHERE id = ${intId}`;
+        } else {
+          throw new Error('Not int');
+        }
+      } catch {
+        await sql`DELETE FROM footer_certifications WHERE id = ${id}::uuid`;
+      }
+    }
     return { success: true };
   } catch (error: any) {
     console.error('Error deleting footer certification:', error);
