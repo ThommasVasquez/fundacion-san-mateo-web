@@ -18,17 +18,25 @@ export default async function Home() {
   const testimonials = await getTestimonials();
   const programs = await getPrograms();
   
-  // Filter and format featured programs for the Bento grid
-  const featuredPrograms = programs
-    .filter((p: any) => p.is_featured)
-    .map((p: any) => ({
-      id: p.id.toString(),
-      title: p.title,
-      subtitle: p.subtitle || '',
-      image_url: p.image_url,
-      href: p.href,
-      details: p.details || {}
-    }));
+  // Filter and format featured programs for the Bento grid with robust fallback
+  const isTruthy = (val: any) => val === true || val === 'true' || val === 't' || val === 1 || val === '1';
+  
+  let featured = programs.filter((p: any) => isTruthy(p.is_featured));
+  
+  // Si ningún programa está marcado o la base no devolvió destacados, usar los primeros técnicos como salvaguarda
+  if (featured.length === 0 && programs.length > 0) {
+    const tecnicos = programs.filter((p: any) => p.category === 'tecnicos');
+    featured = tecnicos.length >= 2 ? tecnicos.slice(0, 4) : programs.slice(0, 4);
+  }
+
+  const featuredPrograms = featured.map((p: any) => ({
+    id: p.id ? p.id.toString() : Math.random().toString(),
+    title: p.title,
+    subtitle: p.subtitle || '',
+    image_url: p.image_url,
+    href: p.href,
+    details: p.details || {}
+  }));
 
   const jsonLd = {
     "@context": "https://schema.org",

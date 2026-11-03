@@ -109,26 +109,71 @@ const BentoCard = ({
   );
 };
 
+// Fallback institucional si no se reciben programas destacados
+const DEFAULT_FALLBACK_PROGRAMS: Program[] = [
+  {
+    id: "fb-1",
+    title: "AUXILIAR EN ENFERMERÍA",
+    subtitle: "Técnico Laboral por Competencias",
+    image_url: "/img/image18.jpg",
+    href: "/programa-enfermeria",
+    details: { show_label: true, label_text: "Técnico Laboral por Competencias" }
+  },
+  {
+    id: "fb-2",
+    title: "AUXILIAR EN SERVICIOS FARMACÉUTICOS",
+    subtitle: "Técnico Laboral por Competencias",
+    image_url: "/img/servicio-al-cliente.jpg",
+    href: "/oferta-academica",
+    details: { show_label: true, label_text: "Técnico Laboral por Competencias" }
+  },
+  {
+    id: "fb-3",
+    title: "ATENCIÓN INTEGRAL A LA PRIMERA INFANCIA",
+    subtitle: "Técnico Laboral por Competencias",
+    image_url: "/img/image27.jpg",
+    href: "/programa-primera-infancia",
+    details: { show_label: true, label_text: "Técnico Laboral por Competencias" }
+  },
+  {
+    id: "fb-4",
+    title: "TÉCNICO EN PREESCOLAR",
+    subtitle: "Técnico Laboral por Competencias",
+    image_url: "/img/image25.jpg",
+    href: "/Programa-preescolar",
+    details: { show_label: true, label_text: "Técnico Laboral por Competencias" }
+  }
+];
+
 const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Si por alguna razón la lista llega vacía, garantizamos que nunca haya un hueco en blanco en la web
+  const activePrograms = (programs && programs.length > 0) ? programs : DEFAULT_FALLBACK_PROGRAMS;
 
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.from(".bento-item", {
-        scrollTrigger: {
-          trigger: containerRef.current,
-          start: "top 95%",
-          once: true,
-        },
-        y: 40,
-        opacity: 0,
-        duration: 0.8,
-        stagger: 0.1,
-        ease: "power2.out",
-      });
-    }, containerRef);
+    // Evitar dejar los items con opacidad 0 si GSAP o ScrollTrigger fallan o en SSR
+    try {
+      const ctx = gsap.context(() => {
+        gsap.from(".bento-item", {
+          scrollTrigger: {
+            trigger: containerRef.current,
+            start: "top 95%",
+            once: true,
+          },
+          y: 40,
+          opacity: 0,
+          duration: 0.8,
+          stagger: 0.1,
+          ease: "power2.out",
+          clearProps: "opacity,transform"
+        });
+      }, containerRef);
 
-    return () => ctx.revert();
+      return () => ctx.revert();
+    } catch (e) {
+      console.warn("GSAP animation error in Bento:", e);
+    }
   }, []);
 
   // Map icons and colors based on index or title keywords
@@ -162,7 +207,8 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
   };
 
   const renderBentoGrid = () => {
-    const count = programs.length;
+    const list = activePrograms;
+    const count = list.length;
     if (count === 0) return null;
 
     const cardProps = {
@@ -174,7 +220,7 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
     if (count === 1) {
       return (
         <div className="grid grid-cols-1 gap-8">
-          <BentoCard {...cardProps} program={programs[0]} index={0} variant="wide" className="h-[500px]" />
+          <BentoCard {...cardProps} program={list[0]} index={0} variant="wide" className="h-[500px]" />
         </div>
       );
     }
@@ -183,8 +229,8 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
     if (count === 2) {
       return (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <BentoCard {...cardProps} program={programs[0]} index={0} variant="wide" className="lg:col-span-7 h-[500px]" />
-          <BentoCard {...cardProps} program={programs[1]} index={1} variant="wide" className="lg:col-span-5 h-[500px]" />
+          <BentoCard {...cardProps} program={list[0]} index={0} variant="wide" className="lg:col-span-7 h-[500px]" />
+          <BentoCard {...cardProps} program={list[1]} index={1} variant="wide" className="lg:col-span-5 h-[500px]" />
         </div>
       );
     }
@@ -194,11 +240,11 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
       return (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-5 flex flex-col">
-            <BentoCard {...cardProps} program={programs[0]} index={0} variant="tall" className="h-full min-h-[500px] lg:min-h-[660px]" />
+            <BentoCard {...cardProps} program={list[0]} index={0} variant="tall" className="h-full min-h-[500px] lg:min-h-[660px]" />
           </div>
           <div className="lg:col-span-7 flex flex-col gap-8 justify-between">
-            <BentoCard {...cardProps} program={programs[1]} index={1} variant="wide" className="h-[310px]" />
-            <BentoCard {...cardProps} program={programs[2]} index={2} variant="wide" className="h-[310px]" />
+            <BentoCard {...cardProps} program={list[1]} index={1} variant="wide" className="h-[310px]" />
+            <BentoCard {...cardProps} program={list[2]} index={2} variant="wide" className="h-[310px]" />
           </div>
         </div>
       );
@@ -209,13 +255,13 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
       return (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-5 flex flex-col">
-            <BentoCard {...cardProps} program={programs[0]} index={0} variant="tall" className="h-full min-h-[500px] lg:min-h-[700px]" />
+            <BentoCard {...cardProps} program={list[0]} index={0} variant="tall" className="h-full min-h-[500px] lg:min-h-[700px]" />
           </div>
           <div className="lg:col-span-7 flex flex-col gap-8 justify-between">
-            <BentoCard {...cardProps} program={programs[1]} index={1} variant="wide" className="h-[380px]" />
+            <BentoCard {...cardProps} program={list[1]} index={1} variant="wide" className="h-[380px]" />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-              <BentoCard {...cardProps} program={programs[2]} index={2} variant="compact" className="h-[290px]" />
-              <BentoCard {...cardProps} program={programs[3]} index={3} variant="compact" className="h-[290px]" />
+              <BentoCard {...cardProps} program={list[2]} index={2} variant="compact" className="h-[290px]" />
+              <BentoCard {...cardProps} program={list[3]} index={3} variant="compact" className="h-[290px]" />
             </div>
           </div>
         </div>
@@ -227,14 +273,14 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
       return (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-5 flex flex-col">
-            <BentoCard {...cardProps} program={programs[0]} index={0} variant="tall" className="h-full min-h-[500px] lg:min-h-[700px]" />
+            <BentoCard {...cardProps} program={list[0]} index={0} variant="tall" className="h-full min-h-[500px] lg:min-h-[700px]" />
           </div>
           <div className="lg:col-span-7 flex flex-col gap-8 justify-between">
-            <BentoCard {...cardProps} program={programs[1]} index={1} variant="wide" className="h-[380px]" />
+            <BentoCard {...cardProps} program={list[1]} index={1} variant="wide" className="h-[380px]" />
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              <BentoCard {...cardProps} program={programs[2]} index={2} variant="compact" className="h-[290px]" />
-              <BentoCard {...cardProps} program={programs[3]} index={3} variant="compact" className="h-[290px]" />
-              <BentoCard {...cardProps} program={programs[4]} index={4} variant="compact" className="h-[290px]" />
+              <BentoCard {...cardProps} program={list[2]} index={2} variant="compact" className="h-[290px]" />
+              <BentoCard {...cardProps} program={list[3]} index={3} variant="compact" className="h-[290px]" />
+              <BentoCard {...cardProps} program={list[4]} index={4} variant="compact" className="h-[290px]" />
             </div>
           </div>
         </div>
@@ -246,17 +292,17 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
       return (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-5 flex flex-col">
-            <BentoCard {...cardProps} program={programs[0]} index={0} variant="tall" className="h-full min-h-[500px] lg:min-h-[720px]" />
+            <BentoCard {...cardProps} program={list[0]} index={0} variant="tall" className="h-full min-h-[500px] lg:min-h-[720px]" />
           </div>
           <div className="lg:col-span-7 flex flex-col gap-6 justify-between">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <BentoCard {...cardProps} program={programs[1]} index={1} variant="medium" className="h-[345px]" />
-              <BentoCard {...cardProps} program={programs[2]} index={2} variant="medium" className="h-[345px]" />
+              <BentoCard {...cardProps} program={list[1]} index={1} variant="medium" className="h-[345px]" />
+              <BentoCard {...cardProps} program={list[2]} index={2} variant="medium" className="h-[345px]" />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              <BentoCard {...cardProps} program={programs[3]} index={3} variant="compact" className="h-[345px]" />
-              <BentoCard {...cardProps} program={programs[4]} index={4} variant="compact" className="h-[345px]" />
-              <BentoCard {...cardProps} program={programs[5]} index={5} variant="compact" className="h-[345px]" />
+              <BentoCard {...cardProps} program={list[3]} index={3} variant="compact" className="h-[345px]" />
+              <BentoCard {...cardProps} program={list[4]} index={4} variant="compact" className="h-[345px]" />
+              <BentoCard {...cardProps} program={list[5]} index={5} variant="compact" className="h-[345px]" />
             </div>
           </div>
         </div>
@@ -268,18 +314,18 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
       return (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-5 flex flex-col gap-6 justify-between">
-            <BentoCard {...cardProps} program={programs[0]} index={0} variant="medium" className="h-[360px]" />
+            <BentoCard {...cardProps} program={list[0]} index={0} variant="medium" className="h-[360px]" />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <BentoCard {...cardProps} program={programs[1]} index={1} variant="compact" className="h-[330px]" />
-              <BentoCard {...cardProps} program={programs[2]} index={2} variant="compact" className="h-[330px]" />
+              <BentoCard {...cardProps} program={list[1]} index={1} variant="compact" className="h-[330px]" />
+              <BentoCard {...cardProps} program={list[2]} index={2} variant="compact" className="h-[330px]" />
             </div>
           </div>
           <div className="lg:col-span-7 flex flex-col gap-6 justify-between">
-            <BentoCard {...cardProps} program={programs[3]} index={3} variant="wide" className="h-[360px]" />
+            <BentoCard {...cardProps} program={list[3]} index={3} variant="wide" className="h-[360px]" />
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              <BentoCard {...cardProps} program={programs[4]} index={4} variant="compact" className="h-[330px]" />
-              <BentoCard {...cardProps} program={programs[5]} index={5} variant="compact" className="h-[330px]" />
-              <BentoCard {...cardProps} program={programs[6]} index={6} variant="compact" className="h-[330px]" />
+              <BentoCard {...cardProps} program={list[4]} index={4} variant="compact" className="h-[330px]" />
+              <BentoCard {...cardProps} program={list[5]} index={5} variant="compact" className="h-[330px]" />
+              <BentoCard {...cardProps} program={list[6]} index={6} variant="compact" className="h-[330px]" />
             </div>
           </div>
         </div>
@@ -292,26 +338,26 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
         <div className="space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-5 flex flex-col">
-              <BentoCard {...cardProps} program={programs[0]} index={0} variant="tall" className="h-full min-h-[480px] lg:min-h-[580px]" />
+              <BentoCard {...cardProps} program={list[0]} index={0} variant="tall" className="h-full min-h-[480px] lg:min-h-[580px]" />
             </div>
             <div className="lg:col-span-7 flex flex-col gap-6 justify-between">
-              <BentoCard {...cardProps} program={programs[1]} index={1} variant="wide" className="h-[280px]" />
+              <BentoCard {...cardProps} program={list[1]} index={1} variant="wide" className="h-[280px]" />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <BentoCard {...cardProps} program={programs[2]} index={2} variant="compact" className="h-[270px]" />
-                <BentoCard {...cardProps} program={programs[3]} index={3} variant="compact" className="h-[270px]" />
+                <BentoCard {...cardProps} program={list[2]} index={2} variant="compact" className="h-[270px]" />
+                <BentoCard {...cardProps} program={list[3]} index={3} variant="compact" className="h-[270px]" />
               </div>
             </div>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-7 flex flex-col gap-6 justify-between">
-              <BentoCard {...cardProps} program={programs[4]} index={4} variant="wide" className="h-[280px]" />
+              <BentoCard {...cardProps} program={list[4]} index={4} variant="wide" className="h-[280px]" />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <BentoCard {...cardProps} program={programs[5]} index={5} variant="compact" className="h-[270px]" />
-                <BentoCard {...cardProps} program={programs[6]} index={6} variant="compact" className="h-[270px]" />
+                <BentoCard {...cardProps} program={list[5]} index={5} variant="compact" className="h-[270px]" />
+                <BentoCard {...cardProps} program={list[6]} index={6} variant="compact" className="h-[270px]" />
               </div>
             </div>
             <div className="lg:col-span-5 flex flex-col">
-              <BentoCard {...cardProps} program={programs[7]} index={7} variant="tall" className="h-full min-h-[480px] lg:min-h-[580px]" />
+              <BentoCard {...cardProps} program={list[7]} index={7} variant="tall" className="h-full min-h-[480px] lg:min-h-[580px]" />
             </div>
           </div>
         </div>
@@ -319,8 +365,8 @@ const BentoPrograms = ({ content = {}, programs = [] }: BentoProgramsProps) => {
     }
 
     // Case > 8: Primary 5-item bento + responsive balanced grid for remaining
-    const primary = programs.slice(0, 5);
-    const remaining = programs.slice(5);
+    const primary = list.slice(0, 5);
+    const remaining = list.slice(5);
 
     return (
       <div className="space-y-8">
