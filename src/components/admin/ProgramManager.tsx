@@ -97,6 +97,225 @@ const defaultChildhoodDetails = {
   ]
 };
 
+const defaultGenericTecnicoDetails = {
+  duration: "3 Semestres",
+  certificate: "Técnico Laboral por Competencias",
+  uniform_gift: "Uniforme Gratis / Por tiempo limitado",
+  plan_estudios: [
+    "Inducción institucional y ética laboral",
+    "Competencias laborales técnicas específicas I",
+    "Competencias laborales técnicas específicas II",
+    "Tecnologías de la información y comunicación (TICs)",
+    "Salud ocupacional y bioseguridad",
+    "Práctica laboral y desarrollo profesional"
+  ],
+  admision: {
+    requirements: [
+      "Documento al 150%",
+      "Certificado EPS/SISBEN",
+      "Diploma bachiller (min. 9°)",
+      "2 Fotos 3x4 fondo blanco"
+    ],
+    note: "Nota: La matrícula se legaliza de forma presencial en nuestra sede administrativa."
+  },
+  calidad: [
+    { title: "RESOLUCIÓN OFICIAL", text: "Resolución de la Secretaría de Educación de Soacha." },
+    { title: "CALIDAD TÉCNICA", text: "Programa de Formación Técnica Laboral por Competencias." }
+  ],
+  practicas: {
+    description: "Convenios empresariales e institucionales para el desarrollo de tus prácticas.",
+    places: [
+      "Empresas aliadas del sector",
+      "Instituciones públicas y privadas en convenio"
+    ]
+  },
+  perfil_titulo: "COMPROMETIDOS CON LA EXCELENCIA Y LA FORMACIÓN INTEGRAL",
+  perfil_p1: "Formación técnica de alta calidad enfocada en competencias laborales prácticas, éticas e idóneas para el mercado laboral actual.",
+  perfil_p2: "El egresado contará con destrezas y conocimientos para incorporarse con éxito al sector productivo, con vocación de servicio y liderazgo.",
+  sidebar_title: "Impulsa tu futuro profesional",
+  salida_laboral: [
+    "Desempeño técnico en entidades del sector público o privado",
+    "Asistencia técnica y operativa especializada",
+    "Emprendimiento y desarrollo laboral autónomo"
+  ]
+};
+
+const defaultCourseDetails = {
+  duration: "20 horas",
+  certificate: "Certificado de Asistencia y Aprobación",
+  methodology: "Semi-presencial",
+  directed_to: "Profesionales y estudiantes de la salud y áreas afines.",
+  objective: "Alcanzar fortalezas y habilidades teórico-prácticas para responder de manera adecuada y eficiente ante los retos del sector.",
+  subtitle: "Actualización profesional certificada por la Fundación San Mateo, con metodología teórico-práctica intensiva.",
+  why_study: "Este programa te brindará las herramientas y conocimientos prácticos necesarios para destacar en tu desempeño profesional y responder con excelencia ante los retos actuales.",
+  step1_title: "Inscripción",
+  step1_desc: "Completa tu registro en línea o comunícate con un asesor a través de nuestros canales oficiales.",
+  step2_title: "Documentos",
+  step2_reqs: ["Cédula de Ciudadanía", "Soporte Académico", "Foto 3x4"],
+  step3_title: "Matrícula",
+  step3_desc: "Legaliza tu proceso realizando el aporte correspondiente para asegurar tu cupo y acceso al curso.",
+  sidebar_text: "Laboratorios y aulas equipadas con tecnología moderna para capacitación y simulación real.",
+  resources: [
+    "Material de apoyo didáctico y guías de estudio.",
+    "Acceso a la plataforma institucional y talleres prácticos.",
+    "Acompañamiento docente especializado durante todo el curso."
+  ],
+  plan_estudios: [
+    "Módulo 1: Fundamentos y marco conceptual",
+    "Módulo 2: Técnicas, procedimientos y protocolos aplicados",
+    "Módulo 3: Prácticas guiadas y evaluación de competencias"
+  ]
+};
+
+function getProgramDefaults(program: Program) {
+  const isTecnico = program.category === 'tecnicos';
+  const normTitle = (program.title || '').toLowerCase();
+  const normHref = (program.href || '').toLowerCase();
+
+  if (isTecnico) {
+    if (normHref.includes('enfermer') || normTitle.includes('enfermer')) {
+      return {
+        ...defaultNursingDetails,
+        banner_image: program.image_url || '/img/banner6.jpg',
+      };
+    }
+    if (normHref.includes('infancia') || normTitle.includes('infancia')) {
+      return {
+        ...defaultChildhoodDetails,
+        banner_image: program.image_url || '/img/banner14.jpg',
+      };
+    }
+    if (normTitle.includes('preescolar') || normHref.includes('preescolar')) {
+      return {
+        ...defaultChildhoodDetails,
+        certificate: "Técnico en Preescolar",
+        perfil_titulo: "FORMANDO EDUCADORES CON VOCACIÓN Y TERNURA",
+        sidebar_title: "Impulsa la educación inicial",
+        banner_image: program.image_url || '/img/image25.jpg',
+      };
+    }
+    if (normTitle.includes('farmac') || normHref.includes('farmac')) {
+      return {
+        ...defaultNursingDetails,
+        duration: "3 Semestres",
+        certificate: "Auxiliar en Servicios Farmacéuticos",
+        uniform_gift: "Uniforme Gratis / Por tiempo limitado",
+        plan_estudios: [
+          "Inducción institucional y ética profesional",
+          "Atención y dispensación de medicamentos",
+          "Administración de farmacia y droguería",
+          "Farmacología básica y terapéutica",
+          "Control de inventarios y almacenamiento",
+          "Bioseguridad y control de calidad",
+          "Tecnologías TICs aplicadas al sector salud",
+          "Prácticas en farmacias y droguerías en convenio"
+        ],
+        admision: {
+          requirements: [
+            "Documento al 150%",
+            "Certificado EPS/SISBEN",
+            "Diploma de bachiller (mínimo 9°)",
+            "2 Fotos 3x4 fondo blanco",
+            "Certificado de vacunas"
+          ],
+          note: "Nota: La matrícula se legaliza de forma presencial en nuestra sede administrativa."
+        },
+        calidad: [
+          { title: "RESOLUCIÓN OFICIAL", text: "Resolución de la Secretaría de Educación de Soacha." },
+          { title: "CALIDAD TÉCNICA", text: "Programa acreditado bajo las normas NTC 5555 e ISO 9001:2015." }
+        ],
+        practicas: {
+          description: "Convenios con las mejores droguerías, farmacias hospitalarias y cadenas del sector.",
+          places: [
+            "Droguerías aliadas en Soacha y Bogotá",
+            "Farmacias hospitalarias en convenio",
+            "Dispensarios y centros de salud"
+          ]
+        },
+        perfil_titulo: "EXCELENCIA EN SERVICIOS FARMACÉUTICOS",
+        perfil_p1: "El egresado como Auxiliar en Servicios Farmacéuticos de la Fundación San Mateo está capacitado para recepcionar, almacenar y dispensar medicamentos y dispositivos médicos según la normatividad vigente.",
+        perfil_p2: "Formamos con altos estándares éticos, vocación de servicio y precisión técnica para laborar en farmacias comerciales, hospitalarias y droguerías.",
+        sidebar_title: "Comienza tu carrera en farmacia",
+        salida_laboral: [
+          "Auxiliar de droguería y farmacia comercial",
+          "Dispensación en farmacias hospitalarias y clínicas",
+          "Gestión de inventarios y almacén farmacéutico",
+          "Asistencia técnica farmacéutica"
+        ],
+        banner_image: program.image_url || '/img/banner6.jpg'
+      };
+    }
+    return {
+      ...defaultGenericTecnicoDetails,
+      perfil_p1: program.description || defaultGenericTecnicoDetails.perfil_p1,
+      banner_image: program.image_url || '/img/banner6.jpg',
+    };
+  }
+
+  return {
+    ...defaultCourseDetails,
+    subtitle: program.subtitle || defaultCourseDetails.subtitle,
+    banner_image: program.image_url || '/img/banner24.jpg',
+  };
+}
+
+function getInitialDetailsForEditing(program: Program) {
+  const defaults: any = getProgramDefaults(program);
+  const saved = program.details || {};
+
+  return {
+    ...defaults,
+    ...saved,
+    show_label: saved.show_label !== undefined ? saved.show_label : true,
+    label_text: (saved.label_text !== undefined && saved.label_text !== '') ? saved.label_text : (program.category === 'tecnicos' ? 'Técnico Laboral por Competencias' : 'Educación Continua'),
+    duration: (saved.duration !== undefined && saved.duration !== '') ? saved.duration : defaults.duration,
+    certificate: (saved.certificate !== undefined && saved.certificate !== '') ? saved.certificate : defaults.certificate,
+    uniform_gift: (saved.uniform_gift !== undefined && saved.uniform_gift !== '') ? saved.uniform_gift : defaults.uniform_gift,
+    banner_image: saved.banner_image || defaults.banner_image || program.image_url || '',
+    plan_estudios: (Array.isArray(saved.plan_estudios) && saved.plan_estudios.length > 0) ? saved.plan_estudios : (defaults.plan_estudios || []),
+    salida_laboral: (Array.isArray(saved.salida_laboral) && saved.salida_laboral.length > 0) ? saved.salida_laboral : (defaults.salida_laboral || []),
+    resources: (Array.isArray(saved.resources) && saved.resources.length > 0) ? saved.resources : (defaults.resources || []),
+    admision: {
+      requirements: (Array.isArray(saved.admision?.requirements) && saved.admision.requirements.length > 0)
+        ? saved.admision.requirements
+        : (defaults.admision?.requirements || []),
+      note: (saved.admision?.note !== undefined && saved.admision.note !== '')
+        ? saved.admision.note
+        : (defaults.admision?.note || '')
+    },
+    calidad: (Array.isArray(saved.calidad) && saved.calidad.length > 0)
+      ? saved.calidad
+      : (defaults.calidad || [{ title: '', text: '' }, { title: '', text: '' }]),
+    practicas: {
+      description: (saved.practicas?.description !== undefined && saved.practicas.description !== '')
+        ? saved.practicas.description
+        : (defaults.practicas?.description || ''),
+      places: (Array.isArray(saved.practicas?.places) && saved.practicas.places.length > 0)
+        ? saved.practicas.places
+        : (defaults.practicas?.places || [])
+    },
+    perfil_titulo: (saved.perfil_titulo !== undefined && saved.perfil_titulo !== '') ? saved.perfil_titulo : (defaults.perfil_titulo || ''),
+    perfil_p1: (saved.perfil_p1 !== undefined && saved.perfil_p1 !== '') ? saved.perfil_p1 : (defaults.perfil_p1 || ''),
+    perfil_p2: (saved.perfil_p2 !== undefined && saved.perfil_p2 !== '') ? saved.perfil_p2 : (defaults.perfil_p2 || ''),
+    sidebar_title: (saved.sidebar_title !== undefined && saved.sidebar_title !== '') ? saved.sidebar_title : (defaults.sidebar_title || ''),
+    subtitle: (saved.subtitle !== undefined && saved.subtitle !== '') ? saved.subtitle : (defaults.subtitle || ''),
+    methodology: (saved.methodology !== undefined && saved.methodology !== '') ? saved.methodology : (defaults.methodology || ''),
+    directed_to: (saved.directed_to !== undefined && saved.directed_to !== '') ? saved.directed_to : (defaults.directed_to || ''),
+    objective: (saved.objective !== undefined && saved.objective !== '') ? saved.objective : (defaults.objective || ''),
+    why_study: (saved.why_study !== undefined && saved.why_study !== '') ? saved.why_study : (defaults.why_study || ''),
+    step1_title: (saved.step1_title !== undefined && saved.step1_title !== '') ? saved.step1_title : (defaults.step1_title || 'Inscripción'),
+    step1_desc: (saved.step1_desc !== undefined && saved.step1_desc !== '') ? saved.step1_desc : (defaults.step1_desc || ''),
+    step2_title: (saved.step2_title !== undefined && saved.step2_title !== '') ? saved.step2_title : (defaults.step2_title || 'Documentos'),
+    step2_reqs: (Array.isArray(saved.step2_reqs) && saved.step2_reqs.length > 0) ? saved.step2_reqs : (defaults.step2_reqs || ["Cédula de Ciudadanía", "Soporte Académico", "Foto 3x4"]),
+    step3_title: (saved.step3_title !== undefined && saved.step3_title !== '') ? saved.step3_title : (defaults.step3_title || 'Matrícula'),
+    step3_desc: (saved.step3_desc !== undefined && saved.step3_desc !== '') ? saved.step3_desc : (defaults.step3_desc || ''),
+    sidebar_text: (saved.sidebar_text !== undefined && saved.sidebar_text !== '') ? saved.sidebar_text : (defaults.sidebar_text || ''),
+    registration_link: (saved.registration_link !== undefined && saved.registration_link !== '') ? saved.registration_link : (defaults.registration_link || ''),
+    brochure_filename: saved.brochure_filename || '',
+    brochure_base64: saved.brochure_base64 || ''
+  };
+}
+
 export default function ProgramManager({ initialPrograms }: ProgramManagerProps) {
   const [programs, setPrograms] = useState<Program[]>(initialPrograms);
   const [loading, setLoading] = useState<Record<string, boolean>>({});
@@ -124,20 +343,37 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
   };
 
   const openDetailsModal = (programId: string) => {
-    const p = programs.find(item => item.id === programId);
-    if (p) {
-      const hasDetails = p.details && Object.keys(p.details).length > 0;
-      if (!hasDetails) {
-        const normTitle = (p.title || '').toLowerCase();
-        const normHref = (p.href || '').toLowerCase();
-        if (normHref.includes('enfermer') || normTitle.includes('enfermer')) {
-          handleUpdate(p.id, 'details', { ...defaultNursingDetails, banner_image: p.image_url });
-        } else if (normHref.includes('infancia') || normTitle.includes('infancia')) {
-          handleUpdate(p.id, 'details', { ...defaultChildhoodDetails, banner_image: p.image_url });
-        }
-      }
-    }
     setSelectedProgramIdForDetails(programId);
+  };
+
+  const saveProgramDetails = async (id: string, newDetails: any): Promise<boolean> => {
+    const program = programs.find(p => p.id === id);
+    if (!program) return false;
+
+    setLoading(prev => ({ ...prev, [id]: true }));
+    const res = await updateProgram(id, { 
+      title: program.title, 
+      subtitle: program.subtitle || '', 
+      description: program.description || '', 
+      image_url: program.image_url, 
+      href: program.href, 
+      category: program.category,
+      is_featured: program.is_featured,
+      details: newDetails,
+      total_clases: program.total_clases ?? null
+    });
+    
+    if (res.success) {
+      setPrograms(prev => prev.map(p => p.id === id ? { ...p, details: newDetails } : p));
+      setSuccess(prev => ({ ...prev, [id]: true }));
+      setTimeout(() => setSuccess(prev => ({ ...prev, [id]: false })), 3000);
+      setLoading(prev => ({ ...prev, [id]: false }));
+      return true;
+    } else {
+      alert("Error al guardar: " + (res.error || "No se pudo guardar la información"));
+      setLoading(prev => ({ ...prev, [id]: false }));
+      return false;
+    }
   };
 
   const saveUpdate = async (id: string): Promise<boolean> => {
@@ -516,32 +752,49 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
       </div>
 
       {selectedProgramIdForDetails && (() => {
-        const program = programs.find(p => p.id === selectedProgramIdForDetails);
-        if (!program) return null;
-
-        const details = program.details || {};
-        const isTecnico = program.category === 'tecnicos';
-
-        // Helper to handle nested details updates
-        const handleDetailsChange = (field: string, value: any) => {
-          const updatedDetails = { ...(program.details || {}), [field]: value };
-          handleUpdate(program.id, 'details', updatedDetails);
-        };
-
-        // Convert lists of strings (e.g., plan_estudios, resources, etc.) to multiline text and vice versa
-        const getMultilineText = (arr: any) => {
-          if (Array.isArray(arr)) return arr.join('\n');
-          if (typeof arr === 'string') return arr;
-          return '';
-        };
-
-        const handleMultilineChange = (field: string, text: string) => {
-          const arr = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-          handleDetailsChange(field, arr);
-        };
-
+        const prog = programs.find(p => p.id === selectedProgramIdForDetails);
+        if (!prog) return null;
         return (
-          <div className="fixed inset-0 z-[150] bg-black/70 flex items-center justify-center p-4 overflow-y-auto">
+          <ProgramDetailsModal 
+            program={prog}
+            onClose={() => setSelectedProgramIdForDetails(null)}
+            onSave={saveProgramDetails}
+            loading={!!loading[prog.id]}
+          />
+        );
+      })()}
+    </div>
+  );
+}
+
+interface ProgramDetailsModalProps {
+  program: Program;
+  onClose: () => void;
+  onSave: (id: string, details: any) => Promise<boolean>;
+  loading: boolean;
+}
+
+function ProgramDetailsModal({ program, onClose, onSave, loading }: ProgramDetailsModalProps) {
+  const [details, setDetails] = useState<any>(() => getInitialDetailsForEditing(program));
+  const isTecnico = program.category === "tecnicos";
+
+  const handleDetailsChange = (field: string, value: any) => {
+    setDetails((prev: any) => ({ ...prev, [field]: value }));
+  };
+
+  const getMultilineText = (arr: any) => {
+    if (Array.isArray(arr)) return arr.join("\n");
+    if (typeof arr === "string") return arr;
+    return "";
+  };
+
+  const handleMultilineChange = (field: string, text: string) => {
+    const arr = text.split("\n").map(line => line.trim()).filter(line => line.length > 0);
+    handleDetailsChange(field, arr);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[150] bg-black/70 flex items-center justify-center p-4 overflow-y-auto">
             <div className="bg-white rounded-[3rem] shadow-premium border border-gray-100 max-w-4xl w-full max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-300">
               <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-[3rem]">
                 <div>
@@ -549,7 +802,7 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                   <h3 className="text-xl font-black text-fsm-blue uppercase mt-1">{program.title}</h3>
                 </div>
                 <button 
-                  onClick={() => setSelectedProgramIdForDetails(null)}
+                  onClick={() => onClose()}
                   className="p-3 bg-white hover:bg-gray-100 text-gray-500 rounded-full transition-all border border-gray-200 font-bold"
                 >
                   ✕
@@ -758,7 +1011,7 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                                     brochure_base64: '',
                                     brochure_filename: ''
                                   };
-                                  handleUpdate(program.id, 'details', updatedDetails);
+                                  setDetails((prev: any) => ({ ...prev, brochure_base64: '', brochure_filename: '' }));
                                 }}
                               >
                                 Eliminar
@@ -789,7 +1042,7 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                                 brochure_base64: base64,
                                 brochure_filename: file.name
                               };
-                              handleUpdate(program.id, 'details', updatedDetails);
+                              setDetails((prev: any) => ({ ...prev, brochure_base64: base64, brochure_filename: file.name }));
                             };
                           }}
                         />
@@ -1082,7 +1335,7 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                                     brochure_base64: '',
                                     brochure_filename: ''
                                   };
-                                  handleUpdate(program.id, 'details', updatedDetails);
+                                  setDetails((prev: any) => ({ ...prev, brochure_base64: '', brochure_filename: '' }));
                                 }}
                               >
                                 Eliminar
@@ -1113,7 +1366,7 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
                                 brochure_base64: base64,
                                 brochure_filename: file.name
                               };
-                              handleUpdate(program.id, 'details', updatedDetails);
+                              setDetails((prev: any) => ({ ...prev, brochure_base64: base64, brochure_filename: file.name }));
                             };
                           }}
                         />
@@ -1125,28 +1378,25 @@ export default function ProgramManager({ initialPrograms }: ProgramManagerProps)
 
               <div className="p-8 border-t border-gray-100 flex justify-end gap-4 bg-gray-50 rounded-b-[3rem]">
                 <button 
-                  onClick={() => setSelectedProgramIdForDetails(null)}
+                  onClick={() => onClose()}
                   className="px-6 py-3 rounded-2xl font-black text-xs tracking-widest text-gray-500 hover:bg-gray-200 transition-all uppercase"
                 >
                   Cerrar
                 </button>
                 <button 
                   onClick={async () => {
-                    const ok = await saveUpdate(program.id);
+                    const ok = await onSave(program.id, details);
                     if (ok) {
-                      setSelectedProgramIdForDetails(null);
+                      onClose();
                     }
                   }}
-                  disabled={loading[program.id]}
+                  disabled={loading}
                   className="px-8 py-3 bg-fsm-blue text-white rounded-2xl font-black text-xs tracking-widest hover:bg-fsm-red transition-all uppercase shadow-lg shadow-fsm-blue/20"
                 >
-                  {loading[program.id] ? "Guardando..." : "Guardar Detalles"}
+                  {loading ? "Guardando..." : "Guardar Detalles"}
                 </button>
               </div>
             </div>
           </div>
-        );
-      })()}
-    </div>
   );
 }
