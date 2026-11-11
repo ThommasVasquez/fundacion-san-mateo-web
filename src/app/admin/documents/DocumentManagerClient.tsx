@@ -1704,6 +1704,7 @@ export default function DocumentManagerClient({
                             <th className="p-3">Documento</th>
                             <th className="p-3">Tipo Documento</th>
                             <th className="p-3">Programa</th>
+                            <th className="p-3">Acta / Registro</th>
                             <th className="p-3">Estado</th>
                           </tr>
                         </thead>
@@ -1718,6 +1719,13 @@ export default function DocumentManagerClient({
                               <td className="p-3 text-gray-600">{r.student_documento || 'S/D'}</td>
                               <td className="p-3 text-gray-700">{r.tipo_documento}</td>
                               <td className="p-3 text-gray-600 uppercase">{r.programa_curso}</td>
+                              <td className="p-3 text-gray-600 font-mono text-[11px]">
+                                {[
+                                  r.acta ? `Acta: ${r.acta}` : null,
+                                  r.folio ? `Folio: ${r.folio}` : null,
+                                  r.libro ? `Libro: ${r.libro}` : null
+                                ].filter(Boolean).join(' | ') || <span className="text-gray-400 italic">--</span>}
+                              </td>
                               <td className="p-3">
                                 {r.isValid ? (
                                   <span className="text-[9px] font-black text-green-700 bg-green-50 px-2 py-0.5 rounded-md border border-green-200">
