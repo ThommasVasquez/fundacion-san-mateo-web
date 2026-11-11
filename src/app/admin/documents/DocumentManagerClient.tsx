@@ -952,6 +952,32 @@ export default function DocumentManagerClient({
     setTimeout(() => setCopiedLink(false), 2500);
   };
 
+  // Direct Download QR as High-Res PNG
+  const [isDownloadingQrPng, setIsDownloadingQrPng] = useState(false);
+  const handleDownloadQrPng = async (consecutivo: string, studentNombre: string) => {
+    try {
+      setIsDownloadingQrPng(true);
+      const url = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(`https://fundacionsanmateosoacha.edu.co/verificar/${encodeURIComponent(consecutivo)}`)}`;
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      const safeName = (studentNombre || 'ESTUDIANTE').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
+      a.download = `QR_${consecutivo}_${safeName}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+      showStatus('Código QR descargado en PNG de alta resolución.', 'success');
+    } catch (err) {
+      console.error('Error downloading QR PNG:', err);
+      window.open(`https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(`https://fundacionsanmateosoacha.edu.co/verificar/${encodeURIComponent(consecutivo)}`)}`, '_blank');
+    } finally {
+      setIsDownloadingQrPng(false);
+    }
+  };
+
   // Export to Excel with Institutional Styling
   const handleExportExcel = async () => {
     if (filteredDocs.length === 0) {
@@ -1972,14 +1998,14 @@ export default function DocumentManagerClient({
               </button>
 
               <div className="flex gap-2">
-                <a
-                  href={`https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(`https://fundacionsanmateosoacha.edu.co/verificar/${encodeURIComponent(qrModalDoc.consecutivo)}`)}`}
-                  target="_blank"
-                  download={`QR_${qrModalDoc.consecutivo}.png`}
-                  className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-xl font-bold text-[11px] uppercase tracking-wider hover:bg-gray-200 transition-all flex items-center justify-center gap-1.5"
+                <button
+                  type="button"
+                  onClick={() => handleDownloadQrPng(qrModalDoc.consecutivo, qrModalDoc.student_nombre)}
+                  disabled={isDownloadingQrPng}
+                  className="flex-1 py-2 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl font-bold text-[11px] uppercase tracking-wider hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
-                  <QrCode size={13} /> PNG Alta Resolución
-                </a>
+                  <QrCode size={13} /> {isDownloadingQrPng ? 'Descargando...' : 'Descargar PNG'}
+                </button>
 
                 <Link
                   href={`/verificar/${encodeURIComponent(qrModalDoc.consecutivo)}`}
