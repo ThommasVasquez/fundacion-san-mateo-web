@@ -30,6 +30,7 @@ interface DocumentItem {
   fecha_expedicion: string;
   folio: string;
   libro: string;
+  acta?: string;
   estado: string;
   notas: string;
   pdf_url: string;
@@ -51,6 +52,7 @@ interface ParsedBulkItem {
   fecha_expedicion?: string;
   folio?: string;
   libro?: string;
+  acta?: string;
   notas?: string;
   isValid: boolean;
   validationError?: string;
@@ -105,6 +107,7 @@ export default function DocumentManagerClient({
   const [newFecha, setNewFecha] = useState(new Date().toISOString().split('T')[0]);
   const [newFolio, setNewFolio] = useState('');
   const [newLibro, setNewLibro] = useState('');
+  const [newActa, setNewActa] = useState('');
   const [newNotas, setNewNotas] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
@@ -143,6 +146,7 @@ export default function DocumentManagerClient({
   const [editFecha, setEditFecha] = useState('');
   const [editFolio, setEditFolio] = useState('');
   const [editLibro, setEditLibro] = useState('');
+  const [editActa, setEditActa] = useState('');
   const [editNotas, setEditNotas] = useState('');
   const [editAttachedPdfFile, setEditAttachedPdfFile] = useState<File | null>(null);
   const [editPdfUrl, setEditPdfUrl] = useState('');
@@ -380,6 +384,7 @@ export default function DocumentManagerClient({
       fecha_expedicion: newFecha,
       folio: newFolio,
       libro: newLibro,
+      acta: newActa,
       notas: newNotas,
       pdf_url: stampedPdfUrl,
     });
@@ -393,6 +398,7 @@ export default function DocumentManagerClient({
       setNewPrograma('');
       setNewFolio('');
       setNewLibro('');
+      setNewActa('');
       setNewNotas('');
       setAttachedPdfFile(null);
       setPdfAutoDetectedMsg('');
@@ -461,6 +467,7 @@ export default function DocumentManagerClient({
 
           const folio = getVal(['folio']);
           const libro = getVal(['libro']);
+          const acta = getVal(['acta', 'numero_acta', 'num_acta', 'no_acta', 'acta_grado']);
           const notas = getVal(['notas', 'observaciones', 'nota', 'detalle']);
 
           const isDiplomaOrActa = /diploma|acta/i.test(tipo_documento);
@@ -483,6 +490,7 @@ export default function DocumentManagerClient({
             fecha_expedicion,
             folio: folio || undefined,
             libro: libro || undefined,
+            acta: acta || undefined,
             notas: notas || undefined,
             isValid,
             validationError
@@ -517,6 +525,7 @@ export default function DocumentManagerClient({
       fecha_expedicion: r.fecha_expedicion,
       folio: r.folio,
       libro: r.libro,
+      acta: r.acta,
       notas: r.notas,
     })));
 
@@ -631,6 +640,7 @@ export default function DocumentManagerClient({
     setEditFecha(doc.fecha_expedicion);
     setEditFolio(doc.folio);
     setEditLibro(doc.libro);
+    setEditActa(doc.acta || '');
     setEditNotas(doc.notas);
     setEditPdfUrl(doc.pdf_url || '');
     setEditAttachedPdfFile(null);
@@ -719,6 +729,7 @@ export default function DocumentManagerClient({
       fecha_expedicion?: string;
       folio?: string;
       libro?: string;
+      acta?: string;
       notas?: string;
       pdf_url?: string;
     } = {
@@ -730,6 +741,7 @@ export default function DocumentManagerClient({
       fecha_expedicion: editFecha,
       folio: editFolio,
       libro: editLibro,
+      acta: editActa,
       notas: editNotas,
     };
 
@@ -897,6 +909,7 @@ export default function DocumentManagerClient({
         fecha_expedicion: formatDateDDMMYYYY(d.fecha_expedicion),
         folio: d.folio || '',
         libro: d.libro || '',
+        acta: d.acta || '',
         estado: d.estado,
         notas: d.notas || '',
         verification_url: `https://fundacionsanmateosoacha.edu.co/verificar/${d.consecutivo}`
@@ -1101,9 +1114,9 @@ export default function DocumentManagerClient({
                       </td>
                       <td className="py-4 px-6 text-gray-500 font-medium">
                         {formatDateDDMMYYYY(doc.fecha_expedicion)}
-                        {(doc.folio || doc.libro) && (
+                        {(doc.folio || doc.libro || doc.acta) && (
                           <div className="text-[9px] text-gray-400 uppercase">
-                            {doc.folio ? `Folio: ${doc.folio}` : ''} {doc.libro ? `| Libro: ${doc.libro}` : ''}
+                            {doc.folio ? `Folio: ${doc.folio}` : ''} {doc.libro ? `| Libro: ${doc.libro}` : ''} {doc.acta ? `| Acta: ${doc.acta}` : ''}
                           </div>
                         )}
                       </td>
@@ -1487,7 +1500,7 @@ export default function DocumentManagerClient({
                 </datalist>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div>
                   <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Fecha Expedición:</label>
                   <input 
@@ -1516,6 +1529,17 @@ export default function DocumentManagerClient({
                     placeholder="Ej: 012"
                     value={newLibro}
                     onChange={e => setNewLibro(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Acta (Opcional):</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej: 128"
+                    value={newActa}
+                    onChange={e => setNewActa(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
                   />
                 </div>
@@ -2040,7 +2064,7 @@ export default function DocumentManagerClient({
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div>
                   <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Fecha Expedición:</label>
                   <input 
@@ -2067,6 +2091,16 @@ export default function DocumentManagerClient({
                     type="text" 
                     value={editLibro}
                     onChange={e => setEditLibro(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">Acta:</label>
+                  <input 
+                    type="text" 
+                    value={editActa}
+                    onChange={e => setEditActa(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl font-bold text-xs uppercase outline-none focus:border-fsm-blue"
                   />
                 </div>

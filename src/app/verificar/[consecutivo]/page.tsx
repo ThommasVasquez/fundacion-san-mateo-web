@@ -19,7 +19,7 @@ export default async function VerifyConsecutivoPage({ params }: VerifyConsecutiv
     SELECT 
       id, consecutivo, student_nombre, student_documento,
       tipo_documento, programa_curso, fecha_expedicion::text,
-      folio, libro, estado, notas, created_at::text
+      folio, libro, acta, estado, notas, created_at::text
     FROM issued_documents
     WHERE UPPER(consecutivo) = ${decodedCode}
        OR UPPER(student_documento) = ${decodedCode}
@@ -40,6 +40,7 @@ export default async function VerifyConsecutivoPage({ params }: VerifyConsecutiv
         fecha_expedicion: doc.fecha_expedicion,
         folio: doc.folio || '',
         libro: doc.libro || '',
+        acta: doc.acta || '',
         estado: doc.estado,
         notas: doc.notas || '',
         created_at: doc.created_at

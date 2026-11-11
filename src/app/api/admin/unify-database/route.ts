@@ -162,20 +162,21 @@ export async function POST(req: Request) {
     }
 
     if (body.action === 'cleanup_noise_events') {
-      // 1. Eliminar eventos de ruido registrados hoy en la madrugada
+      // 1. Eliminar eventos de ruido eléctrico / tramas corruptas (F0..., C0..., 00..., etc.)
       const deletedEvents = await sql`
         DELETE FROM attendance_events
-        WHERE reader_id = 'panel-001'
-          AND timestamp >= '2026-10-16 00:00:00-05'::timestamptz
-          AND timestamp < '2026-10-16 06:15:00-05'::timestamptz
+        WHERE student_id IS NULL
           AND (
-            student_id IS NULL
-            OR rfid_tag_uid = 'C0C0000000'
+            rfid_tag_uid = 'C0C0000000'
             OR rfid_tag_uid = 'TEST_NON_EXISTENT'
+            OR rfid_tag_uid ~* '^0+$'
+            OR rfid_tag_uid ~* '^F+$'
             OR rfid_tag_uid ~* '^0{6,}'
             OR rfid_tag_uid ~* '^F{6,}'
+            OR rfid_tag_uid ~* '^(00|[89A-F][0-9A-F])[0-9A-F]{8}$'
+            OR rfid_tag_uid ~* '^[0-9A-F]{2}0000[0-9A-F]{4}$'
           )
-        RETURNING id, rfid_tag_uid
+        RETURNING id, rfid_tag_uid, timestamp, sede
       `;
 
       // 2. Limpiar el tag fantasma C0C0000000 o ceros si están asignados a estudiantes

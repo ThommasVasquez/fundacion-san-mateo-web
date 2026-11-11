@@ -203,7 +203,16 @@ export async function POST(req: Request) {
 
     // Rechazar lecturas nulas, tramas corruptas o ruido eléctrico de hardware
     // Esto ocurre por líneas flotantes, interferencia, caída de voltaje o pérdida de comunicación en el bus SPI/Wiegand.
+    // En tarjetas EM4100 de 10 dígitos hex (5 bytes): el primer byte es siempre 01..7F (nunca 00 ni >=80 como C0, C3, F0, FF),
+    // el segundo byte es siempre 00 y el tercer byte nunca es 00.
+    const isInvalidEm4100 =
+      /^[0-9A-F]{10}$/i.test(tagHex) &&
+      (/^(00|[89A-F][0-9A-F])/i.test(tagHex) ||
+        tagHex.slice(2, 4) !== '00' ||
+        tagHex.slice(4, 6) === '00');
+
     const isHardwareNoise = 
+      isInvalidEm4100 ||
       /^0+$/.test(tagHex) || 
       /^F+$/i.test(tagHex) ||
       /^0{6,}[0-9A-F]{1,4}$/i.test(tagHex) ||

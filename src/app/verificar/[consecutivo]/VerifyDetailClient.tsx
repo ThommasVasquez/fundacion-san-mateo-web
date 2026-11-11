@@ -19,6 +19,7 @@ interface DocumentRecord {
   fecha_expedicion: string;
   folio: string;
   libro: string;
+  acta?: string;
   estado: string;
   notas: string;
   created_at: string;
@@ -246,10 +247,11 @@ export default function VerifyDetailClient({ doc, searchedCode }: VerifyDetailCl
                   <div className="text-base font-black text-fsm-blue uppercase">{doc.programa_curso}</div>
                 </div>
 
-                {(doc.folio || doc.libro) && (
-                  <div className="space-y-1 md:col-span-2 pt-2 border-t border-gray-200/60 flex gap-6 text-xs font-bold text-gray-600">
+                {(doc.folio || doc.libro || doc.acta) && (
+                  <div className="space-y-1 md:col-span-2 pt-2 border-t border-gray-200/60 flex flex-wrap gap-6 text-xs font-bold text-gray-600">
                     {doc.folio && <div>Folio Registro: <span className="font-mono text-gray-900">{doc.folio}</span></div>}
                     {doc.libro && <div>Libro Registro: <span className="font-mono text-gray-900">{doc.libro}</span></div>}
+                    {doc.acta && <div>Acta de Grado: <span className="font-mono text-gray-900">{doc.acta}</span></div>}
                   </div>
                 )}
               </div>

@@ -1804,6 +1804,7 @@ export async function createIssuedDocument(data: {
   fecha_expedicion?: string;
   folio?: string;
   libro?: string;
+  acta?: string;
   notas?: string;
   pdf_url?: string;
 }) {
@@ -1813,6 +1814,7 @@ export async function createIssuedDocument(data: {
   }
 
   try {
+    await sql`ALTER TABLE issued_documents ADD COLUMN IF NOT EXISTS acta TEXT;`.catch(() => []);
     const studentNombre = data.student_nombre.trim();
     const tipoDocumento = data.tipo_documento.trim();
     const programaCurso = data.programa_curso.trim();
@@ -1841,16 +1843,17 @@ export async function createIssuedDocument(data: {
     const fechaExpedicion = data.fecha_expedicion || new Date().toISOString().split('T')[0];
     const folio = data.folio?.trim() || null;
     const libro = data.libro?.trim() || null;
+    const acta = data.acta?.trim() || null;
     const notas = data.notas?.trim() || null;
     const pdfUrl = data.pdf_url?.trim() || null;
 
     await sql`
       INSERT INTO issued_documents (
         consecutivo, student_nombre, student_documento, tipo_documento,
-        programa_curso, fecha_expedicion, folio, libro, estado, notas, pdf_url
+        programa_curso, fecha_expedicion, folio, libro, acta, estado, notas, pdf_url
       ) VALUES (
         ${consecutivo}, ${studentNombre}, ${studentDocumento}, ${tipoDocumento},
-        ${programaCurso}, ${fechaExpedicion}::date, ${folio}, ${libro}, 'valido', ${notas}, ${pdfUrl}
+        ${programaCurso}, ${fechaExpedicion}::date, ${folio}, ${libro}, ${acta}, 'valido', ${notas}, ${pdfUrl}
       )
     `;
 
@@ -1866,6 +1869,7 @@ export async function createIssuedDocument(data: {
         programa_curso: programaCurso,
         folio,
         libro,
+        acta,
         fecha_expedicion: fechaExpedicion
       }
     });
@@ -1889,6 +1893,7 @@ export async function bulkCreateIssuedDocuments(items: Array<{
   fecha_expedicion?: string;
   folio?: string;
   libro?: string;
+  acta?: string;
   notas?: string;
   pdf_url?: string;
 }>) {
@@ -1898,6 +1903,7 @@ export async function bulkCreateIssuedDocuments(items: Array<{
   }
 
   try {
+    await sql`ALTER TABLE issued_documents ADD COLUMN IF NOT EXISTS acta TEXT;`.catch(() => []);
     if (!Array.isArray(items) || items.length === 0) {
       return { error: 'No se recibieron registros para importar.' };
     }
@@ -1964,6 +1970,7 @@ export async function bulkCreateIssuedDocuments(items: Array<{
 
       const folio = item.folio?.trim() || null;
       const libro = item.libro?.trim() || null;
+      const acta = item.acta?.trim() || null;
       const notas = item.notas?.trim() || null;
       const pdfUrl = item.pdf_url?.trim() || null;
 
@@ -1971,10 +1978,10 @@ export async function bulkCreateIssuedDocuments(items: Array<{
         await sql`
           INSERT INTO issued_documents (
             consecutivo, student_nombre, student_documento, tipo_documento,
-            programa_curso, fecha_expedicion, folio, libro, estado, notas, pdf_url
+            programa_curso, fecha_expedicion, folio, libro, acta, estado, notas, pdf_url
           ) VALUES (
             ${consecutivo}, ${studentNombre}, ${studentDocumento}, ${tipoDocumento},
-            ${programaCurso}, ${fechaExpedicion}::date, ${folio}, ${libro}, 'valido', ${notas}, ${pdfUrl}
+            ${programaCurso}, ${fechaExpedicion}::date, ${folio}, ${libro}, ${acta}, 'valido', ${notas}, ${pdfUrl}
           )
         `;
         createdList.push(consecutivo);
@@ -2024,6 +2031,7 @@ export async function updateIssuedDocument(id: string, data: {
   fecha_expedicion?: string;
   folio?: string;
   libro?: string;
+  acta?: string;
   estado?: string;
   notas?: string;
   pdf_url?: string;
@@ -2034,6 +2042,7 @@ export async function updateIssuedDocument(id: string, data: {
   }
 
   try {
+    await sql`ALTER TABLE issued_documents ADD COLUMN IF NOT EXISTS acta TEXT;`.catch(() => []);
     const studentNombre = data.student_nombre?.trim() || null;
     const tipoDocumento = data.tipo_documento?.trim() || null;
     const programaCurso = data.programa_curso?.trim() || null;
@@ -2042,6 +2051,7 @@ export async function updateIssuedDocument(id: string, data: {
     const fechaExpedicion = data.fecha_expedicion || null;
     const folio = data.folio?.trim() || null;
     const libro = data.libro?.trim() || null;
+    const acta = data.acta?.trim() || null;
     const estado = data.estado || null;
     const notas = data.notas?.trim() || null;
     const hasPdfUrlKey = 'pdf_url' in data;
@@ -2078,6 +2088,7 @@ export async function updateIssuedDocument(id: string, data: {
           fecha_expedicion = COALESCE(${fechaExpedicion}::date, fecha_expedicion),
           folio = COALESCE(${folio}, folio),
           libro = COALESCE(${libro}, libro),
+          acta = COALESCE(${acta}, acta),
           estado = COALESCE(${estado}, estado),
           notas = COALESCE(${notas}, notas),
           pdf_url = ${pdfUrl},
@@ -2096,6 +2107,7 @@ export async function updateIssuedDocument(id: string, data: {
           fecha_expedicion = COALESCE(${fechaExpedicion}::date, fecha_expedicion),
           folio = COALESCE(${folio}, folio),
           libro = COALESCE(${libro}, libro),
+          acta = COALESCE(${acta}, acta),
           estado = COALESCE(${estado}, estado),
           notas = COALESCE(${notas}, notas),
           updated_at = CURRENT_TIMESTAMP

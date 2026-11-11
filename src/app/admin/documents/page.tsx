@@ -59,7 +59,7 @@ export default async function AdminDocumentsPage() {
       SELECT 
         id, consecutivo, student_nombre, student_documento,
         tipo_documento, programa_curso, fecha_expedicion::text,
-        folio, libro, estado, notas,
+        folio, libro, acta, estado, notas,
         CASE 
           WHEN pdf_url IS NULL OR pdf_url = '' THEN ''
           WHEN pdf_url LIKE '/%' OR pdf_url LIKE 'http%' THEN pdf_url
@@ -145,6 +145,7 @@ export default async function AdminDocumentsPage() {
           fecha_expedicion: d.fecha_expedicion,
           folio: d.folio || '',
           libro: d.libro || '',
+          acta: d.acta || '',
           estado: d.estado,
           notas: d.notas || '',
           pdf_url: d.pdf_url || '',

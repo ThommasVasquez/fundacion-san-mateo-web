@@ -697,6 +697,7 @@ export interface DocumentExportItem {
   fecha_expedicion: string;
   folio?: string;
   libro?: string;
+  acta?: string;
   estado: string;
   notas?: string;
   verification_url?: string;
@@ -824,7 +825,11 @@ export async function exportDocumentsToExcel(docs: DocumentExportItem[]) {
     row.getCell(8).value = d.fecha_expedicion;
     row.getCell(8).alignment = { vertical: 'middle', horizontal: 'center' };
 
-    const folioLibro = (d.folio ? `Folio: ${d.folio}` : '') + (d.libro ? ` | Libro: ${d.libro}` : '') || 'N/A';
+    const folioLibroParts = [];
+    if (d.folio) folioLibroParts.push(`Folio: ${d.folio}`);
+    if (d.libro) folioLibroParts.push(`Libro: ${d.libro}`);
+    if (d.acta) folioLibroParts.push(`Acta: ${d.acta}`);
+    const folioLibro = folioLibroParts.join(' | ') || 'N/A';
     row.getCell(9).value = folioLibro;
     row.getCell(9).alignment = { vertical: 'middle', horizontal: 'center' };
 
@@ -931,8 +936,8 @@ export async function exportBulkImportTemplateExcel() {
   const titleRow = worksheet.getRow(1);
   titleRow.getCell(2).value = 'FUNDACIÓN SAN MATEO — PLANTILLA OFICIAL DE CARGA MASIVA DE DOCUMENTOS';
   titleRow.getCell(2).font = { name: 'Calibri', size: 13, bold: true, color: { argb: 'FFFFFFFF' } };
-  worksheet.mergeCells(1, 2, 1, 9);
-  for (let c = 1; c <= 9; c++) {
+  worksheet.mergeCells(1, 2, 1, 10);
+  for (let c = 1; c <= 10; c++) {
     titleRow.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + FSM_COLORS.NAVY_HEADER } };
   }
   titleRow.height = 28;
@@ -941,15 +946,15 @@ export async function exportBulkImportTemplateExcel() {
   const subTitleRow = worksheet.getRow(2);
   subTitleRow.getCell(2).value = 'Diligencia los datos de los estudiantes y títulos a expedir. Guarda y sube este archivo en el panel.';
   subTitleRow.getCell(2).font = { name: 'Calibri', size: 10, italic: true, color: { argb: 'FFFFFFFF' } };
-  worksheet.mergeCells(2, 2, 2, 9);
-  for (let c = 1; c <= 9; c++) {
+  worksheet.mergeCells(2, 2, 2, 10);
+  for (let c = 1; c <= 10; c++) {
     subTitleRow.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + FSM_COLORS.NAVY_ACCENT } };
   }
   subTitleRow.height = 20;
 
   // Row 3: Accent Red line
   const accentRow = worksheet.getRow(3);
-  for (let c = 1; c <= 9; c++) {
+  for (let c = 1; c <= 10; c++) {
     accentRow.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + FSM_COLORS.RED_ACCENT } };
   }
   accentRow.height = 4;
@@ -958,7 +963,7 @@ export async function exportBulkImportTemplateExcel() {
   const metaRow = worksheet.getRow(4);
   metaRow.getCell(1).value = '* Si dejas la columna CONSECUTIVO vacía, el sistema asignará automáticamente códigos FSM-2026-XXXXX correlativos.';
   metaRow.getCell(1).font = { name: 'Calibri', size: 9, bold: true, color: { argb: 'FF' + FSM_COLORS.RED_ACCENT } };
-  worksheet.mergeCells(4, 1, 4, 9);
+  worksheet.mergeCells(4, 1, 4, 10);
   metaRow.height = 18;
 
   // Row 5: Column Headers
@@ -972,6 +977,7 @@ export async function exportBulkImportTemplateExcel() {
     'FECHA_EXPEDICION',
     'FOLIO',
     'LIBRO',
+    'ACTA',
     'OBSERVACIONES_NOTAS'
   ];
 
@@ -1001,6 +1007,7 @@ export async function exportBulkImportTemplateExcel() {
       fecha: new Date().toISOString().split('T')[0],
       folio: '045',
       libro: '012',
+      acta: '128',
       notas: 'Graduación ordinaria periodo 2026-1'
     },
     {
@@ -1012,6 +1019,7 @@ export async function exportBulkImportTemplateExcel() {
       fecha: new Date().toISOString().split('T')[0],
       folio: '046',
       libro: '012',
+      acta: '129',
       notas: 'Promedio acumulado 4.8 / 5.0'
     },
     {
@@ -1023,6 +1031,7 @@ export async function exportBulkImportTemplateExcel() {
       fecha: new Date().toISOString().split('T')[0],
       folio: '047',
       libro: '012',
+      acta: '130',
       notas: '600 horas clínicas certificadas en IPS aliada'
     },
     {
@@ -1034,6 +1043,7 @@ export async function exportBulkImportTemplateExcel() {
       fecha: new Date().toISOString().split('T')[0],
       folio: '048',
       libro: '012',
+      acta: '',
       notas: 'Valores arancelarios año lectivo 2026'
     }
   ];
@@ -1051,13 +1061,14 @@ export async function exportBulkImportTemplateExcel() {
     row.getCell(6).value = item.fecha;
     row.getCell(7).value = item.folio;
     row.getCell(8).value = item.libro;
-    row.getCell(9).value = item.notas;
+    row.getCell(9).value = item.acta;
+    row.getCell(10).value = item.notas;
 
-    for (let c = 1; c <= 9; c++) {
+    for (let c = 1; c <= 10; c++) {
       const cell = row.getCell(c);
       cell.font = { name: 'Calibri', size: 10, color: { argb: 'FF' + FSM_COLORS.TEXT_DARK } };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgArgb } };
-      cell.alignment = { vertical: 'middle', horizontal: c === 1 || c === 3 || c === 6 || c === 7 || c === 8 ? 'center' : 'left' };
+      cell.alignment = { vertical: 'middle', horizontal: c === 1 || c === 3 || c === 6 || c === 7 || c === 8 || c === 9 ? 'center' : 'left' };
       cell.border = {
         top: { style: 'thin', color: { argb: 'FF' + FSM_COLORS.GRAY_BORDER } },
         bottom: { style: 'thin', color: { argb: 'FF' + FSM_COLORS.GRAY_BORDER } },
@@ -1076,7 +1087,8 @@ export async function exportBulkImportTemplateExcel() {
   worksheet.getColumn(6).width = 18;
   worksheet.getColumn(7).width = 12;
   worksheet.getColumn(8).width = 12;
-  worksheet.getColumn(9).width = 36;
+  worksheet.getColumn(9).width = 12;
+  worksheet.getColumn(10).width = 36;
 
   await downloadWorkbook(workbook, 'Plantilla_Carga_Masiva_Documentos_FSM.xlsx');
 }
