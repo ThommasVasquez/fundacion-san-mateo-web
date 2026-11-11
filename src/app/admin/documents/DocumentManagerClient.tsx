@@ -413,6 +413,7 @@ export default function DocumentManagerClient({
   // =========================================================================
   const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    if (e.target) e.target.value = '';
     if (!file) return;
 
     setBulkFileName(file.name);
@@ -425,32 +426,89 @@ export default function DocumentManagerClient({
         const wb = XLSX.read(bstr, { type: 'binary', cellDates: true });
         const wsName = wb.SheetNames[0];
         const ws = wb.Sheets[wsName];
-        const rawData: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
 
+        // 1. Obtener la hoja como matriz 2D (filas x columnas) para detectar encabezados reales
+        const sheetRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-        if (rawData.length === 0) {
+        if (!sheetRows || sheetRows.length === 0) {
           showStatus('El archivo no contiene filas con datos válidos.', 'error');
           return;
         }
 
-        const normalized: ParsedBulkItem[] = rawData.map((row) => {
-          // Normalize column keys
-          const keys = Object.keys(row);
+        // 2. Escaneo inteligente de la fila de encabezados (ignora logos, títulos decorativos o notas al inicio)
+        let headerRowIdx = -1;
+        for (let i = 0; i < Math.min(sheetRows.length, 25); i++) {
+          const row = sheetRows[i];
+          if (!Array.isArray(row)) continue;
+          const cleanRow = row.map(cell => 
+            String(cell || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '')
+          );
+          const hasNombre = cleanRow.some(c => c.includes('nombre') || c.includes('estudiante') || c.includes('titular') || c.includes('alumno'));
+          const hasComplement = cleanRow.some(c => 
+            c.includes('documento') || c.includes('cedula') || c.includes('tipo') || c.includes('programa') || c.includes('curso') || c.includes('consecutivo') || c.includes('folio')
+          );
+          if (hasNombre && hasComplement) {
+            headerRowIdx = i;
+            break;
+          }
+        }
+
+        let headers: string[] = [];
+        let dataRows: any[][] = [];
+
+        if (headerRowIdx !== -1) {
+          headers = (sheetRows[headerRowIdx] as any[]).map(h => String(h || '').trim());
+          dataRows = sheetRows.slice(headerRowIdx + 1);
+        } else {
+          // Si no encuentra la fila con 'nombre', usa la primera fila que contenga texto
+          const firstNonEmpty = sheetRows.findIndex(r => Array.isArray(r) && r.some(c => String(c || '').trim() !== ''));
+          if (firstNonEmpty !== -1) {
+            headers = (sheetRows[firstNonEmpty] as any[]).map(h => String(h || '').trim());
+            dataRows = sheetRows.slice(firstNonEmpty + 1);
+          }
+        }
+
+        // Mapa de encabezados normalizados sin acentos ni símbolos
+        const cleanHeaderMap = headers.map(h => ({
+          original: h,
+          clean: h.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '')
+        }));
+
+        // Filtrar filas completamente vacías
+        const filteredDataRows = dataRows.filter(row => {
+          if (!Array.isArray(row)) return false;
+          return row.some(cell => String(cell || '').trim() !== '');
+        });
+
+        if (filteredDataRows.length === 0) {
+          showStatus('El archivo no contiene registros de estudiantes después de los encabezados.', 'error');
+          return;
+        }
+
+        const normalized: ParsedBulkItem[] = filteredDataRows.map((row) => {
           const getVal = (possibleKeys: string[]) => {
             for (const pk of possibleKeys) {
-              const matchedKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '').includes(pk.toLowerCase().replace(/[^a-z0-9]/g, '')));
-              if (matchedKey && row[matchedKey] !== undefined && row[matchedKey] !== '') {
-                return String(row[matchedKey]).trim();
+              const cleanPk = pk.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '');
+              const foundIdx = cleanHeaderMap.findIndex(h => h.clean.includes(cleanPk));
+              if (foundIdx !== -1 && row[foundIdx] !== undefined && row[foundIdx] !== null && String(row[foundIdx]).trim() !== '') {
+                const raw = row[foundIdx];
+                if (raw instanceof Date) {
+                  return raw.toISOString().split('T')[0];
+                }
+                return String(raw).trim();
               }
             }
             return '';
           };
 
           const consecutivo = getVal(['consecutivo', 'codigo', 'id_documento']);
-          const student_nombre = getVal(['nombre', 'estudiante', 'alumno', 'titular', 'nombre_completo', 'nombres']);
-          const student_documento = getVal(['documento', 'cedula', 'identificacion', 'ti', 'cc', 'dni', 'doc']);
-          let rawTipo = getVal(['tipo', 'tipo_documento', 'titulo', 'documento_tipo']) || 'Diploma de Grado';
-          if (/calificaci|notas/i.test(rawTipo)) {
+          const student_nombre = getVal(['nombre_estudiante', 'nombre', 'estudiante', 'alumno', 'titular', 'nombre_completo', 'nombres']);
+          const student_documento = getVal(['documento_id', 'documento', 'cedula', 'identificacion', 'ti', 'cc', 'dni', 'doc']);
+          
+          let rawTipo = getVal(['tipo_documento', 'tipo', 'documento_tipo', 'titulo']);
+          if (!rawTipo) {
+            rawTipo = 'Certificado de Título';
+          } else if (/calificaci|notas/i.test(rawTipo)) {
             rawTipo = 'Certificado de Notas';
           } else if (/pr[aá]ctica/i.test(rawTipo)) {
             rawTipo = 'Certificado de Prácticas';
@@ -458,17 +516,20 @@ export default function DocumentManagerClient({
             rawTipo = 'Certificado de Costos';
           }
           const tipo_documento = rawTipo;
-          const programa_curso = getVal(['programa', 'curso', 'carrera', 'programa_curso', 'capacitacion']) || 'AUXILIAR EN ENFERMERÍA';
+
+          const programa_curso = getVal(['programa_curso', 'programa', 'curso', 'carrera', 'capacitacion']) || 'AUXILIAR EN PREESCOLAR';
           
-          let fecha_expedicion = getVal(['fecha', 'fecha_expedicion', 'expedicion', 'fecha_grado']);
+          let fecha_expedicion = getVal(['fecha_expedicion', 'fecha', 'expedicion', 'fecha_grado']);
           if (!fecha_expedicion) {
             fecha_expedicion = new Date().toISOString().split('T')[0];
+          } else if (fecha_expedicion.includes('T')) {
+            fecha_expedicion = fecha_expedicion.split('T')[0];
           }
 
           const folio = getVal(['folio']);
           const libro = getVal(['libro']);
           const acta = getVal(['acta', 'numero_acta', 'num_acta', 'no_acta', 'acta_grado']);
-          const notas = getVal(['notas', 'observaciones', 'nota', 'detalle']);
+          const notas = getVal(['observaciones_notas', 'observaciones', 'notas', 'nota', 'detalle']);
 
           const isDiplomaOrActa = /diploma|acta/i.test(tipo_documento);
           const hasRestricted = isDiplomaOrActa && !isSuperAdmin;
@@ -943,6 +1004,8 @@ export default function DocumentManagerClient({
   const documentTypes = [
     'Diploma de Grado',
     'Acta de Grado',
+    'Certificado de Título',
+    'Certificado de Titulo',
     'Certificado de Estudio',
     'Certificado de Notas',
     'Certificado de Prácticas',
