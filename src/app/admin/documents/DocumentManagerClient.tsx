@@ -978,6 +978,93 @@ export default function DocumentManagerClient({
     }
   };
 
+  // Download Bulk Import Template in CSV Format
+  const handleDownloadTemplateCsv = () => {
+    const headers = [
+      'CONSECUTIVO',
+      'NOMBRE_ESTUDIANTE',
+      'DOCUMENTO_ID',
+      'TIPO_DOCUMENTO',
+      'PROGRAMA_CURSO',
+      'FECHA_EXPEDICION',
+      'FOLIO',
+      'LIBRO',
+      'ACTA',
+      'OBSERVACIONES_NOTAS'
+    ];
+    const sampleRows = [
+      ['', 'ACHURY MUÑOZ JESSICA ALEXANDRA', '1073672801', 'Certificado de Titulo', 'TECNICO LABORAL EN AUXILIAR EN PREESCOLAR', '2026-12-05', '1', '1', '1', 'Graduación ordinaria'],
+      ['', 'AZA GUTIERREZ DANIELA', '1001167899', 'Certificado de Titulo', 'TECNICO LABORAL EN AUXILIAR EN PREESCOLAR', '2026-12-05', '1', '1', '2', 'Graduación ordinaria']
+    ];
+    const escapeCsv = (val: string) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+    const csvString = '\uFEFF' + [
+      headers.map(escapeCsv).join(','),
+      ...sampleRows.map(r => r.map(escapeCsv).join(','))
+    ].join('\r\n');
+
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Plantilla_Carga_Masiva_Documentos_FSM.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showStatus('Plantilla CSV descargada exitosamente.');
+  };
+
+  // Export Filtered Documents to CSV
+  const handleExportCsv = () => {
+    if (filteredDocs.length === 0) {
+      showStatus('No hay documentos para exportar.', 'error');
+      return;
+    }
+    const headers = [
+      'CONSECUTIVO',
+      'NOMBRE_ESTUDIANTE',
+      'DOCUMENTO_ID',
+      'TIPO_DOCUMENTO',
+      'PROGRAMA_CURSO',
+      'FECHA_EXPEDICION',
+      'FOLIO',
+      'LIBRO',
+      'ACTA',
+      'ESTADO',
+      'ENLACE_VERIFICACION'
+    ];
+    const escapeCsv = (val: string) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+    const rows = filteredDocs.map(d => [
+      d.consecutivo,
+      d.student_nombre,
+      d.student_documento || 'S/D',
+      d.tipo_documento,
+      d.programa_curso,
+      formatDateDDMMYYYY(d.fecha_expedicion),
+      d.folio || '',
+      d.libro || '',
+      d.acta || '',
+      d.estado === 'valido' ? 'VALIDO' : 'ANULADO',
+      `https://fundacionsanmateosoacha.edu.co/verificar/${encodeURIComponent(d.consecutivo)}`
+    ]);
+
+    const csvString = '\uFEFF' + [
+      headers.map(escapeCsv).join(','),
+      ...rows.map(r => r.map(escapeCsv).join(','))
+    ].join('\r\n');
+
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Reporte_Documentos_FSM_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showStatus(`Exportados ${filteredDocs.length} documentos a formato CSV.`);
+  };
+
   // Export to Excel with Institutional Styling
   const handleExportExcel = async () => {
     if (filteredDocs.length === 0) {
@@ -1143,6 +1230,16 @@ export default function DocumentManagerClient({
             title="Exportar listado a Excel con códigos QR incrustados"
           >
             <FileSpreadsheet size={16} /> {isExportingExcel ? 'Exportando...' : 'Exportar Excel'}
+          </button>
+
+          {/* Export to CSV */}
+          <button
+            onClick={handleExportCsv}
+            disabled={filteredDocs.length === 0}
+            className="px-4 py-3 bg-teal-700 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-teal-800 transition-all shadow-md flex items-center gap-2 disabled:opacity-50 active:scale-95 cursor-pointer"
+            title="Exportar listado completo en archivo de texto separado por comas (.csv)"
+          >
+            <FileText size={16} /> Exportar CSV
           </button>
 
           {/* Bulk Download All QR Codes in ZIP */}
@@ -1795,16 +1892,25 @@ export default function DocumentManagerClient({
                   <div className="text-xs text-gray-700">
                     <strong className="text-fsm-blue">¿Primera vez usando la carga masiva?</strong> Descarga la plantilla oficial con los campos y columnas pre-configurados.
                   </div>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const { exportBulkImportTemplateExcel } = await import('@/lib/excelExportHelper');
-                      exportBulkImportTemplateExcel();
-                    }}
-                    className="px-4 py-2 bg-white text-fsm-blue border border-fsm-blue/20 hover:bg-fsm-blue hover:text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-xs flex items-center gap-1.5 shrink-0"
-                  >
-                    <Download size={14} /> Descargar Plantilla Excel
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const { exportBulkImportTemplateExcel } = await import('@/lib/excelExportHelper');
+                        exportBulkImportTemplateExcel();
+                      }}
+                      className="px-3.5 py-2 bg-white text-fsm-blue border border-fsm-blue/20 hover:bg-fsm-blue hover:text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Download size={14} /> Plantilla Excel (.xlsx)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDownloadTemplateCsv}
+                      className="px-3.5 py-2 bg-white text-teal-800 border border-teal-300 hover:bg-teal-700 hover:text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Download size={14} /> Plantilla CSV (.csv)
+                    </button>
+                  </div>
                 </div>
 
                 {/* Dropzone */}
