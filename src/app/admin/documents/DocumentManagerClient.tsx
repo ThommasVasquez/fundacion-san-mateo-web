@@ -16,7 +16,7 @@ import {
   FileCheck, Search, Plus, QrCode, Edit2, Trash2, X, Save, 
   CheckCircle2, XCircle, Download, ExternalLink, ShieldCheck, Printer, 
   FileText, Copy, Check, FileSpreadsheet, User, BookOpen, Award,
-  UploadCloud, FileUp, AlertTriangle, RefreshCw, File, Eye, Sparkles, AlertCircle
+  UploadCloud, FileUp, AlertTriangle, RefreshCw, File, Eye, Sparkles, AlertCircle, Archive
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -1013,6 +1013,60 @@ export default function DocumentManagerClient({
     }
   };
 
+  // Bulk Download All QR Codes as a Single ZIP
+  const [isDownloadingZip, setIsDownloadingZip] = useState(false);
+  const [zipProgress, setZipProgress] = useState<{ current: number; total: number } | null>(null);
+
+  const handleDownloadBulkZip = async () => {
+    if (filteredDocs.length === 0) {
+      showStatus('No hay documentos visibles para descargar.', 'error');
+      return;
+    }
+
+    try {
+      setIsDownloadingZip(true);
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+      const folder = zip.folder('codigos_qr_fsm') || zip;
+
+      const total = filteredDocs.length;
+      setZipProgress({ current: 0, total });
+
+      for (let i = 0; i < total; i++) {
+        const doc = filteredDocs[i];
+        setZipProgress({ current: i + 1, total });
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(`https://fundacionsanmateosoacha.edu.co/verificar/${encodeURIComponent(doc.consecutivo)}`)}`;
+        try {
+          const res = await fetch(qrUrl);
+          const blob = await res.blob();
+          const cleanName = (doc.student_nombre || 'ESTUDIANTE').trim().replace(/[^a-zA-Z0-9]/g, '_').substring(0, 35);
+          const fileName = `${doc.consecutivo}_${cleanName}.png`;
+          folder.file(fileName, blob);
+        } catch (fetchErr) {
+          console.error(`Error fetching QR for ${doc.consecutivo}:`, fetchErr);
+        }
+      }
+
+      const content = await zip.generateAsync({ type: 'blob' });
+      const blobUrl = URL.createObjectURL(content);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `Codigos_QR_FSM_${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+
+      showStatus(`¡Listo! Se descargó el archivo ZIP con los ${total} códigos QR en PNG.`);
+    } catch (err) {
+      console.error('Error creating ZIP:', err);
+      showStatus('Error al generar el archivo ZIP de códigos QR.', 'error');
+    } finally {
+      setIsDownloadingZip(false);
+      setZipProgress(null);
+    }
+  };
+
   // Filter documents
   const filteredDocs = documents.filter(d => {
     const term = search.toLowerCase();
@@ -1085,9 +1139,23 @@ export default function DocumentManagerClient({
           <button
             onClick={handleExportExcel}
             disabled={isExportingExcel || filteredDocs.length === 0}
-            className="px-4 py-3 bg-emerald-700 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-emerald-800 transition-all shadow-md flex items-center gap-2 disabled:opacity-50 active:scale-95"
+            className="px-4 py-3 bg-emerald-700 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-emerald-800 transition-all shadow-md flex items-center gap-2 disabled:opacity-50 active:scale-95 cursor-pointer"
+            title="Exportar listado a Excel con códigos QR incrustados"
           >
             <FileSpreadsheet size={16} /> {isExportingExcel ? 'Exportando...' : 'Exportar Excel'}
+          </button>
+
+          {/* Bulk Download All QR Codes in ZIP */}
+          <button
+            onClick={handleDownloadBulkZip}
+            disabled={isDownloadingZip || filteredDocs.length === 0}
+            className="px-4 py-3 bg-indigo-700 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-800 transition-all shadow-md flex items-center gap-2 disabled:opacity-50 active:scale-95 cursor-pointer"
+            title="Descargar todos los códigos QR filtrados en un archivo comprimido .ZIP"
+          >
+            <Archive size={16} /> 
+            {isDownloadingZip 
+              ? `Generando ZIP (${zipProgress?.current || 0}/${zipProgress?.total || 0})...` 
+              : 'Descargar QRs (.ZIP)'}
           </button>
         </div>
 
