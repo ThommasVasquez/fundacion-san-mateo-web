@@ -78,12 +78,13 @@ export async function POST(req: Request) {
     // 1. Si R2 está activo y disponible, guardar en R2
     if (bucket) {
       try {
+        const safeOriginalNameAscii = encodeURIComponent(originalName);
         await bucket.put(fileKey, arrayBuffer, {
           httpMetadata: {
             contentType: mimeType,
           },
           customMetadata: {
-            originalName,
+            originalName: safeOriginalNameAscii,
             uploadedAt: new Date().toISOString(),
           },
         });
@@ -98,12 +99,21 @@ export async function POST(req: Request) {
           size: file.size,
           storage: 'r2',
         });
-      } catch (r2Err) {
-        console.warn('Fallo al guardar en R2, procediendo con respaldo en base de datos Postgres:', r2Err);
+      } catch (r2Err: any) {
+        console.error('Fallo al guardar en R2, procediendo con respaldo en base de datos Postgres:', r2Err);
       }
+    } else {
+      console.warn('IMAGES_BUCKET (R2) no disponible en el contexto de Cloudflare');
     }
 
-    // 2. Respaldo de alta resiliencia: Guardar en Postgres (tabla uploaded_documents)
+    // 2. Respaldo ligero en Postgres solo para archivos pequeños (< 500 KB) para no agotar CPU del Worker (evita 503)
+    if (file.size > 500 * 1024) {
+      return NextResponse.json(
+        { error: 'El almacenamiento R2 no respondió y el archivo supera 500KB para respaldo en base de datos.' },
+        { status: 500 }
+      );
+    }
+
     const base64Data = Buffer.from(arrayBuffer).toString('base64');
 
     await sql`

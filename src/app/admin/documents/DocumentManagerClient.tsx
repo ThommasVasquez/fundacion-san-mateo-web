@@ -365,8 +365,8 @@ export default function DocumentManagerClient({
           console.warn('Fallo upload al servidor institucional, usando respaldo directo:', uploadErr);
         }
 
-        // Respaldo directo en caso de fallo de red
-        if (!stampedPdfUrl) {
+        // Respaldo directo solo si el PDF es ligero (< 400KB) para no saturar CPU del Worker
+        if (!stampedPdfUrl && stampedBytes.byteLength < 400 * 1024) {
           stampedPdfUrl = uint8ArrayToDataUrl(stampedBytes);
         }
       } catch (e: any) {
@@ -771,8 +771,8 @@ export default function DocumentManagerClient({
           console.warn('Fallo upload al servidor institucional en edición, usando respaldo directo:', uploadErr);
         }
 
-        // Respaldo directo en caso de fallo de red
-        if (!stampedPdfUrl) {
+        // Respaldo directo solo si el PDF es ligero (< 400KB) para no saturar CPU del Worker
+        if (!stampedPdfUrl && stampedBytes.byteLength < 400 * 1024) {
           stampedPdfUrl = uint8ArrayToDataUrl(stampedBytes);
         }
       } catch (err) {

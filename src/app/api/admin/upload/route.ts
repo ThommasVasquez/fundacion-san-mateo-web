@@ -100,12 +100,13 @@ export async function POST(req: Request) {
 
     if (bucket) {
       // Guardar en R2 si el bucket está enlazado
+      const safeOriginalNameAscii = encodeURIComponent(originalName);
       await bucket.put(r2Key, fileBuffer, {
         httpMetadata: {
           contentType: mimeType,
         },
         customMetadata: {
-          originalName,
+          originalName: safeOriginalNameAscii,
           uploadedAt: new Date().toISOString(),
         },
       });
@@ -120,7 +121,14 @@ export async function POST(req: Request) {
       });
     }
 
-    // Si R2 no está configurado, guardar de forma segura en Postgres
+    // Si R2 no está configurado, guardar en Postgres solo si es menor a 500KB para no agotar CPU del Worker
+    if (fileBuffer.byteLength > 500 * 1024) {
+      return NextResponse.json(
+        { error: 'El almacenamiento R2 no respondió y la imagen supera 500KB.' },
+        { status: 500 }
+      );
+    }
+
     const base64Data = Buffer.from(fileBuffer).toString('base64');
     
     // Asegurar que la tabla existe

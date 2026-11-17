@@ -49,7 +49,12 @@ export async function GET(
       }
 
       // Nombre de archivo para la cabecera Content-Disposition
-      const originalName = object.customMetadata?.originalName || key.split('/').pop() || 'documento.pdf';
+      let originalName = object.customMetadata?.originalName || key.split('/').pop() || 'documento.pdf';
+      try {
+        originalName = decodeURIComponent(originalName);
+      } catch {
+        // mantener como estaba
+      }
 
       // Determinar mimeType
       let contentType = headers.get('Content-Type');
