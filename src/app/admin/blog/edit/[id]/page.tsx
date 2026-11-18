@@ -12,11 +12,11 @@ export default async function EditBlogPostPage({ params }: { params: Promise<{ i
     notFound();
   }
 
-  // Serialize dates for client component
+  // Serialize dates for client component (supports both Date objects and ISO strings)
   const serializedPost = {
     ...post,
-    created_at: post.created_at.toISOString(),
-    updated_at: post.updated_at.toISOString(),
+    created_at: post.created_at instanceof Date ? post.created_at.toISOString() : String(post.created_at || ''),
+    updated_at: post.updated_at instanceof Date ? post.updated_at.toISOString() : String(post.updated_at || ''),
   } as any;
 
   return (

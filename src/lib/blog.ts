@@ -9,8 +9,8 @@ export interface BlogPost {
   image_base64: string | null;
   author: string;
   published: boolean;
-  created_at: Date;
-  updated_at: Date;
+  created_at: Date | string;
+  updated_at: Date | string;
 }
 
 export async function getBlogPosts(onlyPublished = true): Promise<BlogPost[]> {
@@ -51,7 +51,18 @@ export async function getBlogPosts(onlyPublished = true): Promise<BlogPost[]> {
 
 export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> {
   try {
-    const posts = await sql`SELECT * FROM blog_posts WHERE slug = ${slug} LIMIT 1`;
+    const posts = await sql`
+      SELECT 
+        id, title, slug, excerpt, content,
+        CASE 
+          WHEN image_base64 LIKE 'data:%' THEN ('/api/images/legacy/blog/' || id::text)
+          ELSE image_base64
+        END as image_base64,
+        author, published, created_at, updated_at
+      FROM blog_posts 
+      WHERE slug = ${slug} 
+      LIMIT 1
+    `;
     if (posts.length === 0) return null;
     return posts[0] as unknown as BlogPost;
   } catch (error) {
@@ -62,7 +73,18 @@ export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> 
 
 export async function getBlogPostById(id: string): Promise<BlogPost | null> {
   try {
-    const posts = await sql`SELECT * FROM blog_posts WHERE id = ${id} LIMIT 1`;
+    const posts = await sql`
+      SELECT 
+        id, title, slug, excerpt, content,
+        CASE 
+          WHEN image_base64 LIKE 'data:%' THEN ('/api/images/legacy/blog/' || id::text)
+          ELSE image_base64
+        END as image_base64,
+        author, published, created_at, updated_at
+      FROM blog_posts 
+      WHERE id = ${id} 
+      LIMIT 1
+    `;
     if (posts.length === 0) return null;
     return posts[0] as unknown as BlogPost;
   } catch (error) {

@@ -19,11 +19,11 @@ async function handleDelete(formData: FormData) {
 export default async function AdminBlogPage() {
   const rawPosts = await getBlogPosts(false);
   
-  // Serialize dates to prevent hydration errors
+  // Serialize dates safely (supports both Date objects and ISO strings from HTTP DB driver)
   const posts = rawPosts.map(p => ({
     ...p,
-    created_at: p.created_at.toISOString(),
-    updated_at: p.updated_at.toISOString()
+    created_at: p.created_at instanceof Date ? p.created_at.toISOString() : String(p.created_at || ''),
+    updated_at: p.updated_at instanceof Date ? p.updated_at.toISOString() : String(p.updated_at || '')
   }));
 
   return (
