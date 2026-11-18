@@ -13,20 +13,46 @@ export const metadata = {
 };
 
 export default async function AdminHomePage() {
-  // Obtenemos los valores actuales de la base de datos
-  const content = await getAllContent();
-  const testimonials = await getTestimonials();
-  const directoryItems = await getDirectoryItems();
-  const programs = await getPrograms();
-  const newsEvents = await getNewsEvents();
-  const galleryItems = await getGallery();
-  const calendarEvents = await getCalendarEvents();
-  const blogPosts = await getBlogPosts();
-  const faqs = await getFAQs();
-  const normativityDocs = await getNormativityDocuments();
-  const footerAddresses = await getFooterAddresses();
-  const footerSocials = await getFooterSocials();
-  const footerCerts = await getFooterCertifications();
+  // Obtenemos los valores actuales de la base de datos en paralelo
+  const [
+    content,
+    testimonials,
+    directoryItems,
+    programs,
+    newsEvents,
+    galleryItems,
+    calendarEvents,
+    blogPosts,
+    faqs,
+    normativityDocs,
+    footerAddresses,
+    footerSocials,
+    footerCerts,
+  ] = await Promise.all([
+    getAllContent().catch(() => []),
+    getTestimonials().catch(() => []),
+    getDirectoryItems().catch(() => []),
+    getPrograms().catch(() => []),
+    getNewsEvents().catch(() => []),
+    getGallery().catch(() => []),
+    getCalendarEvents().catch(() => []),
+    getBlogPosts().catch(() => []),
+    getFAQs().catch(() => []),
+    getNormativityDocuments().catch(() => []),
+    getFooterAddresses().catch(() => []),
+    getFooterSocials().catch(() => []),
+    getFooterCertifications().catch(() => []),
+  ]);
+
+  const safeIso = (d: any) => {
+    if (!d) return '';
+    try {
+      const dt = new Date(d);
+      return isNaN(dt.getTime()) ? String(d) : dt.toISOString();
+    } catch {
+      return String(d);
+    }
+  };
   
   // Serialize for client component
   const initialContentMap: Record<string, string> = {};
@@ -86,8 +112,8 @@ export default async function AdminHomePage() {
     id: item.id.toString(),
     title: item.title,
     description: item.description || '',
-    start_date: item.start_date ? new Date(item.start_date).toISOString() : '',
-    end_date: item.end_date ? new Date(item.end_date).toISOString() : '',
+    start_date: safeIso(item.start_date),
+    end_date: safeIso(item.end_date),
     type: item.type || 'academic',
     button_text: item.button_text || '',
     button_link: item.button_link || ''

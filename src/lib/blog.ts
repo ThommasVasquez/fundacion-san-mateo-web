@@ -17,9 +17,30 @@ export async function getBlogPosts(onlyPublished = true): Promise<BlogPost[]> {
   try {
     let posts;
     if (onlyPublished) {
-      posts = await sql`SELECT * FROM blog_posts WHERE published = true ORDER BY created_at DESC`;
+      posts = await sql`
+        SELECT 
+          id, title, slug, excerpt, content,
+          CASE 
+            WHEN image_base64 LIKE 'data:%' THEN ('/api/images/legacy/blog/' || id::text)
+            ELSE image_base64
+          END as image_base64,
+          author, published, created_at, updated_at
+        FROM blog_posts 
+        WHERE published = true 
+        ORDER BY created_at DESC
+      `;
     } else {
-      posts = await sql`SELECT * FROM blog_posts ORDER BY created_at DESC`;
+      posts = await sql`
+        SELECT 
+          id, title, slug, excerpt, content,
+          CASE 
+            WHEN image_base64 LIKE 'data:%' THEN ('/api/images/legacy/blog/' || id::text)
+            ELSE image_base64
+          END as image_base64,
+          author, published, created_at, updated_at
+        FROM blog_posts 
+        ORDER BY created_at DESC
+      `;
     }
     return posts as unknown as BlogPost[];
   } catch (error) {

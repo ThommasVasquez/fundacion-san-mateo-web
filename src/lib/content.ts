@@ -72,16 +72,19 @@ function sanitizeImageUrl(url: string | null | undefined, fallback: string = '/i
 export async function getContentMap(path: string): Promise<Record<string, string>> {
   try {
     const results = await sql`
-      SELECT content_key, value FROM site_content WHERE page_path = ${path} OR page_path = '/'
+      SELECT 
+        content_key, 
+        CASE 
+          WHEN value LIKE 'data:image/%' THEN '/img/banner6.jpg'
+          ELSE value
+        END as value 
+      FROM site_content 
+      WHERE page_path = ${path} OR page_path = '/'
     `;
     
     const map: Record<string, string> = {};
     for (const row of results) {
-      let val = row.value;
-      if (val && val.startsWith('data:image/')) {
-        val = '/img/banner6.jpg';
-      }
-      map[row.content_key] = val;
+      map[row.content_key] = row.value;
     }
     return map;
   } catch (e) {
@@ -93,7 +96,17 @@ export async function getContentMap(path: string): Promise<Record<string, string
 
 export async function getAllContent() {
   try {
-    return await sql`SELECT id, content_key, content_type, value, page_path, updated_at FROM site_content ORDER BY page_path, content_key`;
+    return await sql`
+      SELECT 
+        id, content_key, content_type, 
+        CASE 
+          WHEN value LIKE 'data:image/%' THEN ''
+          ELSE value
+        END as value, 
+        page_path, updated_at 
+      FROM site_content 
+      ORDER BY page_path, content_key
+    `;
   } catch (e) {
     if (esSenalDeNext(e)) throw e;
     console.error("Error fetching all content:", e);
@@ -124,7 +137,13 @@ export async function getPrograms() {
     await sql`ALTER TABLE academic_programs ADD COLUMN IF NOT EXISTS total_clases INTEGER;`.catch(() => []);
     await sql`ALTER TABLE academic_programs ADD COLUMN IF NOT EXISTS details JSONB;`.catch(() => []);
     const results = await sql`
-      SELECT id, title, subtitle, description, image_url, href, category, is_featured, order_index, total_clases, details 
+      SELECT 
+        id, title, subtitle, description, 
+        CASE 
+          WHEN image_url LIKE 'data:%' THEN ('/api/images/legacy/programs/' || id::text)
+          ELSE image_url
+        END as image_url, 
+        href, category, is_featured, order_index, total_clases, details 
       FROM academic_programs 
       ORDER BY is_featured DESC, order_index ASC
     `;
@@ -152,7 +171,18 @@ export async function getPrograms() {
 }
 export async function getProgramByHref(href: string) {
   try {
-    const results = await sql`SELECT * FROM academic_programs WHERE href = ${href} LIMIT 1`;
+    const results = await sql`
+      SELECT 
+        id, title, subtitle, description, 
+        CASE 
+          WHEN image_url LIKE 'data:%' THEN ('/api/images/legacy/programs/' || id::text)
+          ELSE image_url
+        END as image_url, 
+        href, category, is_featured, order_index, total_clases, details 
+      FROM academic_programs 
+      WHERE href = ${href} 
+      LIMIT 1
+    `;
     if (results[0]) {
       const defaultImg = getOriginalProgramImage(results[0].href, results[0].title);
       let parsedDetails = results[0].details;
@@ -178,7 +208,17 @@ export async function getProgramByHref(href: string) {
 }
 export async function getNewsEvents() {
   try {
-    return await sql`SELECT * FROM news_events ORDER BY created_at DESC`;
+    return await sql`
+      SELECT 
+        id, title, description, 
+        CASE 
+          WHEN image_url LIKE 'data:%' THEN ('/api/images/legacy/news/' || id::text)
+          ELSE image_url
+        END as image_url, 
+        date_text, category, link, created_at 
+      FROM news_events 
+      ORDER BY created_at DESC
+    `;
   } catch (e) {
     if (esSenalDeNext(e)) throw e;
     console.error("Error fetching news events:", e);
@@ -187,8 +227,31 @@ export async function getNewsEvents() {
 }
 
 export async function getGallery() {
-  const items = await sql`SELECT * FROM gallery_items ORDER BY order_index ASC, created_at DESC`;
-  return items;
+  try {
+    const items = await sql`
+      SELECT 
+        id,
+        CASE 
+          WHEN image_url LIKE 'data:%' THEN ('/api/images/legacy/gallery/' || id::text)
+          ELSE image_url
+        END as image_url,
+        CASE 
+          WHEN thumb_url LIKE 'data:%' THEN ('/api/images/legacy/gallery/' || id::text || '?thumb=1')
+          WHEN image_url LIKE 'data:%' AND (thumb_url IS NULL OR thumb_url = '') THEN ('/api/images/legacy/gallery/' || id::text)
+          ELSE COALESCE(NULLIF(thumb_url, ''), image_url)
+        END as thumb_url,
+        span_class,
+        order_index,
+        created_at
+      FROM gallery_items 
+      ORDER BY order_index ASC, created_at DESC
+    `;
+    return items;
+  } catch (e) {
+    if (esSenalDeNext(e)) throw e;
+    console.error("Error fetching gallery:", e);
+    return [];
+  }
 }
 export async function getCalendarEvents() {
   try {

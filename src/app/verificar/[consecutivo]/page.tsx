@@ -15,6 +15,7 @@ export default async function VerifyConsecutivoPage({ params }: VerifyConsecutiv
   const decodedCode = decodeURIComponent(consecutivo).trim().toUpperCase();
 
   // Search by consecutivo or student_documento
+  await sql`ALTER TABLE issued_documents ADD COLUMN IF NOT EXISTS acta TEXT;`.catch(() => []);
   const documents = await sql`
     SELECT 
       id, consecutivo, student_nombre, student_documento,
@@ -24,7 +25,10 @@ export default async function VerifyConsecutivoPage({ params }: VerifyConsecutiv
     WHERE UPPER(consecutivo) = ${decodedCode}
        OR UPPER(student_documento) = ${decodedCode}
     LIMIT 1
-  `;
+  `.catch((err: any) => {
+    console.error('Error querying issued_documents in verificar:', err);
+    return [];
+  });
 
   const doc = documents.length > 0 ? documents[0] : null;
 

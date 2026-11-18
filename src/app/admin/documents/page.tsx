@@ -54,6 +54,7 @@ export default async function AdminDocumentsPage() {
   const isSuperAdmin = userEmail === 'admin@fundacionsanmateo.edu.co' || userEmail === 'admin@fundacionsanmateosoacha.edu.co';
 
   // Ejecutar consultas en paralelo sin saturar memoria ni tiempo de CPU con base64 pesados
+  await sql`ALTER TABLE issued_documents ADD COLUMN IF NOT EXISTS acta TEXT;`.catch(() => []);
   const [docsRes, nextConsecutivo, studentsRes, progsRes] = await Promise.all([
     sql`
       SELECT 
